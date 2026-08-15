@@ -10,10 +10,14 @@ export default function App() {
   void categories;
 
   async function handleCheck() {
-    // TODO(Issue 4): set loading, call checkSystem(), then either
-    //   - success: store categories and show Online + the list, or
-    //   - error: show Offline + a useful message.
     setState("loading");
+    try {
+      const result = await checkSystem();
+      setCategories(result.categories);
+      setState("success");
+    } catch (err) {
+      setState("error");
+    }
   }
 
   return (
@@ -26,7 +30,26 @@ export default function App() {
         {state === "loading" ? "Loading…" : "Check System"}
       </button>
 
-      {/* TODO(Issue 4): render loading / success (Online + categories) / error (Offline) states. */}
+      <div className="mt-4 p-3 border border-dark">
+        {state === "idle" && (
+          <p className="text-muted">[ Check System ]</p>
+        )}
+        {state === "loading" && (
+          <p className="text-muted">Loading...</p>
+        )}
+        {state === "success" && (
+          <div>
+            <p>System Status: Online</p>
+            {/* TODO(Issue 4): render categories */}
+          </div>
+        )}
+        {state === "error" && (
+          <div>
+            <p>System Status: Offline</p>
+            <p className="text-danger">Unable to connect to TokTickIT API</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
