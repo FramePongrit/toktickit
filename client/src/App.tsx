@@ -40,7 +40,14 @@ export default function App() {
         {state === "success" && (
           <div>
             <p>System Status: Online</p>
-            {/* TODO(Issue 4): render categories */}
+            <div className="mt-3">
+              <p className="mb-2">Supported Request Categories:</p>
+              <ul className="list-unstyled ps-3 mb-0">
+                {categories.map((c, i) => (
+                  <li key={c.id}>{i + 1}. {c.name}</li>
+                ))}
+              </ul>
+            </div>
           </div>
         )}
         {state === "error" && (

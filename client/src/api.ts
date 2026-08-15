@@ -22,6 +22,12 @@ export async function checkSystem(): Promise<SystemStatus> {
     throw new Error("Backend is unavailable");
   }
   
-  // TODO(Issue 4): fetch categories
-  return { online: true, categories: [] };
+  // Issue 4: fetch categories
+  const categoriesRes = await fetch(`${API_URL}/api/categories`);
+  if (!categoriesRes.ok) {
+    throw new Error("Categories unavailable");
+  }
+  
+  const categories = await categoriesRes.json();
+  return { online: true, categories };
 }
