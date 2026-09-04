@@ -10,10 +10,129 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ---------------------------------------------------------------------------
+// --- Enums -----------------------------------------------------------------
+
+// Declared in severity order: PostgreSQL sorts enum values by declaration
+// order, so `sort=requestedPriority` is only meaningful with this ordering.
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TicketStatus {
+  NEW
+}
+
+enum Role {
+  REQUESTER
+  STAFF
+  ADMIN
+}
+
+// --- Reference data --------------------------------------------------------
+
 model Category {
   id        Int      @id @default(autoincrement())
   name      String   @unique
+  active    Boolean  @default(true)
   createdAt DateTime @default(now())
+
+  tickets Ticket[]
 }
-// ---------------------------------------------------------------------------
+
+model RelatedSystem {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  tickets Ticket[]
+}
+
+// --- Identity --------------------------------------------------------------
+
+// The Lab 2 "Development Requester". This is a testing mechanism, not
+// authentication. `passwordHash` and `role` are unused in Lab 2 and exist so
+// that Lab 3 adds authentication to this table instead of migrating to a new
+// identity table (BR-49).
+model RequesterUser {
+  id           Int      @id @default(autoincrement())
+  fullName     String
+  email        String   @unique
+  department   String?
+  active       Boolean  @default(true)
+  role         Role     @default(REQUESTER)
+  passwordHash String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tickets            Ticket[]
+  uploadedAttachments Attachment[] @relation("AttachmentUploader")
+  removedAttachments  Attachment[] @relation("AttachmentRemover")
+
+  @@index([active])
+}
+
+// --- Tickets ---------------------------------------------------------------
+
+model Ticket {
+  id                Int          @id @default(autoincrement())
+  ticketNumber      String       @unique
+  requesterId       Int
+  categoryId        Int
+  relatedSystemId   Int
+  requestedPriority Priority
+  summary           String       @db.VarChar(200)
+  description       String       @db.Text
+  currentStatus     TicketStatus @default(NEW)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  // Restrict, not Cascade: reference data must not be deletable while tickets
+  // point at it. Deactivate it instead.
+  requester     RequesterUser @relation(fields: [requesterId], references: [id], onDelete: Restrict)
+  category      Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  relatedSystem RelatedSystem @relation(fields: [relatedSystemId], references: [id], onDelete: Restrict)
+  attachments   Attachment[]
+
+  @@index([requesterId, createdAt])
+  @@index([requesterId, categoryId])
+  @@index([requesterId, relatedSystemId])
+}
+
+// An Attachment is active if and only if `removedAt` is null. That single
+// nullable timestamp is the only source of truth — there is deliberately no
+// companion boolean, because two representations of one fact can disagree.
+model Attachment {
+  id                    Int       @id @default(autoincrement())
+  ticketId              Int
+  originalFilename      String
+  storedFilename        String    @unique
+  mimeType              String
+  sizeBytes             Int
+  uploadedByRequesterId Int
+  uploadedAt            DateTime  @default(now())
+  removedAt             DateTime?
+  removedByRequesterId  Int?
+  removalReason         String?
+
+  ticket     Ticket         @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  uploadedBy RequesterUser  @relation("AttachmentUploader", fields: [uploadedByRequesterId], references: [id], onDelete: Restrict)
+  removedBy  RequesterUser? @relation("AttachmentRemover", fields: [removedByRequesterId], references: [id], onDelete: Restrict)
+
+  @@index([ticketId, removedAt])
+}
+
+// --- Ticket number allocation ----------------------------------------------
+
+// One row per calendar year. Allocation runs inside the ticket-creation
+// transaction as `UPDATE ... SET lastValue = lastValue + 1 ... RETURNING`,
+// which row-locks the year so concurrent creates serialise on it. Gap-free and
+// race-free with no retry loop; see specification.md §7 for why this beats
+// MAX(ticketNumber)+1 and a per-year sequence.
+model TicketCounter {
+  year      Int @id
+  lastValue Int @default(0)
+}
