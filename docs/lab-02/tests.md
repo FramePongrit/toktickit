@@ -133,13 +133,13 @@ File: `server/tests/lab-02/attachments.api.test.ts`
 |---|---|---|---|---|---|---|
 | UI-01 | UI | AC-01, BR-06 | Selector lists active requesters only | Four active names rendered; the inactive one absent | `client/tests/lab-02/SelectRequester.test.tsx` | Pass |
 | UI-02 | UI | AC-06, BR-09 | Selector empty and failure states | Empty message with Continue disabled; failure message with Retry | `client/tests/lab-02/SelectRequester.test.tsx` | Pass |
-| UI-03 | UI | AC-11 | Submit with an empty Summary | Message rendered below the Summary field; the API is not called | `client/tests/lab-02/CreateTicket.test.tsx` | Planned |
-| UI-04 | UI | AC-14, BR-25 | Busy state on submit | Submit disabled with a busy label; a second click creates nothing | `client/tests/lab-02/CreateTicket.test.tsx` | Planned |
-| UI-05 | UI | AC-07 | Success state | The returned ticket number is displayed with confirming text, not colour alone | `client/tests/lab-02/CreateTicket.test.tsx` | Planned |
-| UI-06 | UI | AC-13, AC-15, BR-26 | Values preserved after failure | Every entered value still present after an API error | `client/tests/lab-02/CreateTicket.test.tsx` | Planned |
-| UI-07 | UI style | BR-28, ui-spec §3 | Validation placement and ARIA | Message follows its field; `aria-invalid` and `aria-describedby` set | `client/tests/lab-02/CreateTicket.test.tsx` | Planned |
-| UI-08 | UI style | ui-spec §3 | Required asterisk | Every required label carries an asterisk, and it does not replace the message | `client/tests/lab-02/CreateTicket.test.tsx` | Planned |
-| UI-09 | UI style | ui-spec §3 | Read-only field styling | Read-only fields carry the read-only class and the `readonly` attribute | `client/tests/lab-02/CreateTicket.test.tsx` | Planned |
+| UI-03 | UI | AC-11 | Submit with an empty Summary | Message rendered below the Summary field; the API is not called | `client/tests/lab-02/CreateTicket.test.tsx` | Pass |
+| UI-04 | UI | AC-14, BR-25 | Busy state on submit | Submit disabled with a busy label; a second click creates nothing | `client/tests/lab-02/CreateTicket.test.tsx` | Pass |
+| UI-05 | UI | AC-07 | Success state | The returned ticket number is displayed with confirming text, not colour alone | `client/tests/lab-02/CreateTicket.test.tsx` | Pass |
+| UI-06 | UI | AC-13, AC-15, BR-26 | Values preserved after failure | Every entered value still present after an API error | `client/tests/lab-02/CreateTicket.test.tsx` | Pass |
+| UI-07 | UI style | BR-28, ui-spec §3 | Validation placement and ARIA | Message follows its field; `aria-invalid` and `aria-describedby` set | `client/tests/lab-02/CreateTicket.test.tsx` | Pass |
+| UI-08 | UI style | ui-spec §3 | Required asterisk | Every required label carries an asterisk, and it does not replace the message | `client/tests/lab-02/CreateTicket.test.tsx` | Pass |
+| UI-09 | UI style | ui-spec §3 | Read-only field styling | Read-only fields carry the read-only class and the `readonly` attribute | `client/tests/lab-02/CreateTicket.test.tsx` | Pass |
 | UI-10 | UI | AC-25, BR-41 | Empty state | Invites creating a first ticket | `client/tests/lab-02/MyTickets.test.tsx` | Planned |
 | UI-11 | UI | AC-26, BR-42 | No-results state | Distinct wording plus a Clear Filters action | `client/tests/lab-02/MyTickets.test.tsx` | Planned |
 | UI-12 | UI | AC-27, FR-26 | List failure state | Safe message plus Retry | `client/tests/lab-02/MyTickets.test.tsx` | Planned |
