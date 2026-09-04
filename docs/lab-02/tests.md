@@ -140,12 +140,12 @@ File: `server/tests/lab-02/attachments.api.test.ts`
 | UI-07 | UI style | BR-28, ui-spec §3 | Validation placement and ARIA | Message follows its field; `aria-invalid` and `aria-describedby` set | `client/tests/lab-02/CreateTicket.test.tsx` | Pass |
 | UI-08 | UI style | ui-spec §3 | Required asterisk | Every required label carries an asterisk, and it does not replace the message | `client/tests/lab-02/CreateTicket.test.tsx` | Pass |
 | UI-09 | UI style | ui-spec §3 | Read-only field styling | Read-only fields carry the read-only class and the `readonly` attribute | `client/tests/lab-02/CreateTicket.test.tsx` | Pass |
-| UI-10 | UI | AC-25, BR-41 | Empty state | Invites creating a first ticket | `client/tests/lab-02/MyTickets.test.tsx` | Planned |
-| UI-11 | UI | AC-26, BR-42 | No-results state | Distinct wording plus a Clear Filters action | `client/tests/lab-02/MyTickets.test.tsx` | Planned |
-| UI-12 | UI | AC-27, FR-26 | List failure state | Safe message plus Retry | `client/tests/lab-02/MyTickets.test.tsx` | Planned |
-| UI-13 | UI | FR-12, FR-13 | Search and filter wiring | Changing a control issues a request with the expected parameters | `client/tests/lab-02/MyTickets.test.tsx` | Planned |
-| UI-14 | UI | FR-15 | Pagination controls | Page change requests the new page; the range and total are displayed | `client/tests/lab-02/MyTickets.test.tsx` | Planned |
-| UI-15 | UI style | ui-spec §5 | Badge consistency | Priority and status badges render text alongside colour | `client/tests/lab-02/MyTickets.test.tsx` | Planned |
+| UI-10 | UI | AC-25, BR-41 | Empty state | Invites creating a first ticket | `client/tests/lab-02/MyTickets.test.tsx` | Pass |
+| UI-11 | UI | AC-26, BR-42 | No-results state | Distinct wording plus a Clear Filters action | `client/tests/lab-02/MyTickets.test.tsx` | Pass |
+| UI-12 | UI | AC-27, FR-26 | List failure state | Safe message plus Retry | `client/tests/lab-02/MyTickets.test.tsx` | Pass |
+| UI-13 | UI | FR-12, FR-13 | Search and filter wiring | Changing a control issues a request with the expected parameters | `client/tests/lab-02/MyTickets.test.tsx` | Pass |
+| UI-14 | UI | FR-15 | Pagination controls | Page change requests the new page; the range and total are displayed | `client/tests/lab-02/MyTickets.test.tsx` | Pass |
+| UI-15 | UI style | ui-spec §5 | Badge consistency | Priority and status badges render text alongside colour | `client/tests/lab-02/MyTickets.test.tsx` | Pass |
 | UI-16 | UI | AC-29 | Detail renders read-only | Every specified field present and read-only | `client/tests/lab-02/RequesterTicketDetail.test.tsx` | Planned |
 | UI-17 | UI | AC-30, BR-45 | Out-of-scope features absent | No comments, internal notes, actions taken, IT priority, or status control | `client/tests/lab-02/RequesterTicketDetail.test.tsx` | Planned |
 | UI-18 | UI | AC-02, BR-46 | Guard without a selected requester | Redirects to the selection screen | `client/tests/lab-02/RequesterTicketDetail.test.tsx` | Pass |
