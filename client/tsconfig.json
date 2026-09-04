@@ -8,6 +8,9 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
+    // `npm run build` runs tsc purely as a type check and lets Vite do the
+    // bundling. Without this, tsc also emits .js files beside every source.
+    "noEmit": true,
     "types": ["vitest/globals", "@testing-library/jest-dom"]
   },
   "include": ["src", "tests"]
