@@ -1,0 +1,277 @@
+/*
+ * Zen Green theme. Imported after bootstrap.min.css in main.tsx.
+ *
+ * Bootstrap 5.3 is loaded precompiled, and it bakes per-variant colours into
+ * each component class at Sass compile time. Overriding --bs-primary alone
+ * therefore does NOT recolour .btn-primary — the component-level variables
+ * below have to be set explicitly. This was verified rather than assumed.
+ */
+
+:root {
+  --zen-primary: #006b3c;
+  --zen-secondary: #0b7a46;
+  --zen-pale: #eaf6ef;
+  --zen-bg: #f5f7f6;
+  --zen-surface: #ffffff;
+  --zen-border: #dde5e0;
+  --zen-text: #1b2b23;
+  --zen-text-muted: #5a6b62;
+  --zen-readonly-bg: #f2f4f1;
+  --zen-error: #a4161a;
+  --zen-warning: #b26a00;
+  --zen-success: #0b7a46;
+
+  --bs-body-bg: var(--zen-bg);
+  --bs-body-color: var(--zen-text);
+  --bs-link-color: var(--zen-secondary);
+  --bs-link-hover-color: var(--zen-primary);
+  --bs-border-color: var(--zen-border);
+}
+
+body {
+  background-color: var(--zen-bg);
+  color: var(--zen-text);
+}
+
+/* --- Application shell --------------------------------------------------- */
+
+.zen-header {
+  background-color: var(--zen-primary);
+  color: #fff;
+}
+
+/* Bootstrap declares .navbar after .container and sets --bs-navbar-padding-x
+   to 0, which wins on an element carrying both classes and leaves the brand
+   flush against the viewport edge below the container's max width. */
+.zen-header .navbar {
+  --bs-navbar-padding-x: 0.75rem;
+}
+
+.zen-header .navbar-brand,
+.zen-header .nav-link {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.zen-header .nav-link:hover,
+.zen-header .nav-link:focus {
+  color: #fff;
+}
+
+/* The active page is marked by weight and an underline as well as colour, so
+   the indication does not depend on colour perception alone. */
+.zen-header .nav-link.active {
+  color: #fff;
+  font-weight: 600;
+  border-bottom: 3px solid #fff;
+}
+
+/* --- Buttons ------------------------------------------------------------- */
+
+.btn-primary {
+  --bs-btn-bg: var(--zen-primary);
+  --bs-btn-border-color: var(--zen-primary);
+  --bs-btn-hover-bg: var(--zen-secondary);
+  --bs-btn-hover-border-color: var(--zen-secondary);
+  --bs-btn-active-bg: var(--zen-secondary);
+  --bs-btn-active-border-color: var(--zen-secondary);
+  --bs-btn-disabled-bg: var(--zen-primary);
+  --bs-btn-disabled-border-color: var(--zen-primary);
+}
+
+.btn-outline-primary {
+  --bs-btn-color: var(--zen-primary);
+  --bs-btn-border-color: var(--zen-primary);
+  --bs-btn-hover-bg: var(--zen-primary);
+  --bs-btn-hover-border-color: var(--zen-primary);
+  --bs-btn-active-bg: var(--zen-primary);
+  --bs-btn-active-border-color: var(--zen-primary);
+}
+
+.btn-outline-danger {
+  --bs-btn-color: var(--zen-error);
+  --bs-btn-border-color: var(--zen-error);
+  --bs-btn-hover-bg: var(--zen-error);
+  --bs-btn-hover-border-color: var(--zen-error);
+}
+
+.btn-link {
+  --bs-btn-color: var(--zen-secondary);
+  --bs-btn-hover-color: var(--zen-primary);
+}
+
+/* Bootstrap's pagination defaults to its own blue, which would be the one
+   place in the app that is not Zen Green. */
+.pagination {
+  --bs-pagination-color: var(--zen-secondary);
+  --bs-pagination-hover-color: var(--zen-primary);
+  --bs-pagination-hover-bg: var(--zen-pale);
+  --bs-pagination-focus-color: var(--zen-primary);
+  --bs-pagination-focus-bg: var(--zen-pale);
+  --bs-pagination-focus-box-shadow: 0 0 0 0.2rem rgba(11, 122, 70, 0.2);
+  --bs-pagination-active-bg: var(--zen-primary);
+  --bs-pagination-active-border-color: var(--zen-primary);
+}
+
+/* --- Surfaces ------------------------------------------------------------ */
+
+.zen-card {
+  background-color: var(--zen-surface);
+  border: 1px solid var(--zen-border);
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 2px rgba(27, 43, 35, 0.06);
+}
+
+/* --- Form controls ------------------------------------------------------- */
+
+/* Bootstrap sets .form-control's background to --bs-body-bg, which the theme
+   repoints at the page background. Without this, every editable field would
+   take the page colour and become indistinguishable from a read-only one —
+   caught by looking at a screenshot, not by any test. */
+.form-control,
+.form-select {
+  background-color: var(--zen-surface);
+  border-color: var(--zen-border);
+}
+
+.form-control:disabled,
+.form-select:disabled {
+  background-color: var(--zen-readonly-bg);
+}
+
+.form-control:focus,
+.form-select:focus {
+  background-color: var(--zen-surface);
+  border-color: var(--zen-secondary);
+  box-shadow: 0 0 0 0.2rem rgba(11, 122, 70, 0.2);
+}
+
+/* Read-only fields: clearly distinct from an editable field, still readable. */
+.zen-readonly {
+  background-color: var(--zen-readonly-bg);
+  border: 1px solid var(--zen-border);
+  border-radius: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  min-height: 38px;
+  color: var(--zen-text);
+}
+
+.zen-required {
+  color: var(--zen-error);
+  margin-left: 0.15rem;
+}
+
+/* Validation messages sit directly below their field, never only at the top. */
+.zen-field-error {
+  color: var(--zen-error);
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+.form-control.is-invalid,
+.form-select.is-invalid {
+  border-color: var(--zen-error);
+}
+
+/* Focus must stay visible for keyboard users at every breakpoint. */
+:focus-visible {
+  outline: 2px solid var(--zen-secondary);
+  outline-offset: 2px;
+}
+
+/* --- Feedback ------------------------------------------------------------ */
+
+/* Success carries a glyph and text as well as the pale green ground, so it
+   never relies on colour alone. */
+.zen-success {
+  background-color: var(--zen-pale);
+  border: 1px solid var(--zen-secondary);
+  color: var(--zen-text);
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.zen-error-panel {
+  background-color: #fdf3f3;
+  border: 1px solid var(--zen-error);
+  color: var(--zen-text);
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.zen-warning-panel {
+  background-color: #fdf6ea;
+  border: 1px solid var(--zen-warning);
+  color: var(--zen-text);
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.zen-muted {
+  color: var(--zen-text-muted);
+}
+
+/* --- Badges -------------------------------------------------------------- */
+
+/* Identical geometry across screens, and always paired with their text label. */
+.zen-badge {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.zen-badge-low {
+  background-color: #eef1ef;
+  color: var(--zen-text-muted);
+  border-color: var(--zen-border);
+}
+
+.zen-badge-medium {
+  background-color: var(--zen-pale);
+  color: var(--zen-secondary);
+  border-color: var(--zen-secondary);
+}
+
+.zen-badge-high {
+  background-color: #fdf6ea;
+  color: var(--zen-warning);
+  border-color: var(--zen-warning);
+}
+
+.zen-badge-urgent {
+  background-color: #fdf3f3;
+  color: var(--zen-error);
+  border-color: var(--zen-error);
+}
+
+.zen-badge-status {
+  background-color: var(--zen-pale);
+  color: var(--zen-secondary);
+  border-color: var(--zen-secondary);
+}
+
+/* --- Layout -------------------------------------------------------------- */
+
+.zen-page {
+  max-width: 1140px;
+}
+
+/* Touch targets stay comfortable on small screens. The pagination controls and
+   the navbar toggler are not .btn, so they need naming explicitly — measuring
+   them found both sitting at 38px and 40px. */
+@media (max-width: 767.98px) {
+  .btn,
+  .navbar-toggler,
+  .page-link {
+    min-height: 44px;
+  }
+
+  .page-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+  }
+}

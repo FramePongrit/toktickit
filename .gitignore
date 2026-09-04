@@ -9,6 +9,12 @@ dist/
 build/
 # prisma
 server/prisma/*.db
+# uploaded attachments — the directory must exist on a fresh clone, its contents must not be committed
+server/uploads/*
+!server/uploads/.gitkeep
+# playwright run output — the screenshots under artifacts/ are committed evidence and stay tracked
+test-results/
+playwright-report/
 # logs & OS
 *.log
 .DS_Store
