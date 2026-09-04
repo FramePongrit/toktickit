@@ -1,7 +1,7 @@
 # Lab 2 — Peer Review Record
 
-**Author:** _<your name>_ — _<student id>_ — GitHub: [@FramePongrit](https://github.com/FramePongrit)
-**Peer reviewers:** [@narakosi-dev](https://github.com/narakosi-dev), [@SANOP19](https://github.com/SANOP19), [@Leviathan-c137](https://github.com/Leviathan-c137)
+**Author:** Pongrit Boawan — 67070505204 — GitHub: [@FramePongrit](https://github.com/FramePongrit)
+**Peer reviewers:** [Nara Kosiyaporn 67070505218](https://github.com/narakosi-dev), [Nitithorn Ketkaew 67070505203](https://github.com/SANOP19), [Tantiyawat Chansiri 67070505216](https://github.com/Leviathan-c137)
 
 **Repository:** https://github.com/FramePongrit/toktickit
 **Integration branch:** `lab2-staging` → released to `main` by one final Pull Request
