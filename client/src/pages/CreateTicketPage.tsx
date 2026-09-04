@@ -79,6 +79,14 @@ export function CreateTicketPage() {
 
   function update<K extends keyof FormValues>(field: K, value: FormValues[K]) {
     setValues((previous) => ({ ...previous, [field]: value }));
+    // Clear this field's message as soon as it is edited. Without this, a
+    // corrected field keeps showing "is required" next to a filled input until
+    // the next submit, which states something untrue.
+    setErrors((previous) => {
+      if (!(field in previous)) return previous;
+      const { [field]: _removed, ...rest } = previous;
+      return rest;
+    });
   }
 
   async function handleSubmit(event: React.FormEvent) {

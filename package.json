@@ -1,0 +1,15 @@
+{
+  "name": "toktickit-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "End-to-end tests and screenshot capture for TokTickIT. The application itself lives in server/ and client/.",
+  "scripts": {
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui",
+    "screenshots": "playwright test --project=screenshots"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.1"
+  }
+}
