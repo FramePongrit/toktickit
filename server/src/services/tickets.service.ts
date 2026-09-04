@@ -134,6 +134,29 @@ export async function listTickets(requesterId: number, query: ListTicketsQuery) 
   };
 }
 
+/**
+ * Ownership is expressed as a where clause rather than a check after loading,
+ * so there is no code path that reads another requester's row into memory
+ * before deciding to refuse it.
+ *
+ * A ticket owned by somebody else is reported exactly like one that does not
+ * exist. Using 403 here would confirm the row exists, letting one requester
+ * walk the id space to learn how many tickets another has and when they were
+ * created. 404 discloses nothing (BR-13, api-spec §3).
+ */
+export async function getOwnedTicket(requesterId: number, ticketId: number) {
+  const ticket = await getPrisma().ticket.findFirst({
+    where: { id: ticketId, requesterId },
+    include: detailInclude,
+  });
+
+  if (!ticket) {
+    throw HttpError.notFound("TICKET_NOT_FOUND", "The requested ticket does not exist.");
+  }
+
+  return serializeTicketDetail(ticket);
+}
+
 export async function createTicket(requesterId: number, input: CreateTicketInput) {
   await assertReferenceDataIsUsable(input);
 

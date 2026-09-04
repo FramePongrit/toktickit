@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { asyncHandler } from "../lib/asyncHandler.js";
-import { createTicketSchema, listTicketsQuerySchema } from "../lib/validation.js";
+import { createTicketSchema, idParamSchema, listTicketsQuerySchema } from "../lib/validation.js";
 import { requireRequester } from "../middleware/requireRequester.js";
-import { createTicket, listTickets } from "../services/tickets.service.js";
+import { createTicket, getOwnedTicket, listTickets } from "../services/tickets.service.js";
 
 export const ticketsRouter = Router();
 
@@ -25,5 +25,14 @@ ticketsRouter.get(
     const query = listTicketsQuerySchema.parse(req.query);
     const page = await listTickets(req.requester!.id, query);
     res.status(200).json(page);
+  })
+);
+
+ticketsRouter.get(
+  "/:id",
+  asyncHandler(async (req, res) => {
+    const { id } = idParamSchema.parse(req.params);
+    const ticket = await getOwnedTicket(req.requester!.id, id);
+    res.status(200).json(ticket);
   })
 );
