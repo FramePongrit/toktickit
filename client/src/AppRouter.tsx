@@ -3,6 +3,7 @@ import App from "./App.js";
 import { AppShell } from "./components/AppShell.js";
 import { StateBlock } from "./components/StateBlock.js";
 import { RequesterProvider, useRequester } from "./context/RequesterContext.js";
+import { CreateTicketPage } from "./pages/CreateTicketPage.js";
 import { NotFoundPage } from "./pages/NotFoundPage.js";
 import { SelectRequesterPage } from "./pages/SelectRequesterPage.js";
 
@@ -29,9 +30,9 @@ export function AppRoutes() {
 
       <Route element={<RequireRequester />}>
         <Route element={<AppShell />}>
-          {/* Ticket screens arrive in Issues 13 to 15. */}
+          {/* The list and detail screens arrive in Issues 14 and 15. */}
           <Route path="/tickets" element={<div />} />
-          <Route path="/tickets/new" element={<div />} />
+          <Route path="/tickets/new" element={<CreateTicketPage />} />
           <Route path="/tickets/:id" element={<div />} />
         </Route>
       </Route>
