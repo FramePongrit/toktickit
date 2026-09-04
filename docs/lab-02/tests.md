@@ -92,12 +92,12 @@ File: `server/tests/lab-02/ticket-detail.api.test.ts`
 
 | Test ID | Type | Requirement / AC | What it tests | Expected result | Final |
 |---|---|---|---|---|---|
-| API-33 | API | AC-29 | Owner retrieves their ticket | 200 with every specified field present | Planned |
-| API-34 | API | AC-28, BR-13 | **Non-owner retrieves a ticket** | **404**, not 403 — see the rationale note below | Planned |
-| API-35 | API | AC-31 | Nonexistent ticket id | 404 with the same body shape as API-34 | Planned |
-| API-36 | API | §5.3 | Non-numeric ticket id | 400 `VALIDATION_FAILED` | Planned |
-| API-37 | API | BR-33 | Removed attachments in the detail | Present with `isRemoved: true` and the removal reason | Planned |
-| API-38 | API | AC-43, AC-44 | Identity header cases | 401 / 400 / 401 / 403 as specified in api-spec §2 | Planned |
+| API-33 | API | AC-29 | Owner retrieves their ticket | 200 with every specified field present | Pass |
+| API-34 | API | AC-28, BR-13 | **Non-owner retrieves a ticket** | **404**, not 403 — see the rationale note below | Pass |
+| API-35 | API | AC-31 | Nonexistent ticket id | 404 with the same body shape as API-34 | Pass |
+| API-36 | API | §5.3 | Non-numeric ticket id | 400 `VALIDATION_FAILED` | Pass |
+| API-37 | API | BR-33 | Removed attachments in the detail | Present with `isRemoved: true` and the removal reason | Pass |
+| API-38 | API | AC-43, AC-44 | Identity header cases | 401 / 400 / 401 / 403 as specified in api-spec §2 | Pass |
 
 > **Rationale to keep in the test file as a comment.** API-34 asserts 404 rather than 403 deliberately. A 403 would confirm the ticket exists, letting one Requester enumerate ids to map another Requester's data. A reviewer expecting 403 should read BR-13 and api-spec §3 before treating this as a defect.
 
