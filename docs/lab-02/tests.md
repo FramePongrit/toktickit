@@ -146,15 +146,15 @@ File: `server/tests/lab-02/attachments.api.test.ts`
 | UI-13 | UI | FR-12, FR-13 | Search and filter wiring | Changing a control issues a request with the expected parameters | `client/tests/lab-02/MyTickets.test.tsx` | Pass |
 | UI-14 | UI | FR-15 | Pagination controls | Page change requests the new page; the range and total are displayed | `client/tests/lab-02/MyTickets.test.tsx` | Pass |
 | UI-15 | UI style | ui-spec §5 | Badge consistency | Priority and status badges render text alongside colour | `client/tests/lab-02/MyTickets.test.tsx` | Pass |
-| UI-16 | UI | AC-29 | Detail renders read-only | Every specified field present and read-only | `client/tests/lab-02/RequesterTicketDetail.test.tsx` | Planned |
-| UI-17 | UI | AC-30, BR-45 | Out-of-scope features absent | No comments, internal notes, actions taken, IT priority, or status control | `client/tests/lab-02/RequesterTicketDetail.test.tsx` | Planned |
+| UI-16 | UI | AC-29 | Detail renders read-only | Every specified field present and read-only | `client/tests/lab-02/RequesterTicketDetail.test.tsx` | Pass |
+| UI-17 | UI | AC-30, BR-45 | Out-of-scope features absent | No comments, internal notes, actions taken, IT priority, or status control | `client/tests/lab-02/RequesterTicketDetail.test.tsx` | Pass |
 | UI-18 | UI | AC-02, BR-46 | Guard without a selected requester | Redirects to the selection screen | `client/tests/lab-02/RequesterTicketDetail.test.tsx` | Pass |
-| UI-19 | UI | BR-43 | No attachments | Explicit message rather than an empty region | `client/tests/lab-02/AttachmentSection.test.tsx` | Planned |
-| UI-20 | UI | AC-32 | Upload happy path | Selected file uploads and appears in the list | `client/tests/lab-02/AttachmentSection.test.tsx` | Planned |
-| UI-21 | UI | BR-29, BR-30 | Client-side pre-checks | Oversized and wrong-type files are rejected before any request | `client/tests/lab-02/AttachmentSection.test.tsx` | Planned |
-| UI-22 | UI | BR-31 | Limit reached | Upload control disabled with an explanation at 5 active | `client/tests/lab-02/AttachmentSection.test.tsx` | Planned |
-| UI-23 | UI | BR-33, ui-spec §7.4 | Removed attachment presentation | Greyed, reason shown, **no download and no remove action** | `client/tests/lab-02/AttachmentSection.test.tsx` | Planned |
-| UI-24 | UI | BR-34 | Removal dialog | Confirm disabled until a valid reason is entered | `client/tests/lab-02/AttachmentSection.test.tsx` | Planned |
+| UI-19 | UI | BR-43 | No attachments | Explicit message rather than an empty region | `client/tests/lab-02/AttachmentSection.test.tsx` | Pass |
+| UI-20 | UI | AC-32 | Upload happy path | Selected file uploads and appears in the list | `client/tests/lab-02/AttachmentSection.test.tsx` | Pass |
+| UI-21 | UI | BR-29, BR-30 | Client-side pre-checks | Oversized and wrong-type files are rejected before any request | `client/tests/lab-02/AttachmentSection.test.tsx` | Pass |
+| UI-22 | UI | BR-31 | Limit reached | Upload control disabled with an explanation at 5 active | `client/tests/lab-02/AttachmentSection.test.tsx` | Pass |
+| UI-23 | UI | BR-33, ui-spec §7.4 | Removed attachment presentation | Greyed, reason shown, **no download and no remove action** | `client/tests/lab-02/AttachmentSection.test.tsx` | Pass |
+| UI-24 | UI | BR-34 | Removal dialog | Confirm disabled until a valid reason is entered | `client/tests/lab-02/AttachmentSection.test.tsx` | Pass |
 | UI-25 | UI | AC-03, AC-04, BR-08 | Shell and requester switching | Name displayed; switching clears the previous Requester's data | `client/tests/lab-02/AppShell.test.tsx` | Pass |
 
 ### 2.7 End-to-end and responsive

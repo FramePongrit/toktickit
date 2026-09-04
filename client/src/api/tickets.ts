@@ -20,6 +20,10 @@ export function createTicket(payload: CreateTicketPayload): Promise<TicketDetail
   });
 }
 
+export function fetchTicket(id: number): Promise<TicketDetail> {
+  return request<TicketDetail>(`/api/tickets/${id}`);
+}
+
 export type TicketSortField = "createdAt" | "ticketNumber" | "requestedPriority" | "summary";
 
 export interface TicketQuery {
