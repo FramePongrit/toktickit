@@ -36,7 +36,7 @@ Status column: `Planned` until implemented, then `Pass`.
 | Test ID | Type | Requirement / AC | What it tests | Expected result | Automated test file | Final |
 |---|---|---|---|---|---|---|
 | UNIT-01 | Unit | BR-01, AC-09 | Ticket number formatter | `format(2026, 42)` returns `TKT-2026-000042` | `server/tests/lab-02/create-ticket.api.test.ts` | Pass |
-| UNIT-02 | Unit | BR-19, BR-20 | Ticket list query schema | `pageSize=7` and `page=0` are rejected; defaults applied when absent | `server/tests/lab-02/my-tickets.api.test.ts` | Planned |
+| UNIT-02 | Unit | BR-19, BR-20 | Ticket list query schema | `pageSize=7` and `page=0` are rejected; defaults applied when absent | `server/tests/lab-02/my-tickets.api.test.ts` | Pass |
 | UNIT-03 | Unit | BR-29 | Attachment type check | Permitted extension + MIME accepted; either one wrong rejected | `server/tests/lab-02/attachments.api.test.ts` | Planned |
 | UNIT-04 | Unit | BR-21, BR-22 | Trimming before validation | `"  hi  "` fails the 5-character minimum after trimming | `server/tests/lab-02/create-ticket.api.test.ts` | Pass |
 
@@ -68,23 +68,23 @@ File: `server/tests/lab-02/my-tickets.api.test.ts`
 
 | Test ID | Type | Requirement / AC | What it tests | Expected result | Final |
 |---|---|---|---|---|---|
-| API-16 | API | AC-17, BR-11 | Ownership isolation | Requester B's list contains no ticket owned by A | Planned |
-| API-17 | API | BR-16 | `requesterId` query parameter ignored | Supplying it cannot widen the result set | Planned |
-| API-18 | API | AC-18, BR-14 | Search by ticket number | Case-insensitive substring match returns the ticket | Planned |
-| API-19 | API | AC-19, BR-14 | Search by summary | Case-insensitive substring match returns the tickets | Planned |
-| API-20 | API | AC-20 | Category filter | Every returned ticket has that Category | Planned |
-| API-21 | API | FR-13 | Related System filter | Every returned ticket has that Related System | Planned |
-| API-22 | API | FR-13 | Priority filter | Every returned ticket has that priority | Planned |
-| API-23 | API | BR-15 | Combined filters | Filters combine conjunctively | Planned |
-| API-24 | API | AC-21 | Sort by each whitelisted field, both orders | Ordering matches the request | Planned |
-| API-25 | API | BR-17 | Default sort | Newest first when no sort is supplied | Planned |
-| API-26 | API | AC-23, BR-18 | Stable pagination on tied sort values | Across consecutive pages no ticket repeats and none is skipped | Planned |
-| API-27 | API | AC-22 | Pagination boundaries | Page 2 is disjoint from page 1; last page is partial; `total` is the full count | Planned |
-| API-28 | API | AC-24, BR-19 | `pageSize=7` | 400, not a silently substituted size | Planned |
-| API-29 | API | BR-19 | `page=0` | 400 | Planned |
-| API-30 | API | BR-20 | `sort=password` | 400 — the whitelist rejects it | Planned |
-| API-31 | API | AC-25 | Requester with no tickets | 200 with `data: []`, `total: 0` | Planned |
-| API-32 | API | §5.2 | `attachmentCount` | Counts active attachments only; removed ones excluded | Planned |
+| API-16 | API | AC-17, BR-11 | Ownership isolation | Requester B's list contains no ticket owned by A | Pass |
+| API-17 | API | BR-16 | `requesterId` query parameter ignored | Supplying it cannot widen the result set | Pass |
+| API-18 | API | AC-18, BR-14 | Search by ticket number | Case-insensitive substring match returns the ticket | Pass |
+| API-19 | API | AC-19, BR-14 | Search by summary | Case-insensitive substring match returns the tickets | Pass |
+| API-20 | API | AC-20 | Category filter | Every returned ticket has that Category | Pass |
+| API-21 | API | FR-13 | Related System filter | Every returned ticket has that Related System | Pass |
+| API-22 | API | FR-13 | Priority filter | Every returned ticket has that priority | Pass |
+| API-23 | API | BR-15 | Combined filters | Filters combine conjunctively | Pass |
+| API-24 | API | AC-21 | Sort by each whitelisted field, both orders | Ordering matches the request | Pass |
+| API-25 | API | BR-17 | Default sort | Newest first when no sort is supplied | Pass |
+| API-26 | API | AC-23, BR-18 | Stable pagination on tied sort values | Across consecutive pages no ticket repeats and none is skipped | Pass |
+| API-27 | API | AC-22 | Pagination boundaries | Page 2 is disjoint from page 1; last page is partial; `total` is the full count | Pass |
+| API-28 | API | AC-24, BR-19 | `pageSize=7` | 400, not a silently substituted size | Pass |
+| API-29 | API | BR-19 | `page=0` | 400 | Pass |
+| API-30 | API | BR-20 | `sort=password` | 400 — the whitelist rejects it | Pass |
+| API-31 | API | AC-25 | Requester with no tickets | 200 with `data: []`, `total: 0` | Pass |
+| API-32 | API | §5.2 | `attachmentCount` | Counts active attachments only; removed ones excluded | Pass |
 
 ### 2.4 API — ticket detail
 

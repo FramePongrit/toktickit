@@ -2,7 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { getPrisma } from "../prisma.js";
 import { HttpError, type FieldIssue } from "../lib/httpError.js";
 import { allocateTicketNumber } from "./ticketNumber.service.js";
-import type { CreateTicketInput } from "../lib/validation.js";
+import type { CreateTicketInput, ListTicketsQuery } from "../lib/validation.js";
 
 /** The relations every ticket-detail response includes. */
 const detailInclude = {
@@ -70,6 +70,68 @@ async function assertReferenceDataIsUsable(input: CreateTicketInput): Promise<vo
   if (details.length > 0) {
     throw HttpError.validationFailed("The submitted data is invalid.", details);
   }
+}
+
+const listSelect = {
+  id: true,
+  ticketNumber: true,
+  summary: true,
+  requestedPriority: true,
+  currentStatus: true,
+  createdAt: true,
+  category: { select: { id: true, name: true } },
+  relatedSystem: { select: { id: true, name: true } },
+  // Removed attachments do not count: the screen shows how many are usable.
+  _count: { select: { attachments: { where: { removedAt: null } } } },
+} satisfies Prisma.TicketSelect;
+
+export async function listTickets(requesterId: number, query: ListTicketsQuery) {
+  const prisma = getPrisma();
+
+  const where: Prisma.TicketWhereInput = {
+    // Not a filter the caller can influence — this is the ownership boundary.
+    requesterId,
+    ...(query.categoryId !== undefined && { categoryId: query.categoryId }),
+    ...(query.relatedSystemId !== undefined && { relatedSystemId: query.relatedSystemId }),
+    ...(query.priority !== undefined && { requestedPriority: query.priority }),
+    ...(query.q !== undefined && {
+      OR: [
+        { ticketNumber: { contains: query.q, mode: "insensitive" } },
+        { summary: { contains: query.q, mode: "insensitive" } },
+      ],
+    }),
+  };
+
+  // The secondary key is what keeps pagination stable: without it, rows that
+  // tie on the primary sort can move between pages, so one ticket appears
+  // twice and another never appears at all (BR-18).
+  const orderBy: Prisma.TicketOrderByWithRelationInput[] = [
+    { [query.sort]: query.order },
+    { id: "desc" },
+  ];
+
+  // One transaction so `total` always describes the same snapshot as `data`.
+  const [rows, total] = await prisma.$transaction([
+    prisma.ticket.findMany({
+      where,
+      select: listSelect,
+      orderBy,
+      skip: (query.page - 1) * query.pageSize,
+      take: query.pageSize,
+    }),
+    prisma.ticket.count({ where }),
+  ]);
+
+  return {
+    data: rows.map(({ _count, ...ticket }) => ({
+      ...ticket,
+      attachmentCount: _count.attachments,
+    })),
+    page: query.page,
+    pageSize: query.pageSize,
+    total,
+    totalPages: Math.ceil(total / query.pageSize),
+  };
 }
 
 export async function createTicket(requesterId: number, input: CreateTicketInput) {

@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { asyncHandler } from "../lib/asyncHandler.js";
-import { createTicketSchema } from "../lib/validation.js";
+import { createTicketSchema, listTicketsQuerySchema } from "../lib/validation.js";
 import { requireRequester } from "../middleware/requireRequester.js";
-import { createTicket } from "../services/tickets.service.js";
+import { createTicket, listTickets } from "../services/tickets.service.js";
 
 export const ticketsRouter = Router();
 
@@ -16,5 +16,14 @@ ticketsRouter.post(
     const input = createTicketSchema.parse(req.body);
     const ticket = await createTicket(req.requester!.id, input);
     res.status(201).json(ticket);
+  })
+);
+
+ticketsRouter.get(
+  "/",
+  asyncHandler(async (req, res) => {
+    const query = listTicketsQuerySchema.parse(req.query);
+    const page = await listTickets(req.requester!.id, query);
+    res.status(200).json(page);
   })
 );
