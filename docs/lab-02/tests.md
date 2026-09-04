@@ -35,10 +35,10 @@ Status column: `Planned` until implemented, then `Pass`.
 
 | Test ID | Type | Requirement / AC | What it tests | Expected result | Automated test file | Final |
 |---|---|---|---|---|---|---|
-| UNIT-01 | Unit | BR-01, AC-09 | Ticket number formatter | `format(2026, 42)` returns `TKT-2026-000042` | `server/tests/lab-02/create-ticket.api.test.ts` | Planned |
+| UNIT-01 | Unit | BR-01, AC-09 | Ticket number formatter | `format(2026, 42)` returns `TKT-2026-000042` | `server/tests/lab-02/create-ticket.api.test.ts` | Pass |
 | UNIT-02 | Unit | BR-19, BR-20 | Ticket list query schema | `pageSize=7` and `page=0` are rejected; defaults applied when absent | `server/tests/lab-02/my-tickets.api.test.ts` | Planned |
 | UNIT-03 | Unit | BR-29 | Attachment type check | Permitted extension + MIME accepted; either one wrong rejected | `server/tests/lab-02/attachments.api.test.ts` | Planned |
-| UNIT-04 | Unit | BR-21, BR-22 | Trimming before validation | `"  hi  "` fails the 5-character minimum after trimming | `server/tests/lab-02/create-ticket.api.test.ts` | Planned |
+| UNIT-04 | Unit | BR-21, BR-22 | Trimming before validation | `"  hi  "` fails the 5-character minimum after trimming | `server/tests/lab-02/create-ticket.api.test.ts` | Pass |
 
 ### 2.2 API — create ticket
 
@@ -46,21 +46,21 @@ File: `server/tests/lab-02/create-ticket.api.test.ts`
 
 | Test ID | Type | Requirement / AC | What it tests | Expected result | Final |
 |---|---|---|---|---|---|
-| API-01 | API | AC-07 | Create with valid data | 201; one ticket saved; ticket number returned | Planned |
-| API-02 | API | AC-08 | Defaults and ownership on create | `currentStatus = NEW`; `requesterId` matches the header | Planned |
-| API-03 | API | AC-09 | Ticket number format | Matches `/^TKT-\d{4}-\d{6}$/` with the current year | Planned |
-| API-04 | API | AC-10, BR-05 | Concurrent creation | 8 parallel creates return 8 distinct ticket numbers | Planned |
-| API-05 | API | AC-12, BR-21 | Summary too short | 400 `VALIDATION_FAILED`; `details` names `summary` | Planned |
-| API-06 | API | BR-22 | Description too short | 400; `details` names `description` | Planned |
-| API-07 | API | BR-21 | Summary over 200 characters | 400; `details` names `summary` | Planned |
-| API-08 | API | BR-23 | Missing required fields | 400; every missing field appears in `details` | Planned |
-| API-09 | API | BR-23 | Invalid priority value | 400; `details` names `requestedPriority` | Planned |
-| API-10 | API | AC-16, D-09 | Inactive or unknown `categoryId` | 400, **not** 404; `details` names `categoryId` | Planned |
-| API-11 | API | BR-04 | Client-supplied `ticketNumber` and `currentStatus` | Ignored; server values used instead | Planned |
-| API-12 | API | AC-43 | Missing identity header | 401 `REQUESTER_HEADER_MISSING` | Planned |
-| API-13 | API | §2 | Non-numeric identity header | 400 `REQUESTER_HEADER_INVALID` | Planned |
-| API-14 | API | §2 | Unknown requester id | 401 `REQUESTER_NOT_FOUND` | Planned |
-| API-15 | API | AC-44, BR-06 | Inactive requester id | 403 `REQUESTER_INACTIVE` | Planned |
+| API-01 | API | AC-07 | Create with valid data | 201; one ticket saved; ticket number returned | Pass |
+| API-02 | API | AC-08 | Defaults and ownership on create | `currentStatus = NEW`; `requesterId` matches the header | Pass |
+| API-03 | API | AC-09 | Ticket number format | Matches `/^TKT-\d{4}-\d{6}$/` with the current year | Pass |
+| API-04 | API | AC-10, BR-05 | Concurrent creation | 8 parallel creates return 8 distinct ticket numbers | Pass |
+| API-05 | API | AC-12, BR-21 | Summary too short | 400 `VALIDATION_FAILED`; `details` names `summary` | Pass |
+| API-06 | API | BR-22 | Description too short | 400; `details` names `description` | Pass |
+| API-07 | API | BR-21 | Summary over 200 characters | 400; `details` names `summary` | Pass |
+| API-08 | API | BR-23 | Missing required fields | 400; every missing field appears in `details` | Pass |
+| API-09 | API | BR-23 | Invalid priority value | 400; `details` names `requestedPriority` | Pass |
+| API-10 | API | AC-16, D-09 | Inactive or unknown `categoryId` | 400, **not** 404; `details` names `categoryId` | Pass |
+| API-11 | API | BR-04 | Client-supplied `ticketNumber` and `currentStatus` | Ignored; server values used instead | Pass |
+| API-12 | API | AC-43 | Missing identity header | 401 `REQUESTER_HEADER_MISSING` | Pass |
+| API-13 | API | §2 | Non-numeric identity header | 400 `REQUESTER_HEADER_INVALID` | Pass |
+| API-14 | API | §2 | Unknown requester id | 401 `REQUESTER_NOT_FOUND` | Pass |
+| API-15 | API | AC-44, BR-06 | Inactive requester id | 403 `REQUESTER_INACTIVE` | Pass |
 
 ### 2.3 API — my tickets
 
