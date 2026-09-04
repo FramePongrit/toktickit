@@ -40,6 +40,13 @@ body {
   color: #fff;
 }
 
+/* Bootstrap declares .navbar after .container and sets --bs-navbar-padding-x
+   to 0, which wins on an element carrying both classes and leaves the brand
+   flush against the viewport edge below the container's max width. */
+.zen-header .navbar {
+  --bs-navbar-padding-x: 0.75rem;
+}
+
 .zen-header .navbar-brand,
 .zen-header .nav-link {
   color: rgba(255, 255, 255, 0.85);
@@ -251,9 +258,20 @@ body {
   max-width: 1140px;
 }
 
-/* Touch targets stay comfortable on small screens. */
+/* Touch targets stay comfortable on small screens. The pagination controls and
+   the navbar toggler are not .btn, so they need naming explicitly — measuring
+   them found both sitting at 38px and 40px. */
 @media (max-width: 767.98px) {
-  .btn {
+  .btn,
+  .navbar-toggler,
+  .page-link {
     min-height: 44px;
+  }
+
+  .page-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
   }
 }

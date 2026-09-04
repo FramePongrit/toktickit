@@ -243,6 +243,32 @@ test("E2E-05 / E2E-07: every screen is usable at desktop, tablet and mobile", as
         () => document.documentElement.scrollWidth - document.documentElement.clientWidth
       );
       expect(overflow, `${path} overflows horizontally at ${viewport.name}`).toBeLessThanOrEqual(1);
+
+      // Content must not sit flush against the viewport edge. Bootstrap zeroes
+      // the navbar's horizontal padding on an element that is also a
+      // container, which left the brand at x=0 below the container's max width.
+      const brand = await page.locator(".navbar-brand").boundingBox();
+      if (brand) {
+        expect(brand.x, `brand touches the edge at ${viewport.name}`).toBeGreaterThan(0);
+      }
+    }
+
+    if (viewport.name === "mobile") {
+      // Every interactive control stays touch-friendly. The pagination links
+      // and the navbar toggler are not .btn, so they were missed by the first
+      // rule and measured 38px and 40px.
+      await page.goto("/tickets");
+      const undersized = await page.evaluate(() => {
+        const bad: string[] = [];
+        document.querySelectorAll("button, a.btn, .page-link").forEach((el) => {
+          const r = el.getBoundingClientRect();
+          if (r.width > 0 && (r.height < 44 || r.width < 44)) {
+            bad.push(`${el.tagName}.${el.className.split(" ")[0]} ${Math.round(r.width)}x${Math.round(r.height)}`);
+          }
+        });
+        return bad;
+      });
+      expect(undersized, "controls below the 44px touch target at mobile").toEqual([]);
     }
   }
 
