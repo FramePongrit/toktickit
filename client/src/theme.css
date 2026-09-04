@@ -92,6 +92,19 @@ body {
   --bs-btn-hover-color: var(--zen-primary);
 }
 
+/* Bootstrap's pagination defaults to its own blue, which would be the one
+   place in the app that is not Zen Green. */
+.pagination {
+  --bs-pagination-color: var(--zen-secondary);
+  --bs-pagination-hover-color: var(--zen-primary);
+  --bs-pagination-hover-bg: var(--zen-pale);
+  --bs-pagination-focus-color: var(--zen-primary);
+  --bs-pagination-focus-bg: var(--zen-pale);
+  --bs-pagination-focus-box-shadow: 0 0 0 0.2rem rgba(11, 122, 70, 0.2);
+  --bs-pagination-active-bg: var(--zen-primary);
+  --bs-pagination-active-border-color: var(--zen-primary);
+}
+
 /* --- Surfaces ------------------------------------------------------------ */
 
 .zen-card {
@@ -103,8 +116,24 @@ body {
 
 /* --- Form controls ------------------------------------------------------- */
 
+/* Bootstrap sets .form-control's background to --bs-body-bg, which the theme
+   repoints at the page background. Without this, every editable field would
+   take the page colour and become indistinguishable from a read-only one —
+   caught by looking at a screenshot, not by any test. */
+.form-control,
+.form-select {
+  background-color: var(--zen-surface);
+  border-color: var(--zen-border);
+}
+
+.form-control:disabled,
+.form-select:disabled {
+  background-color: var(--zen-readonly-bg);
+}
+
 .form-control:focus,
 .form-select:focus {
+  background-color: var(--zen-surface);
   border-color: var(--zen-secondary);
   box-shadow: 0 0 0 0.2rem rgba(11, 122, 70, 0.2);
 }

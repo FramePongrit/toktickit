@@ -163,13 +163,13 @@ File: `e2e/lab-02/requester-ticket-flow.spec.ts`
 
 | Test ID | Type | Requirement / AC | What it tests | Expected result | Final |
 |---|---|---|---|---|---|
-| E2E-01 | E2E | AC-01, AC-05, AC-07 | Select requester → create ticket | The confirmation shows an official ticket number; the selection survives a reload | Planned |
-| E2E-02 | E2E | AC-17, FR-11 | Find the ticket in My Tickets | The new ticket appears; search, a filter, and paging all locate it | Planned |
-| E2E-03 | E2E | AC-32, AC-37, AC-38 | Attachment lifecycle | Upload, download, and remove-with-reason all succeed from the UI | Planned |
-| E2E-04 | E2E | AC-04, AC-28 | Cross-requester isolation | After switching to Requester B, A's tickets are gone and navigating to A's ticket URL shows a not-found state | Planned |
-| E2E-05 | Responsive | AC-45, FR-27 | Three viewports on all three screens | No horizontal page scrolling; no clipping or overlap; controls remain usable | Planned |
-| E2E-06 | UI style | AC-46, AC-48 | Zen Green conformance | Header, primary action, read-only field, and error colours match the tokens; success conveys meaning without colour alone | Planned |
-| E2E-07 | Responsive | ui-spec §7.3 | List representation switches | Table at ≥ 768 px, cards below | Planned |
+| E2E-01 | E2E | AC-01, AC-05, AC-07 | Select requester → create ticket | The confirmation shows an official ticket number; the selection survives a reload | Pass |
+| E2E-02 | E2E | AC-17, FR-11 | Find the ticket in My Tickets | The new ticket appears; search, a filter, and paging all locate it | Pass |
+| E2E-03 | E2E | AC-32, AC-37, AC-38 | Attachment lifecycle | Upload, download, and remove-with-reason all succeed from the UI | Pass |
+| E2E-04 | E2E | AC-04, AC-28 | Cross-requester isolation | After switching to Requester B, A's tickets are gone and navigating to A's ticket URL shows a not-found state | Pass |
+| E2E-05 | Responsive | AC-45, FR-27 | Three viewports on all three screens | No horizontal page scrolling; no clipping or overlap; controls remain usable | Pass |
+| E2E-06 | UI style | AC-46, AC-48 | Zen Green conformance | Header, primary action, read-only field, and error colours match the tokens; success conveys meaning without colour alone | Pass |
+| E2E-07 | Responsive | ui-spec §7.3 | List representation switches | Table at ≥ 768 px, cards below | Pass |
 
 Screenshots produced by the same run are written to `artifacts/lab-02/screenshots/{create-ticket,my-tickets,ticket-detail}/`.
 
@@ -238,10 +238,10 @@ Executed at 1440 × 900, 820 × 1024, and 390 × 844 against `ui-spec.md` §10 a
 
 | Screen | 1440 × 900 | 820 × 1024 | 390 × 844 |
 |---|---|---|---|
-| Development Requester Selection | Pending | Pending | Pending |
-| Create Ticket | Pending | Pending | Pending |
-| My Tickets | Pending | Pending | Pending |
-| Ticket Detail | Pending | Pending | Pending |
+| Development Requester Selection | Pass | Pass | Pass |
+| Create Ticket | Pass | Pass | Pass |
+| My Tickets | Pass | Pass | Pass |
+| Ticket Detail | Pass | Pass | Pass |
 
 ---
 

@@ -145,6 +145,23 @@ describe("Create Ticket — validation", () => {
     expect(document.getElementById("summary-error")).toHaveTextContent("Summary is required.");
   });
 
+  it("clears a field's message as soon as that field is edited", async () => {
+    renderPage();
+
+    await screen.findByLabelText(/Category/i);
+    fireEvent.click(screen.getByRole("button", { name: /Submit Ticket/i }));
+    expect(await screen.findByText("Summary is required.")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/Ticket Summary/i), {
+      target: { value: "Laptop battery drains quickly" },
+    });
+
+    // Leaving the message up beside a filled field states something untrue.
+    await waitFor(() => expect(screen.queryByText("Summary is required.")).not.toBeInTheDocument());
+    // Other fields keep their own messages until they too are corrected.
+    expect(screen.getByText("Description is required.")).toBeInTheDocument();
+  });
+
   it("clears a field's message once the value becomes valid and is resubmitted", async () => {
     vi.spyOn(ticketsApi, "createTicket").mockResolvedValue(CREATED);
     renderPage();
