@@ -1,6 +1,8 @@
 import type { NextFunction, Request, Response } from "express";
+import { MulterError } from "multer";
 import { ZodError } from "zod";
 import { HttpError, type FieldIssue } from "../lib/httpError.js";
+import { MAX_ATTACHMENT_BYTES } from "./upload.js";
 
 function zodIssues(error: ZodError): FieldIssue[] {
   return error.issues.map((issue) => ({
@@ -27,6 +29,24 @@ export function errorHandler(
   if (err instanceof HttpError) {
     res.status(err.status).json({
       error: { code: err.code, message: err.message, ...(err.details && { details: err.details }) },
+    });
+    return;
+  }
+
+  // Multer signals its own limits with a MulterError rather than an HttpError,
+  // so without this mapping an oversized upload would surface as a 500.
+  if (err instanceof MulterError) {
+    if (err.code === "LIMIT_FILE_SIZE") {
+      res.status(413).json({
+        error: {
+          code: "FILE_TOO_LARGE",
+          message: `Each attachment must be ${MAX_ATTACHMENT_BYTES / (1024 * 1024)} MB or smaller.`,
+        },
+      });
+      return;
+    }
+    res.status(400).json({
+      error: { code: "NO_FILE", message: "The uploaded file could not be read." },
     });
     return;
   }

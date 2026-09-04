@@ -1,8 +1,11 @@
 import { Router } from "express";
 import { asyncHandler } from "../lib/asyncHandler.js";
+import { HttpError } from "../lib/httpError.js";
 import { createTicketSchema, idParamSchema, listTicketsQuerySchema } from "../lib/validation.js";
 import { requireRequester } from "../middleware/requireRequester.js";
+import { uploadSingleAttachment } from "../middleware/upload.js";
 import { createTicket, getOwnedTicket, listTickets } from "../services/tickets.service.js";
+import { addAttachment, assertTicketIsOwned } from "../services/attachments.service.js";
 
 export const ticketsRouter = Router();
 
@@ -34,5 +37,24 @@ ticketsRouter.get(
     const { id } = idParamSchema.parse(req.params);
     const ticket = await getOwnedTicket(req.requester!.id, id);
     res.status(200).json(ticket);
+  })
+);
+
+ticketsRouter.post(
+  "/:id/attachments",
+  // Ownership is checked before multer runs, so a file is never written to
+  // disk for a ticket the caller does not own — one fewer orphan case.
+  asyncHandler(async (req, _res, next) => {
+    const { id } = idParamSchema.parse(req.params);
+    await assertTicketIsOwned(req.requester!.id, id);
+    next();
+  }),
+  uploadSingleAttachment,
+  asyncHandler(async (req, res) => {
+    if (!req.file) {
+      throw HttpError.badRequest("NO_FILE", "No file was included in the request.");
+    }
+    const { id } = idParamSchema.parse(req.params);
+    res.status(201).json(await addAttachment(req.requester!.id, id, req.file));
   })
 );

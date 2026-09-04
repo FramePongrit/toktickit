@@ -37,7 +37,7 @@ Status column: `Planned` until implemented, then `Pass`.
 |---|---|---|---|---|---|---|
 | UNIT-01 | Unit | BR-01, AC-09 | Ticket number formatter | `format(2026, 42)` returns `TKT-2026-000042` | `server/tests/lab-02/create-ticket.api.test.ts` | Pass |
 | UNIT-02 | Unit | BR-19, BR-20 | Ticket list query schema | `pageSize=7` and `page=0` are rejected; defaults applied when absent | `server/tests/lab-02/my-tickets.api.test.ts` | Pass |
-| UNIT-03 | Unit | BR-29 | Attachment type check | Permitted extension + MIME accepted; either one wrong rejected | `server/tests/lab-02/attachments.api.test.ts` | Planned |
+| UNIT-03 | Unit | BR-29 | Attachment type check | Permitted extension + MIME accepted; either one wrong rejected | `server/tests/lab-02/attachments.api.test.ts` | Pass |
 | UNIT-04 | Unit | BR-21, BR-22 | Trimming before validation | `"  hi  "` fails the 5-character minimum after trimming | `server/tests/lab-02/create-ticket.api.test.ts` | Pass |
 
 ### 2.2 API — create ticket
@@ -107,25 +107,25 @@ File: `server/tests/lab-02/attachments.api.test.ts`
 
 | Test ID | Type | Requirement / AC | What it tests | Expected result | Final |
 |---|---|---|---|---|---|
-| API-39 | API | AC-32 | Upload each permitted type | 201 for JPEG, PNG, WEBP, and PDF | Planned |
-| API-40 | API | AC-33, BR-30 | 6 MB file | 413 `FILE_TOO_LARGE`; no row and no file left behind | Planned |
-| API-41 | API | AC-34, BR-29 | Disallowed extension | 415 `UNSUPPORTED_FILE_TYPE` | Planned |
-| API-42 | API | BR-29 | Permitted extension with a disallowed MIME type | 415 — both checks must pass | Planned |
-| API-43 | API | AC-35, BR-31 | Sixth active attachment | 409 `ATTACHMENT_LIMIT_REACHED` | Planned |
-| API-44 | API | AC-36, BR-31 | Upload after removing one of five | 201 — removed attachments do not count | Planned |
-| API-45 | API | BR-38 | Non-owner uploads | 404 `TICKET_NOT_FOUND` | Planned |
-| API-46 | API | §6.1 | Request with no file part | 400 `NO_FILE` | Planned |
-| API-47 | API | BR-36 | Filename `../../evil.png` | Stored under a generated UUID name inside the upload directory; original kept only as metadata | Planned |
-| API-48 | API | BR-40 | Rejected upload cleanup | No orphan file remains after a 409 or 415 | Planned |
-| API-49 | API | AC-37 | Download an active attachment | 200 with the correct `Content-Type` and the original filename in `Content-Disposition` | Planned |
-| API-50 | API | AC-39, BR-33 | **Download a removed attachment** | **410 `ATTACHMENT_REMOVED`**; no content returned | Planned |
-| API-51 | API | BR-38 | Non-owner downloads | 404 | Planned |
-| API-52 | API | AC-38, BR-32 | Soft removal | 200; `removedAt`, `removalReason`, and remover recorded; row still present | Planned |
-| API-53 | API | AC-40, BR-34 | Removal without a reason | 400 | Planned |
-| API-54 | API | BR-34 | Removal reason of 2 characters | 400 | Planned |
-| API-55 | API | AC-41, BR-35 | Removing twice | 409 `ALREADY_REMOVED` | Planned |
-| API-56 | API | AC-42, BR-38 | Non-owner reads metadata or removes | 404 for both | Planned |
-| API-57 | API | BR-32 | The file survives removal | The stored file is still on disk after a soft removal | Planned |
+| API-39 | API | AC-32 | Upload each permitted type | 201 for JPEG, PNG, WEBP, and PDF | Pass |
+| API-40 | API | AC-33, BR-30 | 6 MB file | 413 `FILE_TOO_LARGE`; no row and no file left behind | Pass |
+| API-41 | API | AC-34, BR-29 | Disallowed extension | 415 `UNSUPPORTED_FILE_TYPE` | Pass |
+| API-42 | API | BR-29 | Permitted extension with a disallowed MIME type | 415 — both checks must pass | Pass |
+| API-43 | API | AC-35, BR-31 | Sixth active attachment | 409 `ATTACHMENT_LIMIT_REACHED` | Pass |
+| API-44 | API | AC-36, BR-31 | Upload after removing one of five | 201 — removed attachments do not count | Pass |
+| API-45 | API | BR-38 | Non-owner uploads | 404 `TICKET_NOT_FOUND` | Pass |
+| API-46 | API | §6.1 | Request with no file part | 400 `NO_FILE` | Pass |
+| API-47 | API | BR-36 | Filename `../../evil.png` | Stored under a generated UUID name inside the upload directory; original kept only as metadata | Pass |
+| API-48 | API | BR-40 | Rejected upload cleanup | No orphan file remains after a 409 or 415 | Pass |
+| API-49 | API | AC-37 | Download an active attachment | 200 with the correct `Content-Type` and the original filename in `Content-Disposition` | Pass |
+| API-50 | API | AC-39, BR-33 | **Download a removed attachment** | **410 `ATTACHMENT_REMOVED`**; no content returned | Pass |
+| API-51 | API | BR-38 | Non-owner downloads | 404 | Pass |
+| API-52 | API | AC-38, BR-32 | Soft removal | 200; `removedAt`, `removalReason`, and remover recorded; row still present | Pass |
+| API-53 | API | AC-40, BR-34 | Removal without a reason | 400 | Pass |
+| API-54 | API | BR-34 | Removal reason of 2 characters | 400 | Pass |
+| API-55 | API | AC-41, BR-35 | Removing twice | 409 `ALREADY_REMOVED` | Pass |
+| API-56 | API | AC-42, BR-38 | Non-owner reads metadata or removes | 404 for both | Pass |
+| API-57 | API | BR-32 | The file survives removal | The stored file is still on disk after a soft removal | Pass |
 
 ### 2.6 UI components
 
