@@ -271,9 +271,13 @@ Filled in when the sprint completes, with the terminal output pasted below each 
 
 | Suite | Command | Tests | Result |
 |---|---|---|---|
-| Server (lab-01 + lab-02) | `cd server && npm test` | — | Pending |
-| Client (lab-01 + lab-02) | `cd client && npm test` | — | Pending |
-| End-to-end | `npx playwright test` | — | Pending |
+| Server (lab-01 + lab-02) | `cd server && npm test` | 81 | **All passing** |
+| Client (lab-01 + lab-02) | `cd client && npm test` | 77 | **All passing** |
+| End-to-end and capture | `npx playwright test` | 13 | **All passing** |
+
+Totals: **171 automated tests**, all green. The server figure includes the 2 Lab 1
+suites and the client figure includes the 3 Lab 1 tests, none of which were
+modified during this sprint.
 
 *(Paste the passing terminal output from the final `main` branch here.)*
 
