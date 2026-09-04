@@ -1,9 +1,9 @@
 import express, { Request, Response } from "express";
 import cors from "cors";
 import { getPrisma } from "./prisma.js";
-// getPrisma() is your lazy database handle. Call it INSIDE a route when you
-// need the DB (Issue 4). It is intentionally unused until then.
-void getPrisma;
+import { apiRouter } from "./routes/index.js";
+import { notFound } from "./middleware/notFound.js";
+import { errorHandler } from "./middleware/errorHandler.js";
 
 // The Express app is exported separately from app.listen() (see index.ts) so
 // Supertest can import `app` without opening a port. Do not merge these files.
@@ -21,10 +21,13 @@ app.get("/api/health", (_req: Request, res: Response) => {
   res.status(200).json({ status: "ok", service: "TokTickIT API" });
 });
 
+// Lab 2 filters to active categories. The response shape is unchanged, which
+// is what tests/lab-01/categories.test.ts asserts.
 app.get("/api/categories", async (_req: Request, res: Response) => {
   try {
     const prisma = getPrisma();
     const categories = await prisma.category.findMany({
+      where: { active: true },
       select: { id: true, name: true },
       orderBy: { id: "asc" },
     });
@@ -34,5 +37,12 @@ app.get("/api/categories", async (_req: Request, res: Response) => {
   }
 });
 // ---------------------------------------------------------------------------
+
+app.use("/api", apiRouter);
+
+// Order matters: the catch-all runs after every route, and the error handler
+// must be registered last of all.
+app.use(notFound);
+app.use(errorHandler);
 
 export default app;
