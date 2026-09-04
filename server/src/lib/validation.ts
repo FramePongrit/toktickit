@@ -43,6 +43,15 @@ export const idParamSchema = z.object({
     .transform(Number),
 });
 
+/** A reason is required so the removal is explainable to whoever reads it later (BR-34). */
+export const removeAttachmentSchema = z.object({
+  removalReason: z
+    .string({ error: "A removal reason is required." })
+    .trim()
+    .min(3, "The removal reason must be at least 3 characters.")
+    .max(200, "The removal reason must be at most 200 characters."),
+});
+
 export const TICKET_SORT_FIELDS = [
   "createdAt",
   "ticketNumber",
