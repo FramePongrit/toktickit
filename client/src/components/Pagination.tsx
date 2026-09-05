@@ -16,8 +16,8 @@ export function Pagination({ page, pageSize, total, totalPages, onPageChange }: 
         Showing {first} to {last} of {total} tickets
       </p>
 
-      <nav aria-label="Ticket list pages">
-        <ul className="pagination mb-0">
+      <nav aria-label="Ticket list pages" className="zen-pagination-nav">
+        <ul className="pagination mb-0 flex-nowrap">
           <li className={`page-item ${page <= 1 ? "disabled" : ""}`}>
             <button
               type="button"
