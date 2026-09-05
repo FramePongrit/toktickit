@@ -112,6 +112,17 @@ body {
   --bs-pagination-active-border-color: var(--zen-primary);
 }
 
+/* A Requester with enough tickets to reach several pages produces more
+   page-link buttons than a narrow viewport can hold once each one carries
+   the 44px touch-target minimum below. Scrolling the strip itself keeps
+   every page reachable without ever scrolling the document (FR-27 / D-07). */
+.zen-pagination-nav {
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* --- Surfaces ------------------------------------------------------------ */
 
 .zen-card {
