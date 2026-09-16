@@ -59,7 +59,7 @@ TokTickIT needs real accounts, not a client-selected identity. A Requester remai
 ### User administration
 
 - **FR-15** An Administrator shall list Users, search name/email, and optionally filter one Role without receiving passwords, hashes, session secrets, or Internal Notes.
-- **FR-16** An Administrator shall create one Active or Inactive User with one valid Role and an Initial Password, and shall edit another User's name, email, Role, and active state subject to safety rules.
+- **FR-16** An Administrator shall create one Active or Inactive User with one valid Role and an Initial Password, and shall edit name/email for any User plus Role/active state for another User subject to safety rules; an Administrator may edit their own name/email but not their own Role or active state.
 - **FR-17** An Administrator shall reset another User's Initial Password, force Mandatory Password Change, and immediately revoke that User's sessions.
 
 ### Quality and preservation
@@ -94,7 +94,7 @@ The backend returns `401 UNAUTHENTICATED` before evaluating permissions, `403 FO
 
 - **BR-01** Only an Active User with valid credentials may authenticate. Unknown-email and wrong-password attempts both return the same `401 INVALID_CREDENTIALS`; an inactive account returns `403 USER_INACTIVE` only after password verification.
 - **BR-02** Email is trimmed, lowercased, and unique case-insensitively before storage and lookup.
-- **BR-03** Passwords are bcrypt hashes at cost 12; plaintext passwords, hashes, JWTs, CSRF values, and server secrets are never returned or logged.
+- **BR-03** Passwords are bcrypt hashes at cost 12. Plaintext passwords, hashes, JWTs, server-side CSRF storage/derivation secrets, and server secrets are never returned or logged. The opaque session CSRF token is the sole client-returnable CSRF value: it appears only in the documented Login, current-User, and successful password-change JSON responses and is never logged.
 - **BR-04** A valid password is 10-72 trimmed characters, contains at least one letter and one digit, and a changed password cannot match the current password. Confirmation must match.
 - **BR-05** Five failed Login attempts for one normalized email in 15 minutes return `429 LOGIN_THROTTLED`; successful Login clears that email's counter. This is in-memory local-lab throttling, not a permanent lockout.
 - **BR-06** Login creates an `AuthSession` and signed JWT containing only User/session identifiers and expiry. Role, active state, and mandatory-change state are database-authoritative on every protected request.
@@ -107,7 +107,7 @@ The backend returns `401 UNAUTHENTICATED` before evaluating permissions, `403 FO
 
 - **BR-11** Each User has exactly one Role: `REQUESTER`, `STAFF`, or `ADMIN`; Administrator includes IT Staff Ticket permission in this product.
 - **BR-12** Deactivation retains historical identity but stops authentication and new actions. A demotion/deactivation is rejected if the User owns any Non-final Ticket, reporting only the documented safe conflict metadata `error.meta.nonFinalOwnedTicketCount` so Tickets can be reassigned first.
-- **BR-13** An Administrator cannot deactivate themself, change their own Role, or reset their own Initial Password via administration. Self-service Change Password remains available.
+- **BR-13** An Administrator may edit their own name/email but cannot deactivate themself, change their own Role, or reset their own Initial Password via administration. Self-service Change Password remains available.
 - **BR-14** The Last Active Administrator cannot be deactivated or demoted. User deletion is never provided.
 - **BR-15** Create and reset use an Administrator-entered Initial Password and confirmation; reset always sets Mandatory Password Change. Password fields are write-only.
 
@@ -117,7 +117,7 @@ The backend returns `401 UNAUTHENTICATED` before evaluating permissions, `403 FO
 - **BR-17** A Ticket begins `NEW`, may be Unassigned, and has Requested Priority immutable from creation. IT Priority is initialized to Requested Priority and only Staff/Administrators may change it.
 - **BR-18** A Ticket Owner is one active User with Role `STAFF` or `ADMIN`. Claim atomically assigns only an Unassigned Ticket to the caller; Reassign selects another active eligible User. Neither changes status.
 - **BR-19** Every status transition requires a current active eligible Ticket Owner. A Claim/Reassign race never overwrites an existing Owner: the loser receives `409 TICKET_ALREADY_ASSIGNED` with only the documented safe `error.meta.owner` representation.
-- **BR-20** `CLOSED` and `CANCELLED` are Final and completely read-only. `RESOLVED` is Non-final. A later problem after Closed is a new Ticket (Recurrence), not a reopen.
+- **BR-20** `CLOSED` and `CANCELLED` are Final and completely read-only for mutations, while permitted historical content remains readable under BR-23/BR-24. `RESOLVED` is Non-final. A later problem after Closed is a new Ticket (Recurrence), not a reopen.
 - **BR-21** Transitioning to `WAITING_FOR_REQUESTER` requires a trimmed 1-2,000 character Public Comment in the same database transaction. A Requester reply does not implicitly change status.
 - **BR-22** Transitioning to `RESOLVED`, `CLOSED`, `CANCELLED`, or `REOPENED` requires explicit UI confirmation. On `REOPENED`, clear the Resolution Indication. Only `RESOLVED` can transition to `REOPENED`.
 
@@ -134,7 +134,7 @@ The backend returns `401 UNAUTHENTICATED` before evaluating permissions, `403 FO
 ### Communication and safe behavior
 
 - **BR-23** Public Comment history is visible to the Ticket Requester, IT Staff, and Administrators, and Internal Note history only to IT Staff and Administrators, including after finality. Both are append-only backend-authored records with author/time and trimmed plain text of 1-2,000 characters; no new entry may be appended after finality.
-- **BR-24** Public Comments, Internal Notes, Resolution Indication, ownership, priority, and status changes are rejected on Final Tickets. Resolution Indication is available only on a Non-final Ticket that is not `RESOLVED`, is at most one current indication, and repeated indication returns `409 RESOLUTION_ALREADY_INDICATED`.
+- **BR-24** Historical Public Comment and permitted Internal Note reads remain available after finality. Creating/appending either, Resolution Indication, ownership, priority, and status changes are rejected on Final Tickets. Resolution Indication is available only on a Non-final Ticket that is not `RESOLVED`, is at most one current indication, and repeated indication returns `409 RESOLUTION_ALREADY_INDICATED`.
 - **BR-25** All user-entered communication is rendered as plain text, never interpreted HTML. Safe errors expose no stack, SQL, filesystem path, hash, token, or hidden-resource existence.
 - **BR-26** Lab 2 Requester ownership behavior remains: a non-owned Ticket/Attachment returns `404 TICKET_NOT_FOUND`/`ATTACHMENT_NOT_FOUND`, while Staff/Admin can read/download all existing Ticket Attachments but cannot upload/remove them.
 - **BR-27** Queue filters combine with AND semantics; invalid input is a field-level 400 and is never silently clamped. Default Active scope includes `NEW`, `OPEN`, `IN_PROGRESS`, `WAITING_FOR_REQUESTER`, and `REOPENED`, excluding `RESOLVED`, `CLOSED`, and `CANCELLED`.

@@ -210,7 +210,7 @@ An empty result is a 200 with `data: []`, `total: 0`, `totalPages: 0`; the clien
 
 ### `PATCH /api/staff/tickets/:id/claim`
 
-No body. Atomically succeeds only if Ticket has no Owner; caller becomes Owner. **200:** `{ "owner": { "id", "fullName", "role" } }`. Existing Owner returns `409 TICKET_ALREADY_ASSIGNED` with the exact `error.meta.owner` representation defined in §1; Final Ticket returns `409 TICKET_FINAL`. A database conditional update/transaction is required so two concurrent claims produce exactly one 200.
+No body. The server checks the Final-Ticket guard before ownership state: a `CLOSED`/`CANCELLED` Ticket always returns `409 TICKET_FINAL`, even if it already has an Owner. Otherwise, Claim atomically succeeds only if Ticket has no Owner; caller becomes Owner. **200:** `{ "owner": { "id", "fullName", "role" } }`. A Non-final Ticket with an existing Owner returns `409 TICKET_ALREADY_ASSIGNED` with the exact `error.meta.owner` representation defined in §1. A database conditional update/transaction is required so two concurrent claims produce exactly one 200.
 
 ### `PATCH /api/staff/tickets/:id/owner`
 
@@ -259,7 +259,7 @@ Every route below requires `ADMIN` and CSRF on mutations. These endpoints expose
 
 ### `PATCH /api/admin/users/:id`
 
-Request supplies any edit fields `{ "fullName"?, "email"?, "role"?, "active"? }`; at least one field is required and supplied fields are fully validated. **200:** `{ "user": SafeUser }`. A Role change or deactivation revokes all target sessions immediately. The current administrator cannot change their own Role or active state (`409 ADMIN_SELF_PROTECTION`). Deactivation/demotion of the Last Active Administrator is `409 LAST_ACTIVE_ADMINISTRATOR`. Deactivation or demotion to `REQUESTER` of a User who owns Non-final Tickets is `409 USER_OWNS_NON_FINAL_TICKETS` with the exact `error.meta.nonFinalOwnedTicketCount` representation defined in §1; Final historical ownership does not block it. Duplicate normalized email is `409 EMAIL_ALREADY_EXISTS`.
+Request supplies any edit fields `{ "fullName"?, "email"?, "role"?, "active"? }`; at least one field is required and supplied fields are fully validated. **200:** `{ "user": SafeUser }`. An Administrator may edit their own `fullName` and/or `email`; only their own `role` or `active` field is rejected as `409 ADMIN_SELF_PROTECTION`. A Role change or deactivation revokes all target sessions immediately. Deactivation/demotion of the Last Active Administrator is `409 LAST_ACTIVE_ADMINISTRATOR`. Deactivation or demotion to `REQUESTER` of a User who owns Non-final Tickets is `409 USER_OWNS_NON_FINAL_TICKETS` with the exact `error.meta.nonFinalOwnedTicketCount` representation defined in §1; Final historical ownership does not block it. Duplicate normalized email is `409 EMAIL_ALREADY_EXISTS`.
 
 ### `POST /api/admin/users/:id/reset-password`
 

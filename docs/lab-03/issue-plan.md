@@ -236,7 +236,8 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 
 - Implement `client/tests/lab-03/Login.test.tsx`.
 - Implement `client/tests/lab-03/ChangePassword.test.tsx`.
-- Add AppShell/route-guard tests for landing routes, reload, Role navigation, Logout, CSRF handling, and safe failures.
+- Implement `client/tests/lab-03/AppShell.test.tsx` for landing routes, reload, Role navigation, Logout, CSRF handling, and safe failures.
+- Implement `client/tests/lab-03/RequesterTicketDetail.test.tsx` for authenticated Requester regression, Public Comments, Resolution Indication, and Final read-only history.
 
 **Out of scope:** Requester feature migration and Staff/Admin screen content.
 
@@ -556,7 +557,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 - Reset another User's Initial Password, set mandatory change, and revoke all their sessions.
 - Never return plaintext password or hash.
 - Prevent duplicate emails case-insensitively with safe 409 behavior.
-- Prevent Admin self-deactivation, self-Role change, and Admin reset of their own password.
+- Allow an Administrator to edit their own name/email, while preventing self-deactivation, self-Role change, and Admin reset of their own password.
 - Prevent deactivation/demotion of the last active Administrator.
 - Prevent deactivation or demotion to Requester when the User owns any non-final Ticket; return 409 with a safe count so Tickets can be reassigned first.
 - Allow Closed/Cancelled Tickets to retain historical ownership.
@@ -574,7 +575,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 ### Tests
 
 - Implement `server/tests/lab-03/users-admin.api.test.ts`.
-- Cover list/search/filter/order, create, duplicate casing, edit, invalid Role, activation, reset/forced change, session revocation, self protections, last-admin protection, owned-Ticket conflicts, and non-Admin denial.
+- Cover list/search/filter/order, create, duplicate casing, edit, own-name/email success, self restrictions, invalid Role, activation, reset/forced change, session revocation, last-admin protection, owned-Ticket conflicts, and non-Admin denial.
 
 **Out of scope:** Deletion, bulk operations, import/export, audit history, invitation email, advanced filters, and account recovery.
 

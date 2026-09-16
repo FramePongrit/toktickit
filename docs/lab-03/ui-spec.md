@@ -92,7 +92,7 @@ Breadcrumb `Staff Queue > Ticket Details`; title with Ticket Number/current Stat
 7. **Internal notes**: visually distinct amber/neutral restricted card with lock icon and text "Visible only to IT Staff and Administrators". It has a separately labelled composer/action and must not share a submit button/form with Public Comments.
 8. **Attachments**: existing metadata and active Download action; no Staff upload/remove action. Removed metadata is greyed and has no download.
 
-Each independent action owns loading/busy/success/validation/conflict/forbidden/failure feedback; one operation cannot disable unrelated safe reading/actions. On `TICKET_ALREADY_ASSIGNED`, reload detail and display `error.meta.owner`; on the non-final-owned User conflict, display only `error.meta.nonFinalOwnedTicketCount`. On `TICKET_OWNER_REQUIRED`, explain Claim/Reassign must happen before status update. Final Ticket Detail displays all history/metadata, including Public Comments and restricted Internal Notes, but hides/disables Claim, Reassign, Save IT Priority, status, and both composers with a clear "Closed/Cancelled Tickets are read-only" message.
+Each independent action owns loading/busy/success/validation/conflict/forbidden/failure feedback; one operation cannot disable unrelated safe reading/actions. On `TICKET_ALREADY_ASSIGNED`, reload detail and display `error.meta.owner`. On `TICKET_OWNER_REQUIRED`, explain Claim/Reassign must happen before status update. Final Ticket Detail displays all history/metadata, including Public Comments and restricted Internal Notes, but hides/disables Claim, Reassign, Save IT Priority, status, and both composers with a clear "Closed/Cancelled Tickets are read-only" message.
 
 ## 7. User Management (`/admin/users`)
 
@@ -104,7 +104,7 @@ Labelled full name, email, exactly one Role select, active checkbox, Initial Pas
 
 ### 7.2 Edit dialog
 
-Name, email, Role, active state, Save changes, Cancel, plus an explicitly separate **Reset Initial Password** action. Reset opens a nested/replacement confirmation dialog with new Initial Password and confirmation; it states the target will need a new password at next Login and existing sessions will end. Self deactivation/self Role change/self reset controls are disabled with explanatory text, but API conflict is still handled. Last-admin and owned-non-final-Ticket conflicts state the safe corrective action (retain another active Administrator / reassign non-final Tickets) without leaking Ticket detail.
+Name, email, Role, active state, Save changes, Cancel, plus an explicitly separate **Reset Initial Password** action. An Administrator editing their own account may change name/email; their Role and active controls plus reset action are disabled with explanatory text. Reset opens a nested/replacement confirmation dialog with new Initial Password and confirmation; it states the target will need a new password at next Login and existing sessions will end. API conflicts are still handled. Last-admin conflicts state the safe corrective action (retain another active Administrator); `USER_OWNS_NON_FINAL_TICKETS` displays only `error.meta.nonFinalOwnedTicketCount` and explains that non-final Tickets must be reassigned, without leaking Ticket detail.
 
 | Mode | Presentation |
 | --- | --- |
