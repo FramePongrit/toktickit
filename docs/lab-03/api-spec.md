@@ -20,13 +20,26 @@ All non-2xx JSON responses use exactly:
 }
 ```
 
-`details` is supplied only for validation errors. Messages are display-safe and never contain secrets, hashes, JWTs, CSRF values, stack traces, SQL, paths, or undisclosed resource identifiers. Timestamps are ISO 8601 UTC strings. All IDs are positive integers.
+`details` is supplied only for validation errors. A documented `409` may instead include an `error.meta` object with only its named, safe fields; it is absent from every other response. Messages are display-safe and never contain secrets, hashes, JWTs, CSRF values, stack traces, SQL, paths, or undisclosed resource identifiers. Timestamps are ISO 8601 UTC strings. All IDs are positive integers.
+
+The only conflict metadata shapes are:
+
+```json
+{ "error": { "code": "TICKET_ALREADY_ASSIGNED", "message": "This Ticket already has an owner.", "meta": { "owner": { "id": 7, "fullName": "Niran Staff", "role": "STAFF" } } } }
+```
+
+```json
+{ "error": { "code": "USER_OWNS_NON_FINAL_TICKETS", "message": "Reassign this User's non-final Tickets before changing this account.", "meta": { "nonFinalOwnedTicketCount": 2 } } }
+```
+
+`error.meta.owner` has exactly `id`, `fullName`, and `role`; `error.meta.nonFinalOwnedTicketCount` is a non-negative integer. A client must not infer or require additional metadata from any conflict.
 
 ### 1.1 Authentication, cookies, and CSRF
 
-- `POST /api/auth/login` issues a signed JWT in the HttpOnly `toktickit_session` cookie and returns one session-bound CSRF token in its JSON body. The JWT carries only `sub` (User id), `sid` (AuthSession id), `iat`, and fixed `exp`.
+- `POST /api/auth/login` issues a signed JWT in the HttpOnly `toktickit_session` cookie and returns that session's opaque CSRF token in its JSON body. `GET /api/auth/me` returns the same token for a valid cookie-restored session, so the shell can bootstrap after reload. A successful password change creates a new session and returns its new token; Logout returns no token because it revokes the session. The JWT carries only `sub` (User id), `sid` (AuthSession id), `iat`, and fixed `exp`.
 - Cookie attributes: `HttpOnly; SameSite=Lax; Path=/; Max-Age=28800`; append `Secure` outside local development. Cookies are never read by JavaScript.
-- The client keeps the CSRF token in memory and sends it as `X-CSRF-Token` on **every authenticated state-changing request** (POST/PATCH/PUT/DELETE), including Logout and password change. It is not a cookie and is never put in a URL.
+- Each `AuthSession` owns one cryptographically random CSRF token for its fixed lifetime. The client keeps it only in memory and sends it as `X-CSRF-Token` on **every authenticated state-changing request** (POST/PATCH/PUT/DELETE), including Logout and password change. It is not a cookie, is never put in a URL, does not rotate on ordinary mutations, and is invalidated with the session.
+- Login, `GET /api/auth/me`, and successful password change responses containing `csrfToken` send `Cache-Control: no-store`; the browser client calls `GET /api/auth/me` with credentials during shell bootstrap before enabling mutation controls.
 - Each protected request verifies signature, expiry, `AuthSession` existence/revocation/expiry, current User `active`, and current User state/Role from the database. A CSRF check runs before domain work.
 - Credentialed CORS is restricted to configured `CLIENT_ORIGIN`; the browser client uses credentials. `JWT_SECRET`, client origin, and cookie configuration must be validated at startup.
 
@@ -89,7 +102,7 @@ Request:
 
 Requires a valid session; permitted during Mandatory Password Change.
 
-**200:** `{ "user": SafeUser }`. Uses database-current `role`, `active`, and `mustChangePassword`, never JWT claims.
+**200:** `{ "user": SafeUser, "csrfToken": "opaque-session-bound-value" }`, with `Cache-Control: no-store`. Uses database-current `role`, `active`, and `mustChangePassword`, never JWT claims. This is the only reload/bootstrap CSRF recovery mechanism; it remains permitted during Mandatory Password Change.
 
 ### `POST /api/auth/logout`
 
@@ -130,7 +143,7 @@ The existing Lab 2 routes remain at their paths and retain their body/response/v
 
 #### `GET /api/tickets/:id/comments`
 
-Requires authenticated Requester ownership or Staff/Admin access. **200:** `{ "data": [PublicComment] }`, oldest first. `PublicComment` contains `id`, `body`, `createdAt`, and safe `author` (`id`, `fullName`, `role`), but no email/hash/session data.
+Requires authenticated Requester ownership or Staff/Admin access. **200:** `{ "data": [PublicComment] }`, oldest first, for any Ticket including a Final Ticket. `PublicComment` contains `id`, `body`, `createdAt`, and safe `author` (`id`, `fullName`, `role`), but no email/hash/session data.
 
 #### `POST /api/tickets/:id/comments`
 
@@ -157,10 +170,20 @@ Query parameters:
 | `categoryId` | positive integer. |
 | `owner` | positive eligible User id, `me`, or `unassigned`. |
 | `sort` | `itPriority`, `createdAt`, `updatedAt`, `ticketNumber`, or `status`; default `itPriority`. |
-| `order` | `asc` or `desc`; default is `desc` for `itPriority`, `asc` for default created-time tie order, otherwise `asc`. |
+| `order` | `asc` or `desc`; omitted is `desc` for default/explicit `itPriority`, otherwise `asc`. |
 | `page` / `pageSize` | 1-based / `10`, `20`, or `50`; defaults `1` / `10`. |
 
-All supplied filters combine with AND. Default ordering is IT Priority severity descending, then `createdAt` ascending (oldest first), then `id` ascending. For any requested sort, deterministic permitted secondary ordering ends with `id` ascending. Invalid/unknown values are `400 VALIDATION_FAILED` with `details`; values are never clamped.
+All supplied filters combine with AND. Priority severity is `LOW < MEDIUM < HIGH < URGENT`; Status rank is `NEW < OPEN < IN_PROGRESS < WAITING_FOR_REQUESTER < REOPENED < RESOLVED < CLOSED < CANCELLED`. The exact ordering is:
+
+| `sort` | Primary key in requested `order` | Fixed secondary and final keys |
+| --- | --- | --- |
+| omitted / `itPriority` | priority severity; default `desc` | `createdAt ASC`, then `id ASC` |
+| `createdAt` | `createdAt` | `id ASC` |
+| `updatedAt` | `updatedAt` | `id ASC` |
+| `ticketNumber` | `ticketNumber` | `id ASC` |
+| `status` | documented status rank | `createdAt ASC`, then `id ASC` |
+
+For an explicitly selected non-priority `sort`, omitted `order` defaults to `asc`; an explicit `asc`/`desc` changes only the primary key. Thus every direction and page has a stable final `id ASC` tie-breaker. Invalid/unknown values are `400 VALIDATION_FAILED` with `details`; values are never clamped.
 
 **200:**
 
@@ -187,7 +210,7 @@ An empty result is a 200 with `data: []`, `total: 0`, `totalPages: 0`; the clien
 
 ### `PATCH /api/staff/tickets/:id/claim`
 
-No body. Atomically succeeds only if Ticket has no Owner; caller becomes Owner. **200:** `{ "owner": { "id", "fullName", "role" } }`. Existing Owner returns `409 TICKET_ALREADY_ASSIGNED` with safe current owner representation; Final Ticket returns `409 TICKET_FINAL`. A database conditional update/transaction is required so two concurrent claims produce exactly one 200.
+No body. Atomically succeeds only if Ticket has no Owner; caller becomes Owner. **200:** `{ "owner": { "id", "fullName", "role" } }`. Existing Owner returns `409 TICKET_ALREADY_ASSIGNED` with the exact `error.meta.owner` representation defined in §1; Final Ticket returns `409 TICKET_FINAL`. A database conditional update/transaction is required so two concurrent claims produce exactly one 200.
 
 ### `PATCH /api/staff/tickets/:id/owner`
 
@@ -209,7 +232,7 @@ Request:
 
 ### Internal Note routes
 
-`GET /api/staff/tickets/:id/notes` returns `{ "data": [InternalNote] }`, oldest first. `POST /api/staff/tickets/:id/notes` accepts `{ "body": "Checked endpoint logs; awaiting requester." }`, validates 1-2,000 trimmed plain-text characters, and returns **201** `InternalNote`. Only Staff/Admin use either route. Both return `409 TICKET_FINAL` on Final Tickets; Requesters never receive note content (`403 FORBIDDEN` before a representation is assembled).
+`GET /api/staff/tickets/:id/notes` returns `{ "data": [InternalNote] }`, oldest first, for any Ticket including a Final Ticket. `POST /api/staff/tickets/:id/notes` accepts `{ "body": "Checked endpoint logs; awaiting requester." }`, validates 1-2,000 trimmed plain-text characters, and returns **201** `InternalNote` only for a Non-final Ticket; a Final Ticket returns `409 TICKET_FINAL`. Only Staff/Admin use either route. Requesters never receive note content (`403 FORBIDDEN` before a representation is assembled).
 
 ## 5. Administrator User Management
 
@@ -236,7 +259,7 @@ Every route below requires `ADMIN` and CSRF on mutations. These endpoints expose
 
 ### `PATCH /api/admin/users/:id`
 
-Request supplies any edit fields `{ "fullName"?, "email"?, "role"?, "active"? }`; at least one field is required and supplied fields are fully validated. **200:** `{ "user": SafeUser }`. A Role change or deactivation revokes all target sessions immediately. The current administrator cannot change their own Role or active state (`409 ADMIN_SELF_PROTECTION`). Deactivation/demotion of the Last Active Administrator is `409 LAST_ACTIVE_ADMINISTRATOR`. Deactivation or demotion to `REQUESTER` of a User who owns Non-final Tickets is `409 USER_OWNS_NON_FINAL_TICKETS` with `{ "nonFinalOwnedTicketCount": 2 }`; Final historical ownership does not block it. Duplicate normalized email is `409 EMAIL_ALREADY_EXISTS`.
+Request supplies any edit fields `{ "fullName"?, "email"?, "role"?, "active"? }`; at least one field is required and supplied fields are fully validated. **200:** `{ "user": SafeUser }`. A Role change or deactivation revokes all target sessions immediately. The current administrator cannot change their own Role or active state (`409 ADMIN_SELF_PROTECTION`). Deactivation/demotion of the Last Active Administrator is `409 LAST_ACTIVE_ADMINISTRATOR`. Deactivation or demotion to `REQUESTER` of a User who owns Non-final Tickets is `409 USER_OWNS_NON_FINAL_TICKETS` with the exact `error.meta.nonFinalOwnedTicketCount` representation defined in §1; Final historical ownership does not block it. Duplicate normalized email is `409 EMAIL_ALREADY_EXISTS`.
 
 ### `POST /api/admin/users/:id/reset-password`
 

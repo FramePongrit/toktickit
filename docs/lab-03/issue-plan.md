@@ -6,7 +6,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 
 - Integration branch: `lab3-staging`.
 - Every issue begins in **Backlog**, moves to **Specified** after its contract is understood, then moves through **Started**, **PR Review**, **Fixing** when needed, and **Done**.
-- Create each feature branch from the latest `lab3-staging` using `feature/<roadmap-number>-<slug>`; the roadmap number is 1-17 below, not the GitHub Issue number.
+- Create each feature branch from the latest `lab3-staging` using `feature/<roadmap-number>-<slug>`; the roadmap number is 1-18 below, not the GitHub Issue number.
 - Each implementation PR contains its feature tests; tests are not deferred to a later cleanup PR.
 - Every PR targets `lab3-staging`, references its issue, records review feedback, and is merged only when its acceptance criteria pass.
 - Because staging-branch merges do not automatically close issues, move the card to Done and close the issue manually after the PR merges.
@@ -23,7 +23,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 - Requesters never set Ticket status. A Resolution Indication records that the problem appears resolved without changing status.
 - Closed and Cancelled are final. A recurrence after Closed requires a new Ticket; only Resolved may transition to Reopened.
 - Non-final Tickets require an active Staff/Administrator Owner before a status transition. Claim and Reassign never change status implicitly.
-- Public Comments and Internal Notes are append-only plain text of 1-2,000 trimmed characters. Final Tickets are read-only.
+- Public Comments and Internal Notes are append-only plain text of 1-2,000 trimmed characters. Final Tickets reject additions and operational mutations, while permitted historical comments/notes remain readable.
 - The Staff Queue defaults to Active Tickets and prioritizes IT Priority descending, then oldest first.
 - Lab 3 does not add workflow history, attachment management by Staff, email delivery, account recovery, or other explicitly excluded features.
 

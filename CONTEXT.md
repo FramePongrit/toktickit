@@ -155,11 +155,11 @@ _Avoid_: Deleted, rejected
 ### Communication and Queue
 
 **Public Comment**:
-An append-only message on a Non-final Ticket shared among its Ticket Requester, IT Staff, and Administrators.
+An append-only message created on a Non-final Ticket and shared among its Ticket Requester, IT Staff, and Administrators. Its history remains readable after the Ticket becomes Final.
 _Avoid_: Reply, note
 
 **Internal Note**:
-An append-only operational message on a Non-final Ticket visible only to IT Staff and Administrators.
+An append-only operational message created on a Non-final Ticket and visible only to IT Staff and Administrators. Its history remains readable to those roles after the Ticket becomes Final.
 _Avoid_: Private comment, staff comment
 
 **Waiting Explanation**:

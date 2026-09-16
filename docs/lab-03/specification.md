@@ -35,7 +35,7 @@ TokTickIT needs real accounts, not a client-selected identity. A Requester remai
 
 ### Authentication and application access
 
-- **FR-01** The system shall authenticate an Active User by normalized email and password, establish an eight-hour revocable session, and return safe current-User data.
+- **FR-01** The system shall authenticate an Active User by normalized email and password, establish an eight-hour revocable session, and return safe current-User data plus the session-bound CSRF token needed to resume a browser session after reload.
 - **FR-02** The system shall provide Logout that revokes the current session and clears its authentication cookie.
 - **FR-03** The system shall require a User with Mandatory Password Change to save a valid new password before entering normal application routes or APIs.
 - **FR-04** The shell shall display the authenticated User's full name and Role, provide Logout and password actions, and expose only navigation permitted for that Role.
@@ -44,7 +44,7 @@ TokTickIT needs real accounts, not a client-selected identity. A Requester remai
 ### Requester continuation and communication
 
 - **FR-06** An authenticated Requester shall retain all Lab 2 Ticket and Attachment capabilities only for Tickets they submitted, without Development Requester Selector or Change Requester controls.
-- **FR-07** A Requester shall read and append Public Comments on a Non-final Ticket they submitted.
+- **FR-07** A Requester shall read Public Comment history on a Ticket they submitted and append Public Comments only while it is Non-final.
 - **FR-08** A Requester shall record one Resolution Indication on an eligible Non-final, non-Resolved Ticket they submitted without changing Ticket status.
 
 ### Staff operations
@@ -54,7 +54,7 @@ TokTickIT needs real accounts, not a client-selected identity. A Requester remai
 - **FR-11** IT Staff and Administrators shall Claim an Unassigned Ticket or Reassign an owned Ticket to an eligible active IT Staff member or Administrator, without an implicit status change.
 - **FR-12** IT Staff and Administrators shall change IT Priority independently of Requested Priority.
 - **FR-13** IT Staff and Administrators shall make only documented status transitions, with an eligible active Owner and required confirmation/comment behavior.
-- **FR-14** IT Staff and Administrators shall append Public Comments and Internal Notes to a Non-final Ticket; only Staff/Administrators may read or add Internal Notes.
+- **FR-14** IT Staff and Administrators shall read Public Comment and Internal Note history, including Final Tickets, and append either only while the Ticket is Non-final; only Staff/Administrators may read or add Internal Notes.
 
 ### User administration
 
@@ -77,9 +77,11 @@ TokTickIT needs real accounts, not a client-selected identity. A Requester remai
 | Login | Yes | Yes | Yes | Yes |
 | Current User / Logout / change own password | No | Yes | Yes | Yes |
 | Create/list/read Ticket and manage Attachment | No | Yes (own) | Read/download only, all Tickets | Read/download only, all Tickets |
-| Create/read Public Comment | No | Yes (own, Non-final) | Yes (Non-final) | Yes (Non-final) |
+| Read Public Comment | No | Yes (own, including Final) | Yes (including Final) | Yes (including Final) |
+| Create Public Comment | No | Yes (own, Non-final) | Yes (Non-final) | Yes (Non-final) |
 | Set Resolution Indication | No | Yes (own, Non-final and not Resolved) | No | No |
-| Read/create Internal Note | No | No | Yes (Non-final) | Yes (Non-final) |
+| Read Internal Note | No | No | Yes (including Final) | Yes (including Final) |
+| Create Internal Note | No | No | Yes (Non-final) | Yes (Non-final) |
 | Staff Queue / Staff Ticket Detail | No | No | Yes | Yes |
 | Claim/Reassign / set IT Priority / status transition | No | No | Yes | Yes |
 | List/create/edit/reset Users | No | No | No | Yes |
@@ -98,13 +100,13 @@ The backend returns `401 UNAUTHENTICATED` before evaluating permissions, `403 FO
 - **BR-06** Login creates an `AuthSession` and signed JWT containing only User/session identifiers and expiry. Role, active state, and mandatory-change state are database-authoritative on every protected request.
 - **BR-07** A session and JWT expire after a fixed eight hours. Multiple concurrent sessions are allowed; no sliding expiry, refresh, or remember-me option exists.
 - **BR-08** Logout revokes only the current session. Password change creates a fresh current-device session and revokes every prior session; Administrator reset and User deactivation revoke every session for the affected User.
-- **BR-09** The authentication cookie is HttpOnly, `SameSite=Lax`, `Path=/`, and `Secure` outside local development. Authenticated mutations require a session-bound CSRF token; credentialed CORS accepts only the configured client origin.
+- **BR-09** The authentication cookie is HttpOnly, `SameSite=Lax`, `Path=/`, and `Secure` outside local development. Login, successful `GET /api/auth/me`, and successful password change each return the same session's opaque CSRF token in a `Cache-Control: no-store` JSON response; the client holds it only in memory. Authenticated mutations require it in `X-CSRF-Token`; credentialed CORS accepts only the configured client origin.
 - **BR-10** A User in Mandatory Password Change may not enter normal screens or APIs until a successful password change. The server, not route hiding, enforces this.
 
 ### Roles and User safety
 
 - **BR-11** Each User has exactly one Role: `REQUESTER`, `STAFF`, or `ADMIN`; Administrator includes IT Staff Ticket permission in this product.
-- **BR-12** Deactivation retains historical identity but stops authentication and new actions. A demotion/deactivation is rejected if the User owns any Non-final Ticket, reporting only a safe `nonFinalOwnedTicketCount` so Tickets can be reassigned first.
+- **BR-12** Deactivation retains historical identity but stops authentication and new actions. A demotion/deactivation is rejected if the User owns any Non-final Ticket, reporting only the documented safe conflict metadata `error.meta.nonFinalOwnedTicketCount` so Tickets can be reassigned first.
 - **BR-13** An Administrator cannot deactivate themself, change their own Role, or reset their own Initial Password via administration. Self-service Change Password remains available.
 - **BR-14** The Last Active Administrator cannot be deactivated or demoted. User deletion is never provided.
 - **BR-15** Create and reset use an Administrator-entered Initial Password and confirmation; reset always sets Mandatory Password Change. Password fields are write-only.
@@ -114,7 +116,7 @@ The backend returns `401 UNAUTHENTICATED` before evaluating permissions, `403 FO
 - **BR-16** The authenticated Requester identity fixes Ticket submission ownership; client `requesterId` values are ignored/rejected and never widen access.
 - **BR-17** A Ticket begins `NEW`, may be Unassigned, and has Requested Priority immutable from creation. IT Priority is initialized to Requested Priority and only Staff/Administrators may change it.
 - **BR-18** A Ticket Owner is one active User with Role `STAFF` or `ADMIN`. Claim atomically assigns only an Unassigned Ticket to the caller; Reassign selects another active eligible User. Neither changes status.
-- **BR-19** Every status transition requires a current active eligible Ticket Owner. A Claim/Reassign race never overwrites an existing Owner: the loser receives `409 TICKET_ALREADY_ASSIGNED`.
+- **BR-19** Every status transition requires a current active eligible Ticket Owner. A Claim/Reassign race never overwrites an existing Owner: the loser receives `409 TICKET_ALREADY_ASSIGNED` with only the documented safe `error.meta.owner` representation.
 - **BR-20** `CLOSED` and `CANCELLED` are Final and completely read-only. `RESOLVED` is Non-final. A later problem after Closed is a new Ticket (Recurrence), not a reopen.
 - **BR-21** Transitioning to `WAITING_FOR_REQUESTER` requires a trimmed 1-2,000 character Public Comment in the same database transaction. A Requester reply does not implicitly change status.
 - **BR-22** Transitioning to `RESOLVED`, `CLOSED`, `CANCELLED`, or `REOPENED` requires explicit UI confirmation. On `REOPENED`, clear the Resolution Indication. Only `RESOLVED` can transition to `REOPENED`.
@@ -131,7 +133,7 @@ The backend returns `401 UNAUTHENTICATED` before evaluating permissions, `403 FO
 
 ### Communication and safe behavior
 
-- **BR-23** Public Comments are visible to the Ticket Requester, IT Staff, and Administrators; Internal Notes are visible only to IT Staff and Administrators. Both are append-only backend-authored records with author/time and trimmed plain text of 1-2,000 characters.
+- **BR-23** Public Comment history is visible to the Ticket Requester, IT Staff, and Administrators, and Internal Note history only to IT Staff and Administrators, including after finality. Both are append-only backend-authored records with author/time and trimmed plain text of 1-2,000 characters; no new entry may be appended after finality.
 - **BR-24** Public Comments, Internal Notes, Resolution Indication, ownership, priority, and status changes are rejected on Final Tickets. Resolution Indication is available only on a Non-final Ticket that is not `RESOLVED`, is at most one current indication, and repeated indication returns `409 RESOLUTION_ALREADY_INDICATED`.
 - **BR-25** All user-entered communication is rendered as plain text, never interpreted HTML. Safe errors expose no stack, SQL, filesystem path, hash, token, or hidden-resource existence.
 - **BR-26** Lab 2 Requester ownership behavior remains: a non-owned Ticket/Attachment returns `404 TICKET_NOT_FOUND`/`ATTACHMENT_NOT_FOUND`, while Staff/Admin can read/download all existing Ticket Attachments but cannot upload/remove them.
@@ -139,7 +141,19 @@ The backend returns `401 UNAUTHENTICATED` before evaluating permissions, `403 FO
 - **BR-28** Directly invoking an unauthorized endpoint must fail even if a UI control is hidden or disabled.
 - **BR-29** Lab 2 ticket-number allocation, category/related-system validation, attachment size/type/count/soft-removal, and safe responses remain unchanged unless this contract expressly supersedes their identity middleware.
 
-## 7. Data changes, migration, and seed decisions
+## 7. UI Specification Summary
+
+The complete visual contract is in [ui-spec.md](./ui-spec.md). Login and Change Password are focused accessible cards with field-level validation, busy, safe invalid/inactive/throttled/failure, and forced-change states. The authenticated shell loads `GET /api/auth/me` before revealing identity/navigation, retains the returned in-memory CSRF token, shows only Role-permitted navigation, and has Logout.
+
+Authenticated Requesters keep Lab 2 Create, My Tickets, Ticket Detail, and Attachment behavior without a selector, and gain clearly public comments plus a non-status-changing Resolution Indication. Staff/Admin receive a URL-reproducible Queue and Staff Detail whose independent owner, priority, status, public-comment, and restricted-note actions have independent feedback. Administrator receives one responsive User Management list with accessible Create/Edit/Reset dialogs. Every screen uses Zen Green, visible focus, text-plus-colour badges, labelled controls, live feedback, and desktop/tablet/mobile layouts at 1440x900, 820x1024, and 390x844 without page-level horizontal overflow. Final Ticket histories stay readable but all mutation controls are unavailable.
+
+## 8. API Contract Summary
+
+The exact route, JSON, cookie, CSRF, validation, status, safe-error, and conflict-metadata contract is in [api-spec.md](./api-spec.md). Login establishes an eight-hour revocable JWT/`AuthSession` cookie; Login, `GET /api/auth/me`, and successful password change return the session CSRF token with `Cache-Control: no-store` so a cookie-restored shell can safely resume mutations. Current database state, not JWT claims or client identity fields, determines active status, Role, mandatory change, and ownership.
+
+Routes cover authentication/current User/password/Logout; authenticated Lab 2 Requester routes; Public Comments/Resolution Indication; Staff Queue/Detail/Claim/Reassign/IT Priority/status/Internal Notes; and Admin Users. The common response envelope separates field validation (`error.details`) from documented `409` conflict metadata (`error.meta`). Requester non-ownership remains indistinguishable from absence; historical comments/notes can be read after finality but no Ticket mutation can be made.
+
+## 9. Data changes, migration, and seed decisions
 
 | Concept | Lab 3 contract |
 | --- | --- |
@@ -151,7 +165,7 @@ The backend returns `401 UNAUTHENTICATED` before evaluating permissions, `403 FO
 
 Migration is additive/evolutionary and preserves every Ticket ID/number, Attachment row/file, Requester identity, uploader/remover relationship, and Ticket ownership. Existing Tickets receive `itPriority = requestedPriority`; existing Requesters receive an Initial Password only if no hash exists. No migration drops/recreates Tickets or Attachments. Seed is idempotent: four active plus one inactive Requester, three active plus one inactive IT Staff, at least one active Administrator, and realistic assigned/unassigned Tickets across statuses/priorities with safe example communications. Re-running seed neither duplicates rows nor resets changed passwords. Required indexes cover active Role lookup, session lookup, queue scope/sort/owner, and chronological messages.
 
-## 8. Acceptance criteria
+## 10. Acceptance criteria
 
 - **AC-01** Active valid credentials create authenticated access with safe identity/Role data; invalid and inactive cases follow the API contract.
 - **AC-02** Mandatory Password Change blocks normal screens and APIs until a valid new password succeeds; Logout then blocks direct access.
@@ -166,17 +180,17 @@ Migration is additive/evolutionary and preserves every Ticket ID/number, Attachm
 - **AC-11** Fresh and upgraded Lab 2 databases migrate/seed safely, preserve historical data, and pass Lab 1/Lab 2 regression.
 - **AC-12** Required server, client, E2E, responsive, screenshot, review, AI-use, and traceability artifacts exist and are verified on the integrated branch.
 
-## 9. Product Definition of Done
+## 11. Product Definition of Done
 
 - [ ] All FRs, BRs, API/UI contracts, ADRs, and glossary terms are implemented consistently; every AC has passing planned tests documented in `tests.md`.
 - [ ] Every protected route has authentication, Mandatory Password Change, Role, ownership, CSRF, input, safe-error, and Final-state enforcement as applicable.
 - [ ] Fresh and upgraded database migration/seed preserve Lab 2 records and are idempotent; legacy and Lab 3 server/client suites pass.
 - [ ] Required API, component, E2E, authorization/security, responsive, and screenshot tests pass from `main`; evidence paths are populated and readable.
-- [ ] Desktop/tablet/mobile visual checklist passes for Login, password change/shell, Staff Queue, Staff Detail, and User Management; keyboard/focus/dialog/feedback behavior is verified.
+- [ ] Desktop/tablet/mobile visual checklist passes for Login, password change/shell, Requester Ticket Detail, Staff Queue, Staff Detail, and User Management; keyboard/focus/dialog/feedback behavior is verified.
 - [ ] Peer review, Issue/PR/Kanban evidence, reviewer record, selected AI-use prompts/reflection, README setup, and `.gitignore` safety audit are complete; no secrets/runtime uploads/build outputs are tracked.
 - [ ] No excluded capability was introduced, no open review thread/check remains, and the final `main` branch is the evidence source of truth.
 
-## 10. Assumptions and decisions
+## 12. Assumptions and decisions
 
 | ID | Decision | Rationale |
 | --- | --- | --- |

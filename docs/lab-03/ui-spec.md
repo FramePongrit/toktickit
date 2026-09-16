@@ -16,7 +16,7 @@ Lab 3 extends the established Zen Green tokens, typography, spacing, form states
 
 Header: TokTickIT at left, permitted navigation in the middle, current full name plus Role badge and Logout at right. `My Tickets` and `Create Ticket` appear for Requesters; `Staff Queue` for Staff/Admin; `User Management` only for Admin. Change Password is available to all authenticated Roles. No unauthorized destination is presented, but direct navigation remains protected by the API and client route guard.
 
-At `<768px`, the navigation becomes an accessible menu toggle; after a navigation selection it closes and focus lands on the page heading. At Mandatory Password Change, the shell exposes only Change Password and Logout; normal routes redirect to Change Password. Loading `GET /api/auth/me` renders a neutral boot/loading screen rather than briefly showing stale identity/navigation.
+At `<768px`, the navigation becomes an accessible menu toggle; after a navigation selection it closes and focus lands on the page heading. At Mandatory Password Change, the shell exposes only Change Password and Logout; normal routes redirect to Change Password. On every full reload the shell calls credentialed `GET /api/auth/me`; its `user` and `csrfToken` response hydrates in-memory state before any mutation control enables. The token is not persisted in storage. A successful password change replaces it with the returned new-session token; Logout clears it before route change. Loading `GET /api/auth/me` renders a neutral boot/loading screen rather than briefly showing stale identity/navigation.
 
 ## 3. Login and Change Password
 
@@ -54,7 +54,7 @@ Card: explanation whether this is mandatory first-login change; Current Password
 
 ### 4.1 Public Comments
 
-Card heading **Public comments** with a short disclosure: "Visible to you and TokTickIT staff." Timeline uses author name, Role badge, timestamp, and text. Composer has a labelled textarea, remaining-character helper, and **Post public comment** action. It is visually a green-accented public card; it must never resemble Internal Notes.
+Card heading **Public comments** with a short disclosure: "Visible to you and TokTickIT staff." Timeline uses author name, Role badge, timestamp, and text. Composer has a labelled textarea, remaining-character helper, and **Post public comment** action. It is visually a green-accented public card; it must never resemble Internal Notes. On a Final Ticket, historical comments remain readable but the composer is replaced with the finality explanation.
 
 ### 4.2 Resolution Indication
 
@@ -92,7 +92,7 @@ Breadcrumb `Staff Queue > Ticket Details`; title with Ticket Number/current Stat
 7. **Internal notes**: visually distinct amber/neutral restricted card with lock icon and text "Visible only to IT Staff and Administrators". It has a separately labelled composer/action and must not share a submit button/form with Public Comments.
 8. **Attachments**: existing metadata and active Download action; no Staff upload/remove action. Removed metadata is greyed and has no download.
 
-Each independent action owns loading/busy/success/validation/conflict/forbidden/failure feedback; one operation cannot disable unrelated safe reading/actions. On `TICKET_ALREADY_ASSIGNED` or owner eligibility conflict, reload detail and display the current safe owner. On `TICKET_OWNER_REQUIRED`, explain Claim/Reassign must happen before status update. Final Ticket Detail displays all history/metadata but hides/disables Claim, Reassign, Save IT Priority, status, and both composers with a clear "Closed/Cancelled Tickets are read-only" message.
+Each independent action owns loading/busy/success/validation/conflict/forbidden/failure feedback; one operation cannot disable unrelated safe reading/actions. On `TICKET_ALREADY_ASSIGNED`, reload detail and display `error.meta.owner`; on the non-final-owned User conflict, display only `error.meta.nonFinalOwnedTicketCount`. On `TICKET_OWNER_REQUIRED`, explain Claim/Reassign must happen before status update. Final Ticket Detail displays all history/metadata, including Public Comments and restricted Internal Notes, but hides/disables Claim, Reassign, Save IT Priority, status, and both composers with a clear "Closed/Cancelled Tickets are read-only" message.
 
 ## 7. User Management (`/admin/users`)
 
@@ -134,8 +134,8 @@ Issue 16 creates only deterministic evidence under:
 artifacts/lab-03/screenshots/
   authentication/       # login invalid/inactive/busy, change-password, shell/logout, all viewports
   staff-queue/          # loaded/filter/no-results/pagination, all viewports
-  staff-ticket-detail/  # claim/reassign/status/comments/notes/final, all viewports
+  staff-ticket-detail/  # staff detail and requester-ticket-detail states, all viewports
   user-management/      # list/dialog/validation/conflict, all viewports
 ```
 
-The final visual checklist in `tests.md` is completed only from integrated-branch evidence; this contract intentionally records planned requirements rather than claiming screenshots already pass.
+Requester Ticket Detail evidence is stored within the handout-required `staff-ticket-detail/` folder rather than creating a fifth artifact group: `requester-ticket-detail-{desktop,tablet,mobile}.png` plus comment/indication/final-state captures. The final visual checklist in `tests.md` is completed only from integrated-branch evidence; this contract intentionally records planned requirements rather than claiming screenshots already pass.
