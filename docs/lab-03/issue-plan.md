@@ -120,7 +120,8 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 
 ### Tests
 
-- Add migration/seed regression tests under `server/tests/lab-03/`.
+- Implement `server/tests/lab-03/migration-seed.regression.test.ts`.
+- Cover fresh/upgraded migration, idempotent seed, historical Ticket/Attachment identity/ownership/file preservation, and Lab 1/Lab 2 regression.
 - Run all Lab 1 and Lab 2 server tests against the migrated schema.
 
 **Out of scope:** Auth routes, status service, and feature UI.
@@ -142,7 +143,8 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 - Configure the HttpOnly, SameSite=Lax cookie and Secure behavior outside local development.
 - Implement AuthSession creation, lookup, fixed eight-hour expiry, one-session revocation, and revoke-all behavior.
 - Implement session-bound CSRF token generation and verification.
-- Restrict credentialed CORS to the configured client origin and JSON requests.
+- Restrict credentialed CORS to the exact configured client origin for JSON APIs and the preserved multipart Attachment upload route; never use `*` or reflect arbitrary Origins.
+- Permit `GET`, `POST`, `PATCH`, `PUT`, `DELETE`, and `OPTIONS`, with `Content-Type`, `X-CSRF-Token`, and `Accept` request headers. Permit browser `FormData` upload without requiring a hard-coded multipart boundary.
 - Implement in-memory login throttling: five failed attempts per normalized email in fifteen minutes, cleared by successful login, with no permanent lockout.
 - Validate JWT secret, client origin, and cookie configuration at startup.
 - Make clock, randomness, and throttle storage injectable for deterministic tests.
@@ -158,6 +160,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 ### Tests
 
 - Unit tests for password boundaries/reuse, bcrypt verification, JWT tampering/expiry, revocation, CSRF mismatch, cookie attributes, and throttling windows.
+- Add CORS configuration assertions; browser multipart Attachment assertions are owned by Issue 7's `server/tests/lab-03/attachments.api.test.ts`.
 
 **Out of scope:** Public auth endpoints and React screens.
 
@@ -260,6 +263,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 - Prevent Requesters from receiving Internal Note content.
 - Re-check active state, current Role, session, and password-change gate on every request.
 - Implement the shared authenticated Ticket-mutation guard order, including the separate unparseable-JSON transport failure and ownership-safe resource lookup.
+- Apply the shared guard order to Attachment upload/remove after their documented parser-stage behavior, preserving Attachment-safe 404s and cleanup.
 - Remove client-supplied `requesterId` as an authority everywhere.
 - Keep one authorization matrix fixture/table consistent with the engineering contract.
 
@@ -286,7 +290,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 
 **Goal:** Keep every Lab 2 Requester Ticket and Attachment workflow working after authentication replaces the selector.
 
-**Depends on:** Issues 5-6.
+**Depends on:** Issues 3, 5, and 6.
 
 ### Tasks
 
@@ -295,6 +299,8 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 - Update client requests to use auth cookie and CSRF headers for mutations.
 - Preserve Create Ticket, My Tickets, Ticket Detail, upload, download, and soft-removal behavior.
 - Preserve ticket-number allocation, query validation, stable pagination, attachment limits/types, removal reason, and ownership-safe 404s.
+- Send Attachment uploads as credentialed `FormData` with CSRF and no manually set multipart boundary; preserve configured-origin CORS.
+- Apply attachment precedence: parser failures before application guards; then auth/Requester Role/CSRF/ownership/Final/state/payload rules; delete every new temp/orphan file and avoid unintended rows on every rejection/failure.
 - Adapt Lab 2 tests to authenticated multi-Requester fixtures without weakening assertions.
 
 ### Acceptance Criteria
@@ -307,6 +313,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 ### Tests
 
 - Add focused Lab 3 Requester regression tests and update existing Lab 2 setup.
+- Implement `server/tests/lab-03/attachments.api.test.ts` for configured-origin CORS/preflight, multipart transport, ownership/finality precedence, type/size/count/removal rules, and temp/orphan cleanup.
 - Run complete server/client regression suites.
 
 **Out of scope:** Comments, Resolution Indication, Staff screens, and Admin screens.
@@ -505,7 +512,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 ### Tests
 
 - Implement `server/tests/lab-03/staff-ticket-detail.api.test.ts`.
-- Cover detail authorization, Claim race, Reassign including Unassigned `409 TICKET_UNASSIGNED` and malformed/missing/ineligible targets, Final-over-invalid-target/priority/status/comment precedence, inactive Owner, IT Priority, all status edges, missing Owner, Waiting comment transaction, indication clearing, terminal states, and attachment permissions.
+- Cover detail authorization, Claim race, Reassign including Unassigned `409 TICKET_UNASSIGNED` and malformed targets; assert absent, inactive, and Requester targets have identical `409 OWNER_NOT_ELIGIBLE` status/code/body with no metadata; cover Final-over-invalid-target/priority/status/comment precedence, IT Priority, all status edges, missing Owner, Waiting comment transaction, indication clearing, terminal states, and attachment permissions.
 
 **Out of scope:** Staff Detail React UI and workflow history.
 
@@ -640,11 +647,12 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 ### Tasks
 
 - Implement `e2e/lab-03/authentication.spec.ts` for valid/invalid/inactive Login, first password change, Role landing, Logout, and blocked direct access.
-- Implement `e2e/lab-03/staff-ticket-flow.spec.ts` for the safe eligible-Owner directory driving Queue filter/Reassign, Queue Search/filters/sort/page, unassigned Claim, Reassign, IT Priority, allowed status changes, Waiting comment, Public Comment, Internal Note, attachments, Requester Resolution Indication, and Final-over-invalid mutation feedback.
+- Implement `e2e/lab-03/staff-ticket-flow.spec.ts` for the safe eligible-Owner directory driving Queue filter/Reassign, Queue Search/filters/sort/page, unassigned Claim, Reassign, IT Priority, allowed status changes, Waiting comment, Public Comment, Internal Note, configured-origin browser Attachment upload/removal, Requester Resolution Indication, and Final-over-invalid mutation feedback.
 - Implement `e2e/lab-03/user-administration.spec.ts` for list/Search/filter, create, duplicate validation, edit, activation, reset/next-login change, self protection, last-admin protection, and forbidden access.
 - Add direct API authorization/security checks where browser-only evidence is insufficient.
 - Run required major screens at 1440x900, 820x1024, and 390x844.
 - Capture deterministic screenshots under the four required Lab 3 artifact folders.
+- Implement `e2e/lab-03/capture.screens.ts` for the required deterministic responsive screenshot captures.
 - Verify no clipping, overlap, unreadable grid, inaccessible dialog, or page-level horizontal overflow.
 - Run migration/regression from both fresh and upgraded Lab 2 database states.
 - Keep test data isolated/idempotent and remove only records/files created by each suite.

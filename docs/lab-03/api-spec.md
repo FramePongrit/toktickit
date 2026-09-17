@@ -32,7 +32,11 @@ The only conflict metadata shapes are:
 { "error": { "code": "USER_OWNS_NON_FINAL_TICKETS", "message": "Reassign this User's non-final Tickets before deactivation or changing their Role to Requester.", "meta": { "nonFinalOwnedTicketCount": 2 } } }
 ```
 
-`error.meta.owner` has exactly `id`, `fullName`, and `role`; `error.meta.nonFinalOwnedTicketCount` is a non-negative integer. A client must not infer or require additional metadata from any conflict.
+```json
+{ "error": { "code": "OWNER_NOT_ELIGIBLE", "message": "Select an active IT Staff member or Administrator." } }
+```
+
+`error.meta.owner` has exactly `id`, `fullName`, and `role`; `error.meta.nonFinalOwnedTicketCount` is a non-negative integer. `OWNER_NOT_ELIGIBLE` has no `error.meta` or `details`. A client must not infer or require additional metadata from any conflict.
 
 ### 1.1 Authentication, cookies, and CSRF
 
@@ -41,7 +45,7 @@ The only conflict metadata shapes are:
 - Each `AuthSession` owns one cryptographically random CSRF token for its fixed lifetime. The client keeps it only in memory and sends it as `X-CSRF-Token` on **every authenticated state-changing request** (POST/PATCH/PUT/DELETE), including Logout and password change. It is not a cookie, is never put in a URL, does not rotate on ordinary mutations, and is invalidated with the session.
 - Login, `GET /api/auth/me`, and successful password change responses containing `csrfToken` send `Cache-Control: no-store`; the browser client calls `GET /api/auth/me` with credentials during shell bootstrap before enabling mutation controls.
 - Each protected request verifies signature, expiry, `AuthSession` existence/revocation/expiry, current User `active`, and current User state/Role from the database. A CSRF check runs before domain work.
-- Credentialed CORS is restricted to configured `CLIENT_ORIGIN`; the browser client uses credentials. `JWT_SECRET`, client origin, and cookie configuration must be validated at startup.
+- Credentialed CORS accepts only the startup-validated configured `CLIENT_ORIGIN`; actual credentialed responses return that exact origin and `Access-Control-Allow-Credentials: true`, never `*` or a reflected arbitrary Origin. Matching-origin `OPTIONS` preflight permits `GET`, `POST`, `PATCH`, `PUT`, `DELETE`, and `OPTIONS`, and request headers `Content-Type`, `X-CSRF-Token`, and `Accept`; a nonmatching Origin receives no CORS permission headers. This applies to JSON APIs and `POST /api/tickets/:id/attachments` multipart upload. The browser client uses `FormData` for upload and does not set `Content-Type`, so the runtime supplies its required multipart boundary. `JWT_SECRET`, client origin, and cookie configuration must be validated at startup.
 
 ### 1.2 Protected-route failures
 
@@ -60,19 +64,19 @@ Requester ownership uses 404 rather than 403, so a Requester cannot enumerate an
 
 ### 1.3 Mutation guard precedence
 
-An unparseable JSON body is a transport failure: it returns generic `400 VALIDATION_FAILED` before application guards and does not disclose a resource or domain state. For a successfully parsed body, every authenticated Ticket mutation applies only its applicable guards in this fixed order:
+An unparseable JSON body is a transport failure: it returns generic `400 VALIDATION_FAILED` before application guards and does not disclose a resource or domain state. `POST /api/tickets/:id/attachments` is the only multipart route: malformed multipart returns generic `400 VALIDATION_FAILED` and a streaming byte-limit breach returns preserved `413 FILE_TOO_LARGE` before application guards; its parser must delete every partial temp file and create no Attachment row. For a successfully parsed JSON body or successfully parsed multipart request, every authenticated Ticket mutation applies only its applicable guards in this fixed order:
 
 1. Verify the session/current active User (`401 UNAUTHENTICATED` or `403 USER_INACTIVE`).
 2. Enforce Mandatory Password Change (`403 PASSWORD_CHANGE_REQUIRED`).
 3. Enforce route Role access (`403 FORBIDDEN`).
 4. Verify CSRF on a mutation (`403 CSRF_INVALID`).
-5. Locate the Ticket and enforce visibility. Requester lookup plus ownership is one `404 TICKET_NOT_FOUND` predicate, so an unowned Ticket remains indistinguishable from an absent one.
+5. Locate the target Ticket, or the Attachment plus its parent Ticket for removal, and enforce visibility. Requester lookup plus ownership is one matching `404 TICKET_NOT_FOUND`/`ATTACHMENT_NOT_FOUND` predicate, so an unowned resource remains indistinguishable from an absent one.
 6. Reject a `CLOSED`/`CANCELLED` Ticket with `409 TICKET_FINAL`.
-7. Enforce payload-independent operation state prerequisites: Claim requires Unassigned; Reassign requires an existing Owner; status change requires a current active eligible Owner.
-8. Validate payload fields and payload-dependent rules: enums, required/extra status-comment combinations, and 1-2,000 character plain-text bodies; a valid requested status is then checked against the allowed transition matrix.
-9. Validate referenced targets, when any: Reassign validates a positive `ownerId`, then reports an absent target as `404 USER_NOT_FOUND` or an inactive/wrong-Role target as `409 OWNER_NOT_ELIGIBLE`.
+7. Enforce payload-independent operation state prerequisites: Claim requires Unassigned; Reassign requires an existing Owner; status change requires a current active eligible Owner; Attachment removal rejects an already-removed Attachment with `409 ALREADY_REMOVED`.
+8. Validate payload fields and payload-dependent rules: enums, required/extra status-comment combinations, 1-2,000 character plain-text bodies, and parsed upload `NO_FILE`, extension/MIME, active-count, and stored-file metadata rules; a valid requested status is then checked against the allowed transition matrix.
+9. Validate referenced targets, when any: Reassign validates a positive `ownerId`, then returns the exact `409 OWNER_NOT_ELIGIBLE` response for an absent, inactive, or wrong-Role target.
 
-This order applies to `POST /api/tickets/:id/comments`, `PUT /api/tickets/:id/resolution-indication`, `PATCH /api/staff/tickets/:id/claim`, `/owner`, `/it-priority`, `/status`, and `POST /api/staff/tickets/:id/notes`; routes without a particular guard simply skip that stage. Consequently, a Final Ticket wins over competing semantic errors: Final plus an invalid priority, status, Public Comment, Internal Note, or Owner target returns `409 TICKET_FINAL`. For a Non-final Ticket, Claim/Reassign/status state prerequisites win over later payload/target checks. This precedence does not weaken the requester anti-enumeration rule in step 5.
+This order applies to `POST /api/tickets/:id/attachments`, `PATCH /api/attachments/:id/remove`, `POST /api/tickets/:id/comments`, `PUT /api/tickets/:id/resolution-indication`, `PATCH /api/staff/tickets/:id/claim`, `/owner`, `/it-priority`, `/status`, and `POST /api/staff/tickets/:id/notes`; routes without a particular guard simply skip that stage. Consequently, a Final Ticket wins over competing parsed semantic errors: Final plus an invalid Attachment upload/removal payload, priority, status, Public Comment, Internal Note, or Owner target returns `409 TICKET_FINAL`. For a Non-final Ticket, Claim/Reassign/status/removal state prerequisites win over later payload/target checks. This precedence does not weaken the requester anti-enumeration rule in step 5. Every upload parser, guard, validation, database, or filesystem failure deletes every newly created temp/orphan file and leaves no unintended Attachment row; soft removal never deletes an existing stored file.
 
 ### 1.4 Safe User and Ticket representations
 
@@ -154,6 +158,14 @@ The existing Lab 2 routes remain at their paths and retain their body/response/v
 | `PATCH /api/attachments/:id/remove` | Own Non-final Ticket only; preserved soft-removal contract. | `403 FORBIDDEN` |
 
 `POST /api/tickets`, attachment upload, and soft removal require CSRF. Creation rejects a Mandatory Password Change User or a non-Requester. Existing Lab 2 response fields remain, except `requester.department` is removed and Ticket read representations may add `itPriority`, `owner`, `resolutionIndication`, and `publicComments` as defined below. Requester Ticket Detail never includes Internal Notes. Ticket-targeted mutations use the precedence in §1.3.
+
+### Attachment mutation transport and precedence
+
+`POST /api/tickets/:id/attachments` accepts only browser-generated `multipart/form-data` with one `file` field. The client sends `FormData` with credentials and `X-CSRF-Token`, and must not supply a `Content-Type` header or multipart boundary; the runtime supplies it. The configured-origin credentialed CORS policy in §1.1 permits this preflight and request.
+
+Malformed multipart is generic `400 VALIDATION_FAILED`; a streaming upload exceeding 5 MB is `413 FILE_TOO_LARGE`. Both are parser-stage results before application guards, reveal no Ticket state, delete every partial temp file, and create no Attachment row. Once multipart parsing succeeds, §1.3 applies: authenticate/current active User, Mandatory Password Change, Requester Role, CSRF, owned Ticket-safe `404`, Final Ticket, then parsed `NO_FILE`/extension-and-declared-MIME validation/active-count/file-metadata validation. Thus a Final Ticket plus a parsed missing, unsupported, or sixth file returns `409 TICKET_FINAL`; on a Non-final Ticket those conditions retain `400 NO_FILE`, `415 UNSUPPORTED_FILE_TYPE`, or `409 ATTACHMENT_LIMIT_REACHED` respectively. Every newly created temp file is deleted on every guard or validation rejection, failed database write, or failed final filesystem step; a successful database row is committed only after its stored file is durably placed.
+
+`PATCH /api/attachments/:id/remove` keeps its JSON request body and Lab 2 removal-reason contract. After JSON transport parsing, §1.3 applies through owned Attachment-plus-parent-Ticket lookup and Final-parent-Ticket guard. A Final parent Ticket plus an invalid removal reason or already-removed Attachment returns `409 TICKET_FINAL`; a Non-final already-removed Attachment returns `409 ALREADY_REMOVED` before removal-reason validation; a Non-final active Attachment with an invalid reason returns `400 VALIDATION_FAILED`. A successful soft removal retains the existing stored file and metadata row.
 
 ### Requester communication routes
 
@@ -245,7 +257,7 @@ No body. The server checks the Final-Ticket guard before ownership state: a `CLO
 
 ### `PATCH /api/staff/tickets/:id/owner`
 
-Request `{ "ownerId": 8 }`. The Final-Ticket guard runs first. A Non-final Ticket without a current Owner returns `409 TICKET_UNASSIGNED`; callers must use Claim instead. Only after these guards is `ownerId` validated and its target resolved. Target must be a current Active `STAFF` or `ADMIN`; unassigning is not an operation. **200:** safe owner representation. `400 VALIDATION_FAILED` for malformed id, `404 USER_NOT_FOUND` for absent target, `409 OWNER_NOT_ELIGIBLE` for inactive/wrong-Role target, and `409 TICKET_FINAL` for a Final Ticket.
+Request `{ "ownerId": 8 }`. The Final-Ticket guard runs first. A Non-final Ticket without a current Owner returns `409 TICKET_UNASSIGNED`; callers must use Claim instead. Only after these guards is `ownerId` validated and its target resolved. Target must be a current Active `STAFF` or `ADMIN`; unassigning is not an operation. **200:** safe owner representation. A malformed id is `400 VALIDATION_FAILED`. An absent, inactive, or wrong-Role target returns the same exact `409 OWNER_NOT_ELIGIBLE` body defined in §1, with no `meta` or `details`; this endpoint never returns `USER_NOT_FOUND` for `ownerId`. A Final Ticket returns `409 TICKET_FINAL`.
 
 ### `PATCH /api/staff/tickets/:id/it-priority`
 
