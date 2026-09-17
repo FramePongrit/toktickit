@@ -259,6 +259,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 - Use safe 401 for no authentication and safe 403 for known endpoint Role denial.
 - Prevent Requesters from receiving Internal Note content.
 - Re-check active state, current Role, session, and password-change gate on every request.
+- Implement the shared authenticated Ticket-mutation guard order, including the separate unparseable-JSON transport failure and ownership-safe resource lookup.
 - Remove client-supplied `requesterId` as an authority everywhere.
 - Keep one authorization matrix fixture/table consistent with the engineering contract.
 
@@ -273,7 +274,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 ### Tests
 
 - Implement `server/tests/lab-03/authorization.api.test.ts`.
-- Cover every Role/operation cell, direct API denial, ownership probing, inactive/demoted Users, revoked sessions, and safe bodies.
+- Cover every Role/operation cell, direct API denial, ownership probing, inactive/demoted Users, revoked sessions, safe bodies, and authentication/Mandatory Password Change/Role/CSRF precedence before resource/domain work.
 
 **Out of scope:** Feature-specific queue, workflow, comments/notes, and Admin CRUD logic.
 
@@ -332,6 +333,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 - Implement Resolution Indication for the owning Requester on non-final, non-Resolved Tickets.
 - Record backend time, reject duplicate active indications, leave `currentStatus` unchanged, and clear the indication when Staff transitions to Reopened.
 - Expose the indication to Queue and Detail consumers.
+- Apply the shared guard precedence so Final Public Comment/Internal Note requests beat semantic body validation, while Non-final invalid bodies retain validation errors.
 
 ### Acceptance Criteria
 
@@ -344,7 +346,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 ### Tests
 
 - Implement `server/tests/lab-03/comments-notes.api.test.ts`.
-- Cover visibility, authorization, ownership, ordering, boundaries, append-only behavior, terminal states, backend metadata, and Resolution Indication.
+- Cover visibility, authorization, ownership, ordering, boundaries, append-only behavior, Final-over-invalid-body precedence, terminal states, backend metadata, and Resolution Indication.
 
 **Out of scope:** Staff status transitions and comment/note UI.
 
@@ -401,6 +403,8 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 - Add Staff/Admin queue retrieval over all Requesters' Tickets.
 - Search case-insensitively by Ticket Number, Summary, Requester Name, or Requester Email; trim `q` and limit it to 100 characters.
 - Add filters for Status, IT Priority, Category, and Ticket Owner, including My Tickets and Unassigned.
+- Add `GET /api/staff/ticket-owners`: a Staff/Admin-only, no-query, deterministic directory of every active `STAFF`/`ADMIN` with exactly `id`, `fullName`, and `role`, independent of visible Ticket ownership.
+- Validate numeric Queue Owner filters against that current eligible set with generic field-level validation; do not expose Administrator User Management fields or distinguish absent/ineligible IDs.
 - Combine filters with AND semantics.
 - Support Active Tickets scope by default and All Tickets explicitly.
 - Support sort by IT Priority, Created Date, Last Updated, Ticket Number, and Status.
@@ -417,11 +421,12 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 - Pagination remains stable with tied values and reports complete metadata.
 - Query response avoids sensitive Internal Notes and unnecessary detail fields.
 - Empty/no-results states are distinguishable from errors through response metadata.
+- Staff/Admin can obtain safe eligible Owner choices for both the Queue filter and Reassign without Administrator access.
 
 ### Tests
 
 - Implement `server/tests/lab-03/staff-queue.api.test.ts`.
-- Cover search fields, filters, AND behavior, default scope/order, each sort direction, ties, page boundaries, invalid values, assigned/unassigned, and Role denial.
+- Cover search fields, filters, AND behavior, default scope/order, each sort direction, ties, page boundaries, safe eligible-Owner directory shape/order/Role access, invalid values, assigned/unassigned, and Role denial.
 
 **Out of scope:** Queue React UI and Ticket mutations.
 
@@ -440,6 +445,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 - Build the desktop seven-column representation: Ticket/date, Summary/Requester, Category, Requested + IT Priorities, Status, Owner, and Updated/Open action.
 - Build mobile/tablet cards with the same essential information and no horizontal page overflow.
 - Add Active/All scope, Search, Status, IT Priority, Category, and Owner filters.
+- Load eligible Owner choices from `GET /api/staff/ticket-owners`, with independent loading/retry/forbidden feedback and no inference from Queue rows or Administrator Users.
 - Add approved sort choices and 10/20/50 pagination.
 - Reset to page 1 after Search/Filter/Sort changes.
 - Show Resolution Indication, assigned/unassigned ownership, and text-plus-color badges.
@@ -457,7 +463,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 ### Tests
 
 - Implement `client/tests/lab-03/StaffTicketQueue.test.tsx`.
-- Cover query wiring, reset-to-page-one, rows/cards, badges, indications, all feedback states, and Role denial.
+- Cover query wiring, safe eligible-Owner option loading/filtering, reset-to-page-one, rows/cards, badges, indications, all feedback states, and Role denial.
 
 **Out of scope:** Ticket Detail operations.
 
@@ -484,6 +490,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 - Require a nonblank valid Public Comment in the same transaction when moving to Waiting for Requester.
 - Clear Resolution Indication on transition to Reopened.
 - Reject all mutations on Closed/Cancelled Tickets.
+- Apply shared precedence: Final precedes Reassign target, IT Priority, status, and Waiting Comment validation; on Non-final Tickets, Claim/Reassign/status state prerequisites precede later payload/target checks.
 
 ### Acceptance Criteria
 
@@ -498,7 +505,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 ### Tests
 
 - Implement `server/tests/lab-03/staff-ticket-detail.api.test.ts`.
-- Cover detail authorization, Claim race, Reassign including Unassigned `409 TICKET_UNASSIGNED`, inactive Owner, IT Priority, all status edges, missing Owner, Waiting comment transaction, indication clearing, terminal states, and attachment permissions.
+- Cover detail authorization, Claim race, Reassign including Unassigned `409 TICKET_UNASSIGNED` and malformed/missing/ineligible targets, Final-over-invalid-target/priority/status/comment precedence, inactive Owner, IT Priority, all status edges, missing Owner, Waiting comment transaction, indication clearing, terminal states, and attachment permissions.
 
 **Out of scope:** Staff Detail React UI and workflow history.
 
@@ -516,6 +523,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 
 - Reuse the Lab 2 Detail structure for read-only Ticket/requester/classification data.
 - Add separate Claim/Reassign, Save Priority, and Update Status controls rather than one large form.
+- Populate Reassign only from the safe Staff/Admin eligible-Owner directory, with separate directory loading/retry/forbidden feedback and no Administrator Users or visible-owner inference.
 - Show only allowed next statuses returned/derived from the approved matrix.
 - Add Confirmation Dialogs for transitions to Resolved, Closed, Cancelled, and Reopened.
 - Require Public Comment input when selecting Waiting for Requester.
@@ -523,6 +531,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 - Show Resolution Indication prominently to Staff/Admin.
 - Show existing attachment metadata and active download actions without Staff upload/remove controls.
 - Give every independent action its own busy, success, validation, conflict, forbidden, and safe failure feedback.
+- Treat a returned `TICKET_FINAL` as terminal/read-only feedback before local field validation messaging.
 
 ### Acceptance Criteria
 
@@ -536,7 +545,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 ### Tests
 
 - Implement `client/tests/lab-03/StaffTicketDetail.test.tsx`.
-- Cover each action independently, permitted transitions, dialogs, Waiting comment, conflicts, communications separation, indication, attachments, terminal state, and failure feedback.
+- Cover each action independently, eligible-Owner directory states, permitted transitions, dialogs, Waiting comment, conflicts, communications separation, indication, attachments, terminal state, Final-over-local-validation feedback, and failure feedback.
 
 **Out of scope:** Staff attachment upload/removal and workflow history.
 
@@ -631,7 +640,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 ### Tasks
 
 - Implement `e2e/lab-03/authentication.spec.ts` for valid/invalid/inactive Login, first password change, Role landing, Logout, and blocked direct access.
-- Implement `e2e/lab-03/staff-ticket-flow.spec.ts` for Queue Search/filters/sort/page, unassigned Claim, Reassign, IT Priority, allowed status changes, Waiting comment, Public Comment, Internal Note, attachments, and Requester Resolution Indication.
+- Implement `e2e/lab-03/staff-ticket-flow.spec.ts` for the safe eligible-Owner directory driving Queue filter/Reassign, Queue Search/filters/sort/page, unassigned Claim, Reassign, IT Priority, allowed status changes, Waiting comment, Public Comment, Internal Note, attachments, Requester Resolution Indication, and Final-over-invalid mutation feedback.
 - Implement `e2e/lab-03/user-administration.spec.ts` for list/Search/filter, create, duplicate validation, edit, activation, reset/next-login change, self protection, last-admin protection, and forbidden access.
 - Add direct API authorization/security checks where browser-only evidence is insufficient.
 - Run required major screens at 1440x900, 820x1024, and 390x844.

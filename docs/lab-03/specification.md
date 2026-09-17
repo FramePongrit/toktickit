@@ -49,7 +49,7 @@ TokTickIT needs real accounts, not a client-selected identity. A Requester remai
 
 ### Staff operations
 
-- **FR-09** IT Staff and Administrators shall retrieve a paginated Staff Queue across Requesters with documented search, filters, ordering, scope, and safe metadata.
+- **FR-09** IT Staff and Administrators shall retrieve a paginated Staff Queue across Requesters with documented search, filters, ordering, scope, safe metadata, and a safe eligible-Owner filter.
 - **FR-10** IT Staff and Administrators shall read Staff Ticket Detail, including all permitted operational data and existing Attachment metadata/downloads.
 - **FR-11** IT Staff and Administrators shall Claim an Unassigned Ticket or Reassign a Ticket that already has an Owner to an eligible active IT Staff member or Administrator, without an implicit status change. Reassigning an Unassigned Ticket is rejected with `409 TICKET_UNASSIGNED`; Claim is the required operation.
 - **FR-12** IT Staff and Administrators shall change IT Priority independently of Requested Priority.
@@ -67,6 +67,7 @@ TokTickIT needs real accounts, not a client-selected identity. A Requester remai
 - **FR-18** The system shall provide loading, busy, success, validation, empty/no-results, forbidden/not-found/conflict, and safe retryable-failure feedback where meaningful.
 - **FR-19** All required screens shall reuse Zen Green components, remain keyboard accessible, and work without page-level horizontal overflow at 1440x900, 820x1024, and 390x844.
 - **FR-20** Migration and seed operations shall preserve Lab 2 Ticket, Attachment, identity, and ownership data and all legacy automated behavior.
+- **FR-21** IT Staff and Administrators shall retrieve a deterministic directory of eligible active Ticket Owners for Queue filtering and Reassign, without access to Administrator User Management data.
 
 ## 5. Authorization matrix
 
@@ -83,6 +84,7 @@ TokTickIT needs real accounts, not a client-selected identity. A Requester remai
 | Read Internal Note | No | No | Yes (including Final) | Yes (including Final) |
 | Create Internal Note | No | No | Yes (Non-final) | Yes (Non-final) |
 | Staff Queue / Staff Ticket Detail | No | No | Yes | Yes |
+| Eligible Ticket Owner directory | No | No | Yes | Yes |
 | Claim/Reassign / set IT Priority / status transition | No | No | Yes | Yes |
 | List/create/edit/reset Users | No | No | No | Yes |
 
@@ -140,6 +142,8 @@ The backend returns `401 UNAUTHENTICATED` before evaluating permissions, `403 FO
 - **BR-27** Queue filters combine with AND semantics; invalid input is a field-level 400 and is never silently clamped. Default Active scope includes `NEW`, `OPEN`, `IN_PROGRESS`, `WAITING_FOR_REQUESTER`, and `REOPENED`, excluding `RESOLVED`, `CLOSED`, and `CANCELLED`.
 - **BR-28** Directly invoking an unauthorized endpoint must fail even if a UI control is hidden or disabled.
 - **BR-29** Lab 2 ticket-number allocation, category/related-system validation, attachment size/type/count/soft-removal, and safe responses remain unchanged unless this contract expressly supersedes their identity middleware.
+- **BR-30** The eligible Ticket Owner directory is available only to IT Staff/Administrators and contains every current Active `STAFF`/`ADMIN`, regardless of whether they own a visible Ticket. It exposes exactly `id`, `fullName`, and `role`, ordered by case-insensitive `fullName` then `id`; it never exposes email, active status, password-change state, sessions, or other User Management data.
+- **BR-31** After transport-level JSON parsing, every Lab 3 authenticated Ticket mutation applies applicable guards in this order: session/current-active User; Mandatory Password Change; route Role access; CSRF; Ticket existence plus Requester ownership-safe visibility; Final Ticket; operation state prerequisites; payload validation and payload-dependent transition rules; then referenced-target validation. An unparseable JSON body returns generic `400 VALIDATION_FAILED` before application guards. A Requester ownership check remains the same non-enumerating `404` predicate as absence. Therefore Final wins over competing semantic payload/state/target errors; for example a Final Ticket with invalid priority, status, Public Comment, Internal Note, or Owner target returns `409 TICKET_FINAL`.
 
 ## 7. UI Specification Summary
 
@@ -151,7 +155,7 @@ Authenticated Requesters keep Lab 2 Create, My Tickets, Ticket Detail, and Attac
 
 The exact route, JSON, cookie, CSRF, validation, status, safe-error, and conflict-metadata contract is in [api-spec.md](./api-spec.md). Login establishes an eight-hour revocable JWT/`AuthSession` cookie; Login, `GET /api/auth/me`, and successful password change return the session CSRF token with `Cache-Control: no-store` so a cookie-restored shell can safely resume mutations. Current database state, not JWT claims or client identity fields, determines active status, Role, mandatory change, and ownership.
 
-Routes cover authentication/current User/password/Logout; authenticated Lab 2 Requester routes; Public Comments/Resolution Indication; Staff Queue/Detail/Claim/Reassign/IT Priority/status/Internal Notes; and Admin Users. The common response envelope separates field validation (`error.details`) from documented `409` conflict metadata (`error.meta`). Requester non-ownership remains indistinguishable from absence; historical comments/notes can be read after finality but no Ticket mutation can be made.
+Routes cover authentication/current User/password/Logout; authenticated Lab 2 Requester routes; Public Comments/Resolution Indication; Staff Queue/eligible Ticket Owner directory/Detail/Claim/Reassign/IT Priority/status/Internal Notes; and Admin Users. The common response envelope separates field validation (`error.details`) from documented `409` conflict metadata (`error.meta`) and defines mutation-guard precedence. Requester non-ownership remains indistinguishable from absence; historical comments/notes can be read after finality but no Ticket mutation can be made.
 
 ## 9. Data changes, migration, and seed decisions
 
@@ -171,9 +175,9 @@ Migration is additive/evolutionary and preserves every Ticket ID/number, Attachm
 - **AC-02** Mandatory Password Change blocks normal screens and APIs until a valid new password succeeds; Logout then blocks direct access.
 - **AC-03** Protected operations enforce current session, active state, Role, CSRF, and Requester ownership server-side.
 - **AC-04** Lab 2 requester Ticket/Attachment behavior works through authenticated identity with no selector/change-requester state.
-- **AC-05** Public Comments may be appended on every permitted Non-final Ticket, including `RESOLVED`; Resolution Indication obeys its separate non-Resolved/no-status-change rule; Final Tickets reject appends; Internal Notes never reach a Requester.
-- **AC-06** Staff/Admin Queue supports documented search, AND filters, scope, stable sort, page sizes, pagination metadata, and safe failures.
-- **AC-07** Staff/Admin Ticket Detail supports authorized read/download, atomic Claim/Reassign, IT Priority, and every permitted status edge while rejecting absent edges/final mutations.
+- **AC-05** Public Comments may be appended on every permitted Non-final Ticket, including `RESOLVED`; Resolution Indication obeys its separate non-Resolved/no-status-change rule; Final Tickets reject appends before competing semantic body errors; Internal Notes never reach a Requester.
+- **AC-06** Staff/Admin Queue supports documented search, AND filters, scope, stable sort, page sizes, pagination metadata, safe failures, and eligible Owner filtering from the safe Owner directory.
+- **AC-07** Staff/Admin Ticket Detail supports authorized read/download, safe eligible-Owner selection, atomic Claim/Reassign, IT Priority, and every permitted status edge while rejecting absent edges/final mutations according to the guard-precedence contract.
 - **AC-08** Waiting for Requester requires an atomic Public Comment; Resolution Indication clears on Reopened; Closed/Cancelled remain Final.
 - **AC-09** Administrator User Management supports list/search/filter/create/edit/reset while enforcing one Role, normalized unique email, write-only passwords, session revocation, self safety, last-admin safety, and non-final ownership safety.
 - **AC-10** All major screens use Zen Green, accessible states, role-aware navigation, distinguish public/private content, and have no page-level horizontal overflow at required viewports.

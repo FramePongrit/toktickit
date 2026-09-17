@@ -58,7 +58,23 @@ The only conflict metadata shapes are:
 
 Requester ownership uses 404 rather than 403, so a Requester cannot enumerate another Requester's Ticket or Attachment. Staff/Admin access to a nonexistent Ticket is ordinary 404. No endpoint accepts a client `requesterId` to determine ownership.
 
-### 1.3 Safe User and Ticket representations
+### 1.3 Mutation guard precedence
+
+An unparseable JSON body is a transport failure: it returns generic `400 VALIDATION_FAILED` before application guards and does not disclose a resource or domain state. For a successfully parsed body, every authenticated Ticket mutation applies only its applicable guards in this fixed order:
+
+1. Verify the session/current active User (`401 UNAUTHENTICATED` or `403 USER_INACTIVE`).
+2. Enforce Mandatory Password Change (`403 PASSWORD_CHANGE_REQUIRED`).
+3. Enforce route Role access (`403 FORBIDDEN`).
+4. Verify CSRF on a mutation (`403 CSRF_INVALID`).
+5. Locate the Ticket and enforce visibility. Requester lookup plus ownership is one `404 TICKET_NOT_FOUND` predicate, so an unowned Ticket remains indistinguishable from an absent one.
+6. Reject a `CLOSED`/`CANCELLED` Ticket with `409 TICKET_FINAL`.
+7. Enforce payload-independent operation state prerequisites: Claim requires Unassigned; Reassign requires an existing Owner; status change requires a current active eligible Owner.
+8. Validate payload fields and payload-dependent rules: enums, required/extra status-comment combinations, and 1-2,000 character plain-text bodies; a valid requested status is then checked against the allowed transition matrix.
+9. Validate referenced targets, when any: Reassign validates a positive `ownerId`, then reports an absent target as `404 USER_NOT_FOUND` or an inactive/wrong-Role target as `409 OWNER_NOT_ELIGIBLE`.
+
+This order applies to `POST /api/tickets/:id/comments`, `PUT /api/tickets/:id/resolution-indication`, `PATCH /api/staff/tickets/:id/claim`, `/owner`, `/it-priority`, `/status`, and `POST /api/staff/tickets/:id/notes`; routes without a particular guard simply skip that stage. Consequently, a Final Ticket wins over competing semantic errors: Final plus an invalid priority, status, Public Comment, Internal Note, or Owner target returns `409 TICKET_FINAL`. For a Non-final Ticket, Claim/Reassign/status state prerequisites win over later payload/target checks. This precedence does not weaken the requester anti-enumeration rule in step 5.
+
+### 1.4 Safe User and Ticket representations
 
 `SafeUser`:
 
@@ -137,7 +153,7 @@ The existing Lab 2 routes remain at their paths and retain their body/response/v
 | `GET /api/attachments/:id`, `/download` | Own Attachment; preserved `410 ATTACHMENT_REMOVED`. | Staff/Admin only may download through the same route for any Ticket. |
 | `PATCH /api/attachments/:id/remove` | Own Non-final Ticket only; preserved soft-removal contract. | `403 FORBIDDEN` |
 
-`POST /api/tickets`, attachment upload, and soft removal require CSRF. Creation rejects a Mandatory Password Change User or a non-Requester. Existing Lab 2 response fields remain, except `requester.department` is removed and Ticket read representations may add `itPriority`, `owner`, `resolutionIndication`, and `publicComments` as defined below. Requester Ticket Detail never includes Internal Notes.
+`POST /api/tickets`, attachment upload, and soft removal require CSRF. Creation rejects a Mandatory Password Change User or a non-Requester. Existing Lab 2 response fields remain, except `requester.department` is removed and Ticket read representations may add `itPriority`, `owner`, `resolutionIndication`, and `publicComments` as defined below. Requester Ticket Detail never includes Internal Notes. Ticket-targeted mutations use the precedence in §1.3.
 
 ### Requester communication routes
 
@@ -147,7 +163,7 @@ Requires authenticated Requester ownership or Staff/Admin access. **200:** `{ "d
 
 #### `POST /api/tickets/:id/comments`
 
-Requires CSRF and access to the Ticket. Request `{ "body": "Please restart and tell us whether it changes." }`. `body` is trimmed, plain text, 1-2,000 characters. Requester may post only to an owned Non-final Ticket, including `RESOLVED`; Staff/Admin may post on any Non-final Ticket, including `RESOLVED`. **201:** created `PublicComment`. `400 VALIDATION_FAILED`; `409 TICKET_FINAL`; standard ownership/Role errors.
+Requires CSRF and access to the Ticket. Request `{ "body": "Please restart and tell us whether it changes." }`. `body` is trimmed, plain text, 1-2,000 characters. Requester may post only to an owned Non-final Ticket, including `RESOLVED`; Staff/Admin may post on any Non-final Ticket, including `RESOLVED`. Under §1.3, `TICKET_FINAL` precedes body validation; a Non-final invalid body is `400 VALIDATION_FAILED`. **201:** created `PublicComment`. Standard ownership/Role errors apply.
 
 #### `PUT /api/tickets/:id/resolution-indication`
 
@@ -155,7 +171,7 @@ Requires Requester ownership and CSRF. Body may be empty. A Non-final Ticket oth
 
 ## 4. Staff Queue and Staff Ticket Detail
 
-All routes in this section require `STAFF` or `ADMIN`; all mutations require CSRF.
+All routes in this section require `STAFF` or `ADMIN`; all mutations require CSRF and use §1.3.
 
 ### `GET /api/staff/tickets`
 
@@ -168,12 +184,12 @@ Query parameters:
 | `status` | one Ticket status. |
 | `itPriority` | one Priority value. |
 | `categoryId` | positive integer. |
-| `owner` | positive eligible User id, `me`, or `unassigned`. |
+| `owner` | active eligible Ticket Owner id from `GET /api/staff/ticket-owners`, `me`, or `unassigned`. |
 | `sort` | `itPriority`, `createdAt`, `updatedAt`, `ticketNumber`, or `status`; default `itPriority`. |
 | `order` | `asc` or `desc`; omitted is `desc` for default/explicit `itPriority`, otherwise `asc`. |
 | `page` / `pageSize` | 1-based / `10`, `20`, or `50`; defaults `1` / `10`. |
 
-All supplied filters combine with AND. Priority severity is `LOW < MEDIUM < HIGH < URGENT`; Status rank is `NEW < OPEN < IN_PROGRESS < WAITING_FOR_REQUESTER < REOPENED < RESOLVED < CLOSED < CANCELLED`. The exact ordering is:
+All supplied filters combine with AND. A numeric `owner` must identify a current Active `STAFF`/`ADMIN`; an absent, inactive, or wrong-Role numeric owner returns generic field-level `400 VALIDATION_FAILED` for `owner`, without a `USER_NOT_FOUND` distinction. Priority severity is `LOW < MEDIUM < HIGH < URGENT`; Status rank is `NEW < OPEN < IN_PROGRESS < WAITING_FOR_REQUESTER < REOPENED < RESOLVED < CLOSED < CANCELLED`. The exact ordering is:
 
 | `sort` | Primary key in requested `order` | Fixed secondary and final keys |
 | --- | --- | --- |
@@ -204,6 +220,21 @@ For an explicitly selected non-priority `sort`, omitted `order` defaults to `asc
 
 An empty result is a 200 with `data: []`, `total: 0`, `totalPages: 0`; the client distinguishes empty/no-results from its active query state. No Internal Note text or unnecessary Ticket description/attachments appears in Queue rows.
 
+### `GET /api/staff/ticket-owners`
+
+No query parameters are supported; supplying any returns `400 VALIDATION_FAILED` with field details. Requires `STAFF` or `ADMIN`; it is a read route and requires no CSRF token. **200:**
+
+```json
+{
+  "data": [
+    { "id": 7, "fullName": "Niran Staff", "role": "STAFF" },
+    { "id": 9, "fullName": "Ploy Administrator", "role": "ADMIN" }
+  ]
+}
+```
+
+The result includes every current Active `STAFF`/`ADMIN`, even if they own no Ticket in the Queue or Detail response, ordered by `LOWER(fullName) ASC, id ASC`. Each entry contains exactly `id`, `fullName`, and `role`; email, `active`, `mustChangePassword`, passwords, hashes, sessions, and all Administrator User Management-only data are excluded. Standard `401`/Mandatory Password Change/`403 FORBIDDEN` failures apply. The Queue Owner filter and Reassign selector must use this endpoint, never `GET /api/admin/users` or a list inferred from visible Ticket Owners.
+
 ### `GET /api/staff/tickets/:id`
 
 **200:** Staff Ticket Detail includes Ticket core/classification, Ticket Requester (`id`, name, email), Requested/IT Priority, status, owner, indication, Attachment metadata, Public Comments, and Internal Notes (each with safe author/time), plus `allowedTransitions` derived from the current status and whether an eligible Owner exists. Attachment bytes are only through `/api/attachments/:id/download`; `POST`/remove remain denied to Staff/Admin. `404 TICKET_NOT_FOUND` for no record.
@@ -214,11 +245,11 @@ No body. The server checks the Final-Ticket guard before ownership state: a `CLO
 
 ### `PATCH /api/staff/tickets/:id/owner`
 
-Request `{ "ownerId": 8 }`. The Final-Ticket guard runs first. A Non-final Ticket without a current Owner returns `409 TICKET_UNASSIGNED`; callers must use Claim instead. Target must be a current Active `STAFF` or `ADMIN`; unassigning is not an operation. **200:** safe owner representation. `400 VALIDATION_FAILED` for malformed id, `404 USER_NOT_FOUND` for absent target, `409 OWNER_NOT_ELIGIBLE` for inactive/wrong-Role target, and `409 TICKET_FINAL` for a Final Ticket.
+Request `{ "ownerId": 8 }`. The Final-Ticket guard runs first. A Non-final Ticket without a current Owner returns `409 TICKET_UNASSIGNED`; callers must use Claim instead. Only after these guards is `ownerId` validated and its target resolved. Target must be a current Active `STAFF` or `ADMIN`; unassigning is not an operation. **200:** safe owner representation. `400 VALIDATION_FAILED` for malformed id, `404 USER_NOT_FOUND` for absent target, `409 OWNER_NOT_ELIGIBLE` for inactive/wrong-Role target, and `409 TICKET_FINAL` for a Final Ticket.
 
 ### `PATCH /api/staff/tickets/:id/it-priority`
 
-Request `{ "itPriority": "HIGH" }`. **200:** `{ "itPriority": "HIGH" }`. Only Staff/Admin may change it; Requested Priority never changes. Invalid enum is `400 VALIDATION_FAILED`; Final is `409 TICKET_FINAL`.
+Request `{ "itPriority": "HIGH" }`. **200:** `{ "itPriority": "HIGH" }`. Only Staff/Admin may change it; Requested Priority never changes. Under §1.3, Final is `409 TICKET_FINAL` before enum validation; a Non-final invalid enum is `400 VALIDATION_FAILED`.
 
 ### `PATCH /api/staff/tickets/:id/status`
 
@@ -228,11 +259,11 @@ Request:
 { "status": "WAITING_FOR_REQUESTER", "publicComment": "Please provide the laptop asset tag." }
 ```
 
-`status` must be one allowed edge in specification §6. An active eligible current Owner is required for every transition (`409 TICKET_OWNER_REQUIRED` if missing/ineligible). `publicComment` is required only for `WAITING_FOR_REQUESTER`, with the same 1-2,000 plain-text validation, and the status transition plus comment insertion occur in one transaction. Extra `publicComment` on another transition is rejected (`400 VALIDATION_FAILED`) to keep the operation unambiguous; callers use the comments endpoint. **200:** updated `{ "currentStatus", "resolutionIndication", "allowedTransitions" }`. Invalid edge is `409 INVALID_STATUS_TRANSITION`; Final is `409 TICKET_FINAL`. The UI asks confirmation for `RESOLVED`, `CLOSED`, `CANCELLED`, and `REOPENED`, but the API performs no client-trust confirmation flag.
+`status` must be one allowed edge in specification §6. An active eligible current Owner is required for every transition (`409 TICKET_OWNER_REQUIRED` if missing/ineligible). Under §1.3, Final wins before Owner, status, or comment checks; on a Non-final Ticket the Owner prerequisite is checked before status/body validation. `publicComment` is required only for `WAITING_FOR_REQUESTER`, with the same 1-2,000 plain-text validation, and the status transition plus comment insertion occur in one transaction. Extra `publicComment` on another transition is rejected (`400 VALIDATION_FAILED`) to keep the operation unambiguous; callers use the comments endpoint. **200:** updated `{ "currentStatus", "resolutionIndication", "allowedTransitions" }`. A valid but absent matrix edge is `409 INVALID_STATUS_TRANSITION`; a Non-final invalid status/body is `400 VALIDATION_FAILED`. The UI asks confirmation for `RESOLVED`, `CLOSED`, `CANCELLED`, and `REOPENED`, but the API performs no client-trust confirmation flag.
 
 ### Internal Note routes
 
-`GET /api/staff/tickets/:id/notes` returns `{ "data": [InternalNote] }`, oldest first, for any Ticket including a Final Ticket. `POST /api/staff/tickets/:id/notes` accepts `{ "body": "Checked endpoint logs; awaiting requester." }`, validates 1-2,000 trimmed plain-text characters, and returns **201** `InternalNote` for any Non-final Ticket, including `RESOLVED`; a Final Ticket returns `409 TICKET_FINAL`. Only Staff/Admin use either route. Requesters never receive note content (`403 FORBIDDEN` before a representation is assembled).
+`GET /api/staff/tickets/:id/notes` returns `{ "data": [InternalNote] }`, oldest first, for any Ticket including a Final Ticket. `POST /api/staff/tickets/:id/notes` accepts `{ "body": "Checked endpoint logs; awaiting requester." }`, validates 1-2,000 trimmed plain-text characters, and returns **201** `InternalNote` for any Non-final Ticket, including `RESOLVED`. Under §1.3, a Final Ticket returns `409 TICKET_FINAL` before body validation; a Non-final invalid body is `400 VALIDATION_FAILED`. Only Staff/Admin use either route. Requesters never receive note content (`403 FORBIDDEN` before a representation is assembled).
 
 ## 5. Administrator User Management
 
