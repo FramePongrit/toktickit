@@ -29,7 +29,7 @@ The only conflict metadata shapes are:
 ```
 
 ```json
-{ "error": { "code": "USER_OWNS_NON_FINAL_TICKETS", "message": "Reassign this User's non-final Tickets before changing this account.", "meta": { "nonFinalOwnedTicketCount": 2 } } }
+{ "error": { "code": "USER_OWNS_NON_FINAL_TICKETS", "message": "Reassign this User's non-final Tickets before deactivation or changing their Role to Requester.", "meta": { "nonFinalOwnedTicketCount": 2 } } }
 ```
 
 `error.meta.owner` has exactly `id`, `fullName`, and `role`; `error.meta.nonFinalOwnedTicketCount` is a non-negative integer. A client must not infer or require additional metadata from any conflict.
@@ -147,7 +147,7 @@ Requires authenticated Requester ownership or Staff/Admin access. **200:** `{ "d
 
 #### `POST /api/tickets/:id/comments`
 
-Requires CSRF and access to the Ticket. Request `{ "body": "Please restart and tell us whether it changes." }`. `body` is trimmed, plain text, 1-2,000 characters. Requester may post only to own Non-final Ticket; Staff/Admin may post on any Non-final Ticket. **201:** created `PublicComment`. `400 VALIDATION_FAILED`; `409 TICKET_FINAL`; standard ownership/Role errors.
+Requires CSRF and access to the Ticket. Request `{ "body": "Please restart and tell us whether it changes." }`. `body` is trimmed, plain text, 1-2,000 characters. Requester may post only to an owned Non-final Ticket, including `RESOLVED`; Staff/Admin may post on any Non-final Ticket, including `RESOLVED`. **201:** created `PublicComment`. `400 VALIDATION_FAILED`; `409 TICKET_FINAL`; standard ownership/Role errors.
 
 #### `PUT /api/tickets/:id/resolution-indication`
 
@@ -214,7 +214,7 @@ No body. The server checks the Final-Ticket guard before ownership state: a `CLO
 
 ### `PATCH /api/staff/tickets/:id/owner`
 
-Request `{ "ownerId": 8 }`. Target must be a current Active `STAFF` or `ADMIN`; unassigning is not an operation. **200:** safe owner representation. `400 VALIDATION_FAILED` for malformed id, `404 USER_NOT_FOUND` for absent target, `409 OWNER_NOT_ELIGIBLE` for inactive/wrong-Role target, `409 TICKET_FINAL` for a Final Ticket.
+Request `{ "ownerId": 8 }`. The Final-Ticket guard runs first. A Non-final Ticket without a current Owner returns `409 TICKET_UNASSIGNED`; callers must use Claim instead. Target must be a current Active `STAFF` or `ADMIN`; unassigning is not an operation. **200:** safe owner representation. `400 VALIDATION_FAILED` for malformed id, `404 USER_NOT_FOUND` for absent target, `409 OWNER_NOT_ELIGIBLE` for inactive/wrong-Role target, and `409 TICKET_FINAL` for a Final Ticket.
 
 ### `PATCH /api/staff/tickets/:id/it-priority`
 
@@ -232,7 +232,7 @@ Request:
 
 ### Internal Note routes
 
-`GET /api/staff/tickets/:id/notes` returns `{ "data": [InternalNote] }`, oldest first, for any Ticket including a Final Ticket. `POST /api/staff/tickets/:id/notes` accepts `{ "body": "Checked endpoint logs; awaiting requester." }`, validates 1-2,000 trimmed plain-text characters, and returns **201** `InternalNote` only for a Non-final Ticket; a Final Ticket returns `409 TICKET_FINAL`. Only Staff/Admin use either route. Requesters never receive note content (`403 FORBIDDEN` before a representation is assembled).
+`GET /api/staff/tickets/:id/notes` returns `{ "data": [InternalNote] }`, oldest first, for any Ticket including a Final Ticket. `POST /api/staff/tickets/:id/notes` accepts `{ "body": "Checked endpoint logs; awaiting requester." }`, validates 1-2,000 trimmed plain-text characters, and returns **201** `InternalNote` for any Non-final Ticket, including `RESOLVED`; a Final Ticket returns `409 TICKET_FINAL`. Only Staff/Admin use either route. Requesters never receive note content (`403 FORBIDDEN` before a representation is assembled).
 
 ## 5. Administrator User Management
 
@@ -259,7 +259,7 @@ Every route below requires `ADMIN` and CSRF on mutations. These endpoints expose
 
 ### `PATCH /api/admin/users/:id`
 
-Request supplies any edit fields `{ "fullName"?, "email"?, "role"?, "active"? }`; at least one field is required and supplied fields are fully validated. **200:** `{ "user": SafeUser }`. An Administrator may edit their own `fullName` and/or `email`; only their own `role` or `active` field is rejected as `409 ADMIN_SELF_PROTECTION`. A Role change or deactivation revokes all target sessions immediately. Deactivation/demotion of the Last Active Administrator is `409 LAST_ACTIVE_ADMINISTRATOR`. Deactivation or demotion to `REQUESTER` of a User who owns Non-final Tickets is `409 USER_OWNS_NON_FINAL_TICKETS` with the exact `error.meta.nonFinalOwnedTicketCount` representation defined in §1; Final historical ownership does not block it. Duplicate normalized email is `409 EMAIL_ALREADY_EXISTS`.
+Request supplies any edit fields `{ "fullName"?, "email"?, "role"?, "active"? }`; at least one field is required and supplied fields are fully validated. **200:** `{ "user": SafeUser }`. An Administrator may edit their own `fullName` and/or `email`; only their own `role` or `active` field is rejected as `409 ADMIN_SELF_PROTECTION`. A Role change or deactivation revokes all target sessions immediately. Deactivation/demotion of the Last Active Administrator is `409 LAST_ACTIVE_ADMINISTRATOR`. An `ADMIN` to `STAFF` change is permitted even when the User owns Non-final Tickets because the Owner remains eligible. Deactivation or a Role change to `REQUESTER` of a User who owns Non-final Tickets is `409 USER_OWNS_NON_FINAL_TICKETS` with the exact `error.meta.nonFinalOwnedTicketCount` representation defined in §1; Final historical ownership does not block it. Duplicate normalized email is `409 EMAIL_ALREADY_EXISTS`.
 
 ### `POST /api/admin/users/:id/reset-password`
 
@@ -273,7 +273,7 @@ Request `{ "initialPassword": "replacement-password2", "confirmation": "replacem
 | `UNAUTHENTICATED`, `INVALID_CREDENTIALS`, `CURRENT_PASSWORD_INVALID` | 401 |
 | `USER_INACTIVE`, `PASSWORD_CHANGE_REQUIRED`, `FORBIDDEN`, `CSRF_INVALID` | 403 |
 | `TICKET_NOT_FOUND`, `ATTACHMENT_NOT_FOUND`, `USER_NOT_FOUND`, `ROUTE_NOT_FOUND` | 404 |
-| `TICKET_FINAL`, `TICKET_ALREADY_ASSIGNED`, `OWNER_NOT_ELIGIBLE`, `TICKET_OWNER_REQUIRED`, `INVALID_STATUS_TRANSITION`, `RESOLUTION_ALREADY_INDICATED`, `RESOLUTION_INDICATION_NOT_ALLOWED`, `EMAIL_ALREADY_EXISTS`, `ADMIN_SELF_PROTECTION`, `LAST_ACTIVE_ADMINISTRATOR`, `USER_OWNS_NON_FINAL_TICKETS` | 409 |
+| `TICKET_FINAL`, `TICKET_ALREADY_ASSIGNED`, `TICKET_UNASSIGNED`, `OWNER_NOT_ELIGIBLE`, `TICKET_OWNER_REQUIRED`, `INVALID_STATUS_TRANSITION`, `RESOLUTION_ALREADY_INDICATED`, `RESOLUTION_INDICATION_NOT_ALLOWED`, `EMAIL_ALREADY_EXISTS`, `ADMIN_SELF_PROTECTION`, `LAST_ACTIVE_ADMINISTRATOR`, `USER_OWNS_NON_FINAL_TICKETS` | 409 |
 | `LOGIN_THROTTLED` | 429 |
 | `ATTACHMENT_REMOVED` | 410 |
 | `FILE_TOO_LARGE` | 413 |

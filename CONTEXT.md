@@ -51,7 +51,7 @@ An Administrator action that changes an Active User into an Inactive User withou
 _Avoid_: Delete User, suspend Ticket
 
 **Demotion**:
-A Role change from Administrator or IT Staff to a Role with fewer operational capabilities, especially Requester.
+A Role change from Administrator or IT Staff to a Role with fewer operational capabilities, especially Requester. A change from Administrator to IT Staff retains eligibility to own a Non-final Ticket; a change to Requester does not.
 _Avoid_: Deactivation, deletion
 
 **Last Active Administrator**:

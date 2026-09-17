@@ -237,7 +237,6 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 - Implement `client/tests/lab-03/Login.test.tsx`.
 - Implement `client/tests/lab-03/ChangePassword.test.tsx`.
 - Implement `client/tests/lab-03/AppShell.test.tsx` for landing routes, reload, Role navigation, Logout, CSRF handling, and safe failures.
-- Implement `client/tests/lab-03/RequesterTicketDetail.test.tsx` for authenticated Requester regression, Public Comments, Resolution Indication, and Final read-only history.
 
 **Out of scope:** Requester feature migration and Staff/Admin screen content.
 
@@ -329,6 +328,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 - Trim and validate both message types at 1-2,000 characters.
 - Treat input as plain text; reject/escape unsafe rendering assumptions and never accept backend-owned author/time fields.
 - Prevent edit/delete and prevent new messages on Closed/Cancelled Tickets.
+- Keep Public Comments and Internal Notes available for append on `RESOLVED`, which remains Non-final.
 - Implement Resolution Indication for the owning Requester on non-final, non-Resolved Tickets.
 - Record backend time, reject duplicate active indications, leave `currentStatus` unchanged, and clear the indication when Staff transitions to Reopened.
 - Expose the indication to Queue and Detail consumers.
@@ -364,6 +364,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 - Add chronological Public Comments with author, Role, and backend timestamp.
 - Add an accessible plain-text composer with 2,000-character feedback, busy state, validation, retry, and duplicate-submit protection.
 - Add the “Problem Appears Resolved” action only in permitted states.
+- Keep the Public Comment composer available on `RESOLVED`; only the Resolution Indication action is unavailable there.
 - Explain that the action does not change Ticket status and show the recorded indication afterward.
 - Hide Internal Notes completely.
 - Make Closed/Cancelled detail read-only while retaining history and permitted active attachment downloads.
@@ -380,8 +381,8 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 
 ### Tests
 
-- Add Requester Ticket Detail Lab 3 component tests.
-- Cover comments, validation, indication states, priorities, terminal read-only behavior, hidden notes, and API failures.
+- Implement `client/tests/lab-03/RequesterTicketDetail.test.tsx` for authenticated Requester regression, Public Comments, Resolution Indication, and Final read-only history.
+- Cover comments on `RESOLVED`, validation, indication states, priorities, terminal read-only behavior, hidden notes, and API failures.
 
 **Out of scope:** Staff Queue and Staff operations.
 
@@ -475,7 +476,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 - Add Staff/Admin Ticket Detail retrieval with Requester, classification, both priorities, current status, owner, indication, comments/notes, and attachment metadata.
 - Allow Staff/Admin to view/download active attachments on any Ticket but not upload/remove them.
 - Implement Claim of an unassigned Ticket by the caller; first concurrent claim wins and later claims return 409.
-- Implement Reassign only to an active Staff/Admin; do not support Unassign.
+- Implement Reassign only from an already assigned Ticket to an active Staff/Admin; reject Reassign on an Unassigned Ticket with `409 TICKET_UNASSIGNED` and do not support Unassign.
 - Keep Claim/Reassign independent from status changes.
 - Implement IT Priority update by Staff/Admin only.
 - Implement the approved status transition matrix in one domain service.
@@ -497,7 +498,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 ### Tests
 
 - Implement `server/tests/lab-03/staff-ticket-detail.api.test.ts`.
-- Cover detail authorization, Claim race, Reassign, inactive Owner, IT Priority, all status edges, missing Owner, Waiting comment transaction, indication clearing, terminal states, and attachment permissions.
+- Cover detail authorization, Claim race, Reassign including Unassigned `409 TICKET_UNASSIGNED`, inactive Owner, IT Priority, all status edges, missing Owner, Waiting comment transaction, indication clearing, terminal states, and attachment permissions.
 
 **Out of scope:** Staff Detail React UI and workflow history.
 
@@ -560,6 +561,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 - Allow an Administrator to edit their own name/email, while preventing self-deactivation, self-Role change, and Admin reset of their own password.
 - Prevent deactivation/demotion of the last active Administrator.
 - Prevent deactivation or demotion to Requester when the User owns any non-final Ticket; return 409 with a safe count so Tickets can be reassigned first.
+- Permit an Administrator-to-IT-Staff Role change while the User owns Non-final Tickets because the Owner remains eligible.
 - Allow Closed/Cancelled Tickets to retain historical ownership.
 - Revoke all sessions immediately on deactivation or Role change.
 
@@ -575,7 +577,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 ### Tests
 
 - Implement `server/tests/lab-03/users-admin.api.test.ts`.
-- Cover list/search/filter/order, create, duplicate casing, edit, own-name/email success, self restrictions, invalid Role, activation, reset/forced change, session revocation, last-admin protection, owned-Ticket conflicts, and non-Admin denial.
+- Cover list/search/filter/order, create, duplicate casing, edit, own-name/email success, Administrator-to-IT-Staff eligible-owner success, self restrictions, invalid Role, activation, reset/forced change, session revocation, last-admin protection, owned-Ticket conflicts, and non-Admin denial.
 
 **Out of scope:** Deletion, bulk operations, import/export, audit history, invitation email, advanced filters, and account recovery.
 

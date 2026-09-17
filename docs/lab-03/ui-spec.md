@@ -58,7 +58,7 @@ Card heading **Public comments** with a short disclosure: "Visible to you and To
 
 ### 4.2 Resolution Indication
 
-For an eligible Non-final Ticket that is not Resolved and has no indication, show **Problem appears resolved** as a secondary action with confirmation: "This tells IT the problem appears resolved. It does not close the Ticket." On success show a textual/timestamp indication badge and disable the action. A 409 refreshes current Ticket state and says it was already recorded or is no longer eligible; this action never shows status controls. On Resolved or Final Tickets the timeline remains readable but composer/indication are replaced by the applicable read-only explanation.
+For an eligible Non-final Ticket that is not Resolved and has no indication, show **Problem appears resolved** as a secondary action with confirmation: "This tells IT the problem appears resolved. It does not close the Ticket." On success show a textual/timestamp indication badge and disable the action. A 409 refreshes current Ticket state and says it was already recorded or is no longer eligible; this action never shows status controls. On a Resolved Ticket, replace only the Resolution Indication action with an explanation that the Ticket is already formally Resolved; the Public Comment timeline and composer remain available. On a Final Ticket, the timeline remains readable but both the Public Comment composer and Resolution Indication are replaced by the finality explanation.
 
 Requester modes: loading, comments loading, empty timeline, comment validation/busy/success/failure, indication confirmation/busy/already-indicated/failure, Ticket not found, and final read-only. An Internal Notes region is never rendered or requested for Requesters.
 
@@ -84,7 +84,7 @@ Tablet (`768-991px`) may use the same table only if all seven columns remain rea
 Breadcrumb `Staff Queue > Ticket Details`; title with Ticket Number/current Status. Separate cards prevent accidental conflation of independent operations:
 
 1. **Ticket and Requester information**: Lab 2 classification/description as read-only; Requester name/email; Requested Priority as read-only badge.
-2. **Ownership**: current owner or Unassigned; Claim appears only to an Unassigned Ticket and is disabled/busy during request. Reassign opens an accessible dialog with eligible active Staff/Admin select, explanation, confirmation, and conflict refresh.
+2. **Ownership**: current owner or Unassigned; Claim appears only to an Unassigned Ticket and is disabled/busy during request. Reassign appears only when a current Owner exists and opens an accessible dialog with eligible active Staff/Admin select, explanation, confirmation, and conflict refresh; it is never offered for an Unassigned Ticket.
 3. **IT Priority**: a labelled editable select plus distinct **Save IT Priority** action; Requested Priority remains visibly read-only.
 4. **Status**: current status, only API-permitted next-status choices, and **Update status**. Selecting Waiting for Requester reveals a required Public Comment textarea. Resolved, Closed, Cancelled, and Reopened open a confirmation dialog before the API mutation. Closed confirmation explicitly says it is Final; there is no reopen control on Closed/Cancelled.
 5. **Resolution Indication**: prominent contextual banner, including timestamp/requester, so Staff can act deliberately. It clears on successful Reopened refresh.

@@ -51,7 +51,7 @@ TokTickIT needs real accounts, not a client-selected identity. A Requester remai
 
 - **FR-09** IT Staff and Administrators shall retrieve a paginated Staff Queue across Requesters with documented search, filters, ordering, scope, and safe metadata.
 - **FR-10** IT Staff and Administrators shall read Staff Ticket Detail, including all permitted operational data and existing Attachment metadata/downloads.
-- **FR-11** IT Staff and Administrators shall Claim an Unassigned Ticket or Reassign an owned Ticket to an eligible active IT Staff member or Administrator, without an implicit status change.
+- **FR-11** IT Staff and Administrators shall Claim an Unassigned Ticket or Reassign a Ticket that already has an Owner to an eligible active IT Staff member or Administrator, without an implicit status change. Reassigning an Unassigned Ticket is rejected with `409 TICKET_UNASSIGNED`; Claim is the required operation.
 - **FR-12** IT Staff and Administrators shall change IT Priority independently of Requested Priority.
 - **FR-13** IT Staff and Administrators shall make only documented status transitions, with an eligible active Owner and required confirmation/comment behavior.
 - **FR-14** IT Staff and Administrators shall read Public Comment and Internal Note history, including Final Tickets, and append either only while the Ticket is Non-final; only Staff/Administrators may read or add Internal Notes.
@@ -106,7 +106,7 @@ The backend returns `401 UNAUTHENTICATED` before evaluating permissions, `403 FO
 ### Roles and User safety
 
 - **BR-11** Each User has exactly one Role: `REQUESTER`, `STAFF`, or `ADMIN`; Administrator includes IT Staff Ticket permission in this product.
-- **BR-12** Deactivation retains historical identity but stops authentication and new actions. A demotion/deactivation is rejected if the User owns any Non-final Ticket, reporting only the documented safe conflict metadata `error.meta.nonFinalOwnedTicketCount` so Tickets can be reassigned first.
+- **BR-12** Deactivation retains historical identity but stops authentication and new actions. Deactivation, or a Role change to `REQUESTER`, is rejected if the User owns any Non-final Ticket, reporting only the documented safe conflict metadata `error.meta.nonFinalOwnedTicketCount` so Tickets can be reassigned first. A change from `ADMIN` to `STAFF` is permitted because both Roles are eligible Ticket Owners.
 - **BR-13** An Administrator may edit their own name/email but cannot deactivate themself, change their own Role, or reset their own Initial Password via administration. Self-service Change Password remains available.
 - **BR-14** The Last Active Administrator cannot be deactivated or demoted. User deletion is never provided.
 - **BR-15** Create and reset use an Administrator-entered Initial Password and confirmation; reset always sets Mandatory Password Change. Password fields are write-only.
@@ -115,7 +115,7 @@ The backend returns `401 UNAUTHENTICATED` before evaluating permissions, `403 FO
 
 - **BR-16** The authenticated Requester identity fixes Ticket submission ownership; client `requesterId` values are ignored/rejected and never widen access.
 - **BR-17** A Ticket begins `NEW`, may be Unassigned, and has Requested Priority immutable from creation. IT Priority is initialized to Requested Priority and only Staff/Administrators may change it.
-- **BR-18** A Ticket Owner is one active User with Role `STAFF` or `ADMIN`. Claim atomically assigns only an Unassigned Ticket to the caller; Reassign selects another active eligible User. Neither changes status.
+- **BR-18** A Ticket Owner is one active User with Role `STAFF` or `ADMIN`. Claim atomically assigns only an Unassigned Ticket to the caller; Reassign selects another active eligible User only when the Ticket already has an Owner. Reassigning an Unassigned Ticket returns `409 TICKET_UNASSIGNED` and neither action changes status.
 - **BR-19** Every status transition requires a current active eligible Ticket Owner. A Claim/Reassign race never overwrites an existing Owner: the loser receives `409 TICKET_ALREADY_ASSIGNED` with only the documented safe `error.meta.owner` representation.
 - **BR-20** `CLOSED` and `CANCELLED` are Final and completely read-only for mutations, while permitted historical content remains readable under BR-23/BR-24. `RESOLVED` is Non-final. A later problem after Closed is a new Ticket (Recurrence), not a reopen.
 - **BR-21** Transitioning to `WAITING_FOR_REQUESTER` requires a trimmed 1-2,000 character Public Comment in the same database transaction. A Requester reply does not implicitly change status.
@@ -171,7 +171,7 @@ Migration is additive/evolutionary and preserves every Ticket ID/number, Attachm
 - **AC-02** Mandatory Password Change blocks normal screens and APIs until a valid new password succeeds; Logout then blocks direct access.
 - **AC-03** Protected operations enforce current session, active state, Role, CSRF, and Requester ownership server-side.
 - **AC-04** Lab 2 requester Ticket/Attachment behavior works through authenticated identity with no selector/change-requester state.
-- **AC-05** Public Comments and Resolution Indication obey visibility, validation, finality, and no-status-change rules; Internal Notes never reach a Requester.
+- **AC-05** Public Comments may be appended on every permitted Non-final Ticket, including `RESOLVED`; Resolution Indication obeys its separate non-Resolved/no-status-change rule; Final Tickets reject appends; Internal Notes never reach a Requester.
 - **AC-06** Staff/Admin Queue supports documented search, AND filters, scope, stable sort, page sizes, pagination metadata, and safe failures.
 - **AC-07** Staff/Admin Ticket Detail supports authorized read/download, atomic Claim/Reassign, IT Priority, and every permitted status edge while rejecting absent edges/final mutations.
 - **AC-08** Waiting for Requester requires an atomic Public Comment; Resolution Indication clears on Reopened; Closed/Cancelled remain Final.
