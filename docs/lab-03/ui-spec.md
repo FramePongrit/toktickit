@@ -54,7 +54,7 @@ Card: explanation whether this is mandatory first-login change; Current Password
 
 ### 4.1 Public Comments
 
-Card heading **Public comments** with a short disclosure: "Visible to you and TokTickIT staff." Timeline uses author name, Role badge, timestamp, and text. Composer has a labelled textarea, remaining-character helper, and **Post public comment** action. It is visually a green-accented public card; it must never resemble Internal Notes. On a Final Ticket, historical comments remain readable but the composer is replaced with the finality explanation.
+Card heading **Public comments** with a short disclosure: "Visible to you and TokTickIT staff." Timeline uses author name, Role badge, timestamp, and text. Comment text is inserted as a text node, never HTML: a stored value such as `<img src=x onerror=alert(1)>` visibly appears as those literal characters and creates no `img`, `script`, or event-capable DOM node. Composer has a labelled textarea, remaining-character helper, and **Post public comment** action. It is visually a green-accented public card; it must never resemble Internal Notes. On a Final Ticket, historical comments remain readable but the composer is replaced with the finality explanation.
 
 ### 4.2 Resolution Indication
 
@@ -88,8 +88,8 @@ Breadcrumb `Staff Queue > Ticket Details`; title with Ticket Number/current Stat
 3. **IT Priority**: a labelled editable select plus distinct **Save IT Priority** action; Requested Priority remains visibly read-only.
 4. **Status**: current status, only API-permitted next-status choices, and **Update status**. Selecting Waiting for Requester reveals a required Public Comment textarea. Resolved, Closed, Cancelled, and Reopened open a confirmation dialog before the API mutation. Closed confirmation explicitly says it is Final; there is no reopen control on Closed/Cancelled.
 5. **Resolution Indication**: prominent contextual banner, including timestamp/requester, so Staff can act deliberately. It clears on successful Reopened refresh.
-6. **Public comments**: green public timeline/composer labelled "Visible to Requester and staff".
-7. **Internal notes**: visually distinct amber/neutral restricted card with lock icon and text "Visible only to IT Staff and Administrators". It has a separately labelled composer/action and must not share a submit button/form with Public Comments.
+6. **Public comments**: green public timeline/composer labelled "Visible to Requester and staff". Stored text is rendered as a text node, never HTML; malicious markup remains literal and cannot create an element or execute an event handler.
+7. **Internal notes**: visually distinct amber/neutral restricted card with lock icon and text "Visible only to IT Staff and Administrators". It has a separately labelled composer/action and must not share a submit button/form with Public Comments. Stored note text uses the same text-node-only rendering rule, including malicious-markup values.
 8. **Attachments**: existing metadata and active Download action; no Staff upload/remove action. Removed metadata is greyed and has no download.
 
 Each independent action owns loading/busy/success/validation/conflict/forbidden/failure feedback; one operation cannot disable unrelated safe reading/actions. On `TICKET_ALREADY_ASSIGNED` or `TICKET_OWNER_CHANGED`, reload detail and display `error.meta.owner`; the latter requires a new explicit Reassign confirmation. On `TICKET_OWNER_REQUIRED`, explain Claim/Reassign must happen before status update. When the API returns `TICKET_FINAL`, it takes precedence over local field validation/conflict messaging: refresh/read the Final detail and show the terminal read-only explanation. Final Ticket Detail displays all history/metadata, including Public Comments and restricted Internal Notes, but hides/disables Claim, Reassign, Save IT Priority, status, and both composers with a clear "Closed/Cancelled Tickets are read-only" message.

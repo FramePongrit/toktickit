@@ -264,6 +264,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 - Re-check active state, current Role, session, and password-change gate on every request.
 - Implement the shared authenticated Ticket-mutation guard order, including the separate unparseable-JSON transport failure and ownership-safe resource lookup.
 - Apply the shared guard order to Attachment upload/remove after their documented parser-stage behavior, preserving Attachment-safe 404s and cleanup.
+- Map unexpected database/service failures to the generic `500 INTERNAL_ERROR` envelope with no stack, SQL, filesystem path, hash, token, secret, or hidden-resource detail.
 - Remove client-supplied `requesterId` as an authority everywhere.
 - Keep one authorization matrix fixture/table consistent with the engineering contract.
 
@@ -277,8 +278,8 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 
 ### Tests
 
-- Implement `server/tests/lab-03/authorization.api.test.ts`.
-- Cover every Role/operation cell, direct API denial, ownership probing, inactive/demoted Users, revoked sessions, safe bodies, and authentication/Mandatory Password Change/Role/CSRF precedence before resource/domain work.
+- Implement `server/tests/lab-03/authorization.api.test.ts` (`API-Z01`–`API-Z04`); `API-Z04` is the fault-injection owner for scrubbed `500 INTERNAL_ERROR`.
+- Cover every Role/operation cell, direct API denial, ownership probing, inactive/demoted Users, revoked sessions, safe bodies, an injected unexpected database/service failure returning scrubbed `500 INTERNAL_ERROR`, and authentication/Mandatory Password Change/Role/CSRF precedence before resource/domain work.
 
 **Out of scope:** Feature-specific queue, workflow, comments/notes, and Admin CRUD logic.
 
@@ -299,6 +300,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 - Update client requests to use auth cookie and CSRF headers for mutations.
 - Preserve Create Ticket, My Tickets, Ticket Detail, upload, download, and soft-removal behavior.
 - Preserve ticket-number allocation, query validation, stable pagination, attachment limits/types, removal reason, and ownership-safe 404s.
+- Make `server/tests/lab-03/requester-regression.api.test.ts` the sole Lab 3 owner for authenticated Lab 2 create/list/detail/Attachment regression; communications tests do not duplicate this scope.
 - Send Attachment uploads as credentialed `FormData` with CSRF and no manually set multipart boundary; preserve configured-origin CORS.
 - Apply attachment precedence: parser failures before application guards; then auth/Requester Role/CSRF/ownership/Final/state/payload rules; delete every new temp/orphan file and avoid unintended rows on every rejection/failure.
 - Adapt only Lab 2 identity setup and obsolete Development Requester selector/`X-Requester-Id` expectations to authenticated multi-Requester fixtures; retain Ticket, Attachment, validation, and safe-response behavioral assertions as regression evidence.
@@ -313,7 +315,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 ### Tests
 
 - Add focused Lab 3 Requester regression tests and update existing Lab 2 setup.
-- Implement `server/tests/lab-03/requester-regression.api.test.ts` for authenticated Ticket creation, Requested-to-IT Priority initialization, immutable Requested Priority, and preserved Requester behavior.
+- Implement `server/tests/lab-03/requester-regression.api.test.ts` (`API-R01`) for authenticated Lab 2 create/list/detail/Attachment ownership regression, absent selector endpoint, Ticket creation, Requested-to-IT Priority initialization, and immutable Requested Priority.
 - Implement `server/tests/lab-03/attachments.api.test.ts` for configured-origin CORS/preflight, multipart transport, ownership/finality precedence, type/size/count/removal rules, and temp/orphan cleanup.
 - Run complete server/client regression suites.
 
@@ -342,6 +344,8 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 - Record backend time, reject duplicate active indications, and leave `currentStatus` unchanged.
 - Expose the indication to Queue and Detail consumers.
 - Apply the shared guard precedence so Final Public Comment/Internal Note requests beat semantic body validation, while Non-final invalid bodies retain validation errors.
+- Use the shared parent-Ticket transaction for comments, notes, and Resolution Indication so an interleaved final transition cannot admit a post-final write.
+- Apply Resolution Indication precedence Final, then Resolved-not-allowed, then duplicate; Resolved plus an existing indication deterministically returns `RESOLUTION_INDICATION_NOT_ALLOWED`.
 
 ### Acceptance Criteria
 
@@ -353,8 +357,8 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 
 ### Tests
 
-- Implement `server/tests/lab-03/comments-notes.api.test.ts`.
-- Cover visibility, authorization, ownership, ordering, boundaries, append-only behavior, Final-over-invalid-body precedence, terminal states, backend metadata, and Resolution Indication.
+- Implement `server/tests/lab-03/comments-notes.api.test.ts` (`API-C02`–`API-C04`).
+- Cover visibility, authorization, ownership, ordering, boundaries, append-only behavior, Final-over-invalid-body precedence, terminal states, backend metadata, Resolution Indication including the combined Resolved-plus-existing-indication guard, and Final interleavings.
 
 **Out of scope:** Staff status transitions and comment/note UI.
 
@@ -379,6 +383,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 - Hide Internal Notes completely.
 - Make Closed/Cancelled detail read-only while retaining history and permitted active attachment downloads.
 - Preserve existing upload/remove behavior only for eligible Requester Tickets.
+- Render all communication text with text-node semantics; malicious markup is visibly literal and cannot create an HTML/event-capable DOM node.
 
 ### Acceptance Criteria
 
@@ -391,8 +396,8 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 
 ### Tests
 
-- Implement `client/tests/lab-03/RequesterTicketDetail.test.tsx` for authenticated Requester regression, Public Comments, Resolution Indication, and Final read-only history.
-- Cover comments on `RESOLVED`, validation, indication states, priorities, terminal read-only behavior, hidden notes, and API failures.
+- Implement `client/tests/lab-03/RequesterTicketDetail.test.tsx` (`UI-R01`) for authenticated Requester regression, Public Comments, Resolution Indication, and Final read-only history.
+- Cover comments on `RESOLVED`, validation, indication states, priorities, terminal read-only behavior, hidden notes, API failures, and literal malicious-markup rendering with no inserted HTML/event-capable node.
 
 **Out of scope:** Staff Queue and Staff operations.
 
@@ -499,6 +504,8 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 - Clear Resolution Indication on transition to Reopened.
 - Reject all mutations on Closed/Cancelled Tickets.
 - Apply shared precedence: Final precedes Reassign target, IT Priority, status, and Waiting Comment validation; on Non-final Tickets, Claim/Reassign/status state prerequisites precede later payload/target checks.
+- Use the shared parent-Ticket transaction for Claim, Reassign, priority, status, and Waiting Comment so a final-transition interleaving returns `TICKET_FINAL` to the losing mutation.
+- Reassign locks/rechecks its candidate User under the shared serialization contract, coordinating with Administrator deactivation/demotion so an ineligible Owner cannot commit.
 
 ### Acceptance Criteria
 
@@ -512,8 +519,8 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 
 ### Tests
 
-- Implement `server/tests/lab-03/staff-ticket-detail.api.test.ts`.
-- Cover detail authorization, Claim race, concurrent/stale Reassign with `expectedOwnerId` and exact `TICKET_OWNER_CHANGED` owner metadata, Reassign Unassigned `409 TICKET_UNASSIGNED` and malformed targets; assert absent, inactive, and Requester targets have identical `409 OWNER_NOT_ELIGIBLE` status/code/body with no metadata; cover Final-over-invalid-target/priority/status/comment precedence, IT Priority, all status edges, missing Owner, Waiting comment transaction, `RESOLVED -> REOPENED` indication clearing, terminal states, and attachment permissions.
+- Implement `server/tests/lab-03/staff-ticket-detail.api.test.ts` (`API-S01`–`API-S04`).
+- Cover detail authorization, Claim race, concurrent/stale Reassign with `expectedOwnerId` and exact `TICKET_OWNER_CHANGED` owner metadata, Reassign raced with target deactivation/demotion, Reassign Unassigned `409 TICKET_UNASSIGNED` and malformed targets; assert absent, inactive, and Requester targets have identical `409 OWNER_NOT_ELIGIBLE` status/code/body with no metadata; cover Final-over-invalid-target/priority/status/comment precedence, priority/finality interleaving, all status edges, missing Owner, Waiting comment transaction, `RESOLVED -> REOPENED` indication clearing, terminal states, and attachment permissions.
 
 **Out of scope:** Staff Detail React UI and workflow history.
 
@@ -540,6 +547,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 - Show existing attachment metadata and active download actions without Staff upload/remove controls.
 - Give every independent action its own busy, success, validation, conflict, forbidden, and safe failure feedback.
 - Treat a returned `TICKET_FINAL` as terminal/read-only feedback before local field validation messaging.
+- Render Public Comments and Internal Notes as text, not HTML; malicious markup must remain literal with no inserted HTML/event-capable DOM node.
 
 ### Acceptance Criteria
 
@@ -552,8 +560,8 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 
 ### Tests
 
-- Implement `client/tests/lab-03/StaffTicketDetail.test.tsx`.
-- Cover each action independently, eligible-Owner directory states, captured `expectedOwnerId`, stale Reassign refresh/explicit retry, permitted transitions, dialogs, Waiting comment, conflicts, communications separation, indication, attachments, terminal state, Final-over-local-validation feedback, and failure feedback.
+- Implement `client/tests/lab-03/StaffTicketDetail.test.tsx` (`UI-S01`, `UI-S02`).
+- Cover each action independently, eligible-Owner directory states, captured `expectedOwnerId`, stale Reassign refresh/explicit retry, permitted transitions, dialogs, Waiting comment, conflicts, communications separation, literal malicious-markup rendering for both communication types, indication, attachments, terminal state, Final-over-local-validation feedback, and failure feedback.
 
 **Out of scope:** Staff attachment upload/removal and workflow history.
 
@@ -565,7 +573,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 
 **Goal:** Provide the complete minimalist User Management contract with safety rules and immediate authorization effects.
 
-**Depends on:** Issues 2-4 and 6.
+**Depends on:** Issues 2-4, 6, and 12.
 
 ### Tasks
 
@@ -581,6 +589,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 - Permit an Administrator-to-IT-Staff Role change while the User owns Non-final Tickets because the Owner remains eligible.
 - Allow Closed/Cancelled Tickets to retain historical ownership.
 - Revoke all sessions immediately on deactivation or Role change.
+- Serialize role/active changes with Reassign and the active-Administrator roster: recheck owned Non-final Tickets and active-Administrator count under the deterministic transaction locks.
 
 ### Acceptance Criteria
 
@@ -593,8 +602,8 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 
 ### Tests
 
-- Implement `server/tests/lab-03/users-admin.api.test.ts`.
-- Cover list/search/filter/order, create, duplicate casing, edit, own-name/email success, Administrator-to-IT-Staff eligible-owner success, self restrictions, invalid Role, activation, reset/forced change, session revocation, last-admin protection, owned-Ticket conflicts, and non-Admin denial.
+- Implement `server/tests/lab-03/users-admin.api.test.ts` (`API-U01`–`API-U04`).
+- Cover list/search/filter/order, create, duplicate casing, edit, own-name/email success, Administrator-to-IT-Staff eligible-owner success, self restrictions, invalid Role, activation, reset/forced change, session revocation, last-admin protection, owned-Ticket conflicts, a controlled two-Administrator concurrent demotion/deactivation interleaving, and non-Admin denial.
 
 **Out of scope:** Deletion, bulk operations, import/export, audit history, invitation email, advanced filters, and account recovery.
 
@@ -651,6 +660,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 - Implement `e2e/lab-03/staff-ticket-flow.spec.ts` for the safe eligible-Owner directory driving Queue filter/Reassign, Queue Search/filters/sort/page, unassigned Claim, optimistic-concurrency Reassign with stale-owner refresh, IT Priority, allowed status changes including `RESOLVED -> REOPENED` indication clearing, Waiting comment, Public Comment, Internal Note, configured-origin browser Attachment upload/removal, Requester Resolution Indication, and Final-over-invalid mutation feedback.
 - Implement `e2e/lab-03/user-administration.spec.ts` for list/Search/filter, create, duplicate validation, edit, activation, reset/next-login change, self protection, last-admin protection, and forbidden access.
 - Add direct API authorization/security checks where browser-only evidence is insufficient.
+- Implement `server/tests/lab-03/ticket-mutation-concurrency.api.test.ts` (`API-M01`) as the cross-feature interleaving suite for finality versus every Ticket mutation; this issue owns its integrated execution after Issues 7, 8, and 12.
 - Run required major screens at 1440x900, 820x1024, and 390x844.
 - Capture deterministic screenshots under the four required Lab 3 artifact folders.
 - Implement `e2e/lab-03/capture.screens.ts` for the required deterministic responsive screenshot captures.
