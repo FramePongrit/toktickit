@@ -4,8 +4,8 @@ import { fetchCategories, fetchRelatedSystems } from "../api/referenceData.js";
 import { createTicket } from "../api/tickets.js";
 import { FormField } from "../components/FormField.js";
 import { StateBlock } from "../components/StateBlock.js";
+import { useAuth } from "../context/AuthContext.js";
 import { ApiError } from "../lib/http.js";
-import { useRequester } from "../context/RequesterContext.js";
 import type { Priority, ReferenceItem, TicketDetail } from "../types/index.js";
 
 const PRIORITIES: Priority[] = ["LOW", "MEDIUM", "HIGH", "URGENT"];
@@ -51,7 +51,7 @@ function validate(values: FormValues): Record<string, string> {
 }
 
 export function CreateTicketPage() {
-  const { requester } = useRequester();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   const [categories, setCategories] = useState<ReferenceItem[]>([]);
@@ -162,7 +162,7 @@ export function CreateTicketPage() {
 
   return (
     <>
-      <h1 className="h3 mb-1">Create Ticket</h1>
+      <h1 className="h3 mb-1" data-page-heading tabIndex={-1}>Create Ticket</h1>
       <p className="zen-muted mb-4">Describe your problem so IT support can help you.</p>
 
       {referenceState === "loading" && <StateBlock kind="loading" title="Loading form options…" />}
@@ -199,7 +199,7 @@ export function CreateTicketPage() {
               <div className="col-12 col-md-4 mb-3">
                 <span className="form-label fw-semibold d-block">Requester</span>
                 <div className="zen-readonly" data-testid="readonly-requester">
-                  {requester?.fullName ?? ""}
+                  {user?.fullName ?? ""}
                 </div>
               </div>
             </div>
