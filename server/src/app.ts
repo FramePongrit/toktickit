@@ -9,6 +9,7 @@ import { getPrisma } from "./prisma.js";
 import { createApiRouter } from "./routes/index.js";
 import { notFound } from "./middleware/notFound.js";
 import { errorHandler } from "./middleware/errorHandler.js";
+import { asyncHandler } from "./lib/asyncHandler.js";
 
 // The Express app is exported separately from app.listen() (see index.ts) so
 // Supertest can import `app` without opening a port. Do not merge these files.
@@ -34,8 +35,9 @@ export function createApp(securityConfig: SecurityConfig) {
 
 // Lab 2 filters to active categories. The response shape is unchanged, which
 // is what tests/lab-01/categories.test.ts asserts.
-  application.get("/api/categories", async (_req: Request, res: Response) => {
-    try {
+  application.get(
+    "/api/categories",
+    asyncHandler(async (_req: Request, res: Response) => {
       const prisma = getPrisma();
       const categories = await prisma.category.findMany({
         where: { active: true },
@@ -43,10 +45,8 @@ export function createApp(securityConfig: SecurityConfig) {
         orderBy: { id: "asc" },
       });
       res.status(200).json(categories);
-    } catch (error) {
-      res.status(500).json({ error: "Internal Server Error" });
-    }
-  });
+    })
+  );
 // ---------------------------------------------------------------------------
 
   application.use("/api", createApiRouter({ config: securityConfig, jwt, sessions, throttle }));

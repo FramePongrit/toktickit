@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import multer from "multer";
+import type { NextFunction, Request, Response } from "express";
 import { HttpError } from "../lib/httpError.js";
-import { UPLOAD_DIR, ensureUploadDir } from "../lib/paths.js";
+import { UPLOAD_DIR, deleteFileIfPresent, ensureUploadDir, storedFilePath } from "../lib/paths.js";
 
 export const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
 export const MAX_ACTIVE_ATTACHMENTS = 5;
@@ -42,19 +43,43 @@ const storage = multer.diskStorage({
 export const uploadSingleAttachment = multer({
   storage,
   limits: { fileSize: MAX_ATTACHMENT_BYTES, files: 1 },
-  fileFilter: (_req, file, cb) => {
-    if (!isPermittedFile(file.originalname, file.mimetype)) {
-      // Rejecting here means the file is never written, so a wrong type leaves
-      // no orphan to clean up.
-      cb(
-        new HttpError(
-          415,
-          "UNSUPPORTED_FILE_TYPE",
-          "Only JPG, JPEG, PNG, WEBP and PDF files are accepted."
-        )
-      );
+}).single("file");
+
+function isMultipartParserError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const candidate = error as { message?: unknown; code?: unknown };
+  if (typeof candidate.code === "string") return false;
+  return typeof candidate.message === "string" && /multipart|boundary|form|part/i.test(candidate.message);
+}
+
+/** Normalizes Busboy's plain parser Errors without masking disk failures. */
+export function parseSingleAttachment(req: Request, res: Response, next: NextFunction): void {
+  uploadSingleAttachment(req, res, (error: unknown) => {
+    if (isMultipartParserError(error)) {
+      next(new HttpError(400, "VALIDATION_FAILED", "The submitted data is invalid."));
       return;
     }
-    cb(null, true);
-  },
-}).single("file");
+    next(error);
+  });
+}
+
+/**
+ * Multer must parse before application guards so malformed multipart and
+ * streaming size failures do not disclose route state. Disk storage can have
+ * created a file by the time a later auth/role/ownership/service guard fails,
+ * so the route-level error middleware removes it before the error is rendered.
+ */
+export function cleanupUploadedFileOnError(
+  error: unknown,
+  req: Request,
+  _res: Response,
+  next: NextFunction
+): void {
+  const filename = req.file?.filename;
+  if (!filename) {
+    next(error);
+    return;
+  }
+
+  void deleteFileIfPresent(storedFilePath(filename)).finally(() => next(error));
+}

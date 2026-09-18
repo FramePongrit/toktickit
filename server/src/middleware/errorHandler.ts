@@ -11,6 +11,12 @@ function zodIssues(error: ZodError): FieldIssue[] {
   }));
 }
 
+function isJsonParseError(error: unknown): boolean {
+  if (!(error instanceof SyntaxError)) return false;
+  const candidate = error as SyntaxError & { type?: string; status?: number };
+  return candidate.type === "entity.parse.failed" || candidate.status === 400;
+}
+
 /**
  * The single place any failure becomes a response. Every non-2xx body in this
  * API has the shape { error: { code, message, details? } } because every one
@@ -46,7 +52,7 @@ export function errorHandler(
       return;
     }
     res.status(400).json({
-      error: { code: "NO_FILE", message: "The uploaded file could not be read." },
+      error: { code: "VALIDATION_FAILED", message: "The submitted data is invalid." },
     });
     return;
   }
@@ -62,9 +68,20 @@ export function errorHandler(
     return;
   }
 
-  // Anything reaching here is unexpected. Log it for the developer, but tell
-  // the caller nothing beyond the fact that it failed (BR-27).
-  console.error("Unhandled error:", err);
+  // express.json() reports malformed JSON as a SyntaxError before the route
+  // middleware runs. Keep it a transport-level, generic validation failure so
+  // it cannot reveal authentication, role, ownership, or Ticket state.
+  if (isJsonParseError(err)) {
+    res.status(400).json({
+      error: { code: "VALIDATION_FAILED", message: "The submitted data is invalid." },
+    });
+    return;
+  }
+
+  // Anything reaching here is unexpected. Keep internal exception details out
+  // of both the response and the default log line; callers and log consumers
+  // must not receive SQL, paths, hashes, tokens, or stack traces (BR-25).
+  console.error("Unhandled error");
   res.status(500).json({
     error: { code: "INTERNAL_ERROR", message: "An unexpected error occurred." },
   });

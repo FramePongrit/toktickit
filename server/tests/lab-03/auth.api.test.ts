@@ -218,8 +218,11 @@ describe("API-A03 — migrated legacy Requester password lifecycle", () => {
     const noSession = await request(app)
       .get("/api/tickets")
       .set("X-Requester-Id", String(legacyUserId));
-    expect(noSession.status).toBe(403);
-    expect(noSession.body.error.code).toBe("PASSWORD_CHANGE_REQUIRED");
+    // Issue 6 removes the Development Requester header as an authority. A
+    // request without the authenticated session is unauthenticated, so it
+    // cannot reach the mandatory-password gate.
+    expect(noSession.status).toBe(401);
+    expect(noSession.body.error.code).toBe("UNAUTHENTICATED");
 
     const missingCsrf = await request(app)
       .post("/api/auth/change-password")
