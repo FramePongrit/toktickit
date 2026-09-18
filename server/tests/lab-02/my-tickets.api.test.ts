@@ -34,6 +34,7 @@ async function seedTicket(
       categoryId: overrides.categoryId ?? categoryHardware,
       relatedSystemId: overrides.relatedSystemId ?? systemOne,
       requestedPriority: overrides.requestedPriority ?? "MEDIUM",
+      itPriority: overrides.requestedPriority ?? "MEDIUM",
       summary: overrides.summary ?? "Placeholder summary for testing",
       description: "A description long enough to satisfy the minimum length rule.",
       ...(overrides.createdAt && { createdAt: overrides.createdAt }),
@@ -50,10 +51,10 @@ function list(requesterId: number, query: Record<string, string | number> = {}) 
 
 beforeAll(async () => {
   const [a, b] = await Promise.all([
-    prisma.requesterUser.create({
+    prisma.user.create({
       data: { fullName: "List Suite A", email: `list-a-${suiteTag}@lab2.local` },
     }),
-    prisma.requesterUser.create({
+    prisma.user.create({
       data: { fullName: "List Suite B", email: `list-b-${suiteTag}@lab2.local` },
     }),
   ]);
@@ -105,7 +106,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await prisma.ticket.deleteMany({ where: { requesterId: { in: [requesterA, requesterB] } } });
-  await prisma.requesterUser.deleteMany({ where: { id: { in: [requesterA, requesterB] } } });
+  await prisma.user.deleteMany({ where: { id: { in: [requesterA, requesterB] } } });
   await prisma.$disconnect();
 });
 

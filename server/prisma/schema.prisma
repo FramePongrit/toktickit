@@ -23,6 +23,13 @@ enum Priority {
 
 enum TicketStatus {
   NEW
+  OPEN
+  IN_PROGRESS
+  WAITING_FOR_REQUESTER
+  RESOLVED
+  REOPENED
+  CLOSED
+  CANCELLED
 }
 
 enum Role {
@@ -53,53 +60,84 @@ model RelatedSystem {
 
 // --- Identity --------------------------------------------------------------
 
-// The Lab 2 "Development Requester". This is a testing mechanism, not
-// authentication. `passwordHash` and `role` are unused in Lab 2 and exist so
-// that Lab 3 adds authentication to this table instead of migrating to a new
-// identity table (BR-49).
-model RequesterUser {
-  id           Int      @id @default(autoincrement())
-  fullName     String
-  email        String   @unique
-  department   String?
-  active       Boolean  @default(true)
-  role         Role     @default(REQUESTER)
-  passwordHash String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+// Lab 3 evolves the Lab 2 RequesterUser table in place. The migration renames
+// the table and keeps its primary keys so Ticket and Attachment ownership
+// remains historical data, not a copied relationship.
+model User {
+  id                 Int      @id @default(autoincrement())
+  fullName           String
+  email              String   @unique
+  active             Boolean  @default(true)
+  role               Role     @default(REQUESTER)
+  passwordHash       String?
+  mustChangePassword Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
-  tickets            Ticket[]
-  uploadedAttachments Attachment[] @relation("AttachmentUploader")
-  removedAttachments  Attachment[] @relation("AttachmentRemover")
+  tickets               Ticket[]        @relation("TicketRequester")
+  ownedTickets          Ticket[]        @relation("TicketOwner")
+  resolutionIndications Ticket[]        @relation("ResolutionIndication")
+  sessions              AuthSession[]
+  publicComments        PublicComment[]
+  internalNotes         InternalNote[]
+  uploadedAttachments   Attachment[]    @relation("AttachmentUploader")
+  removedAttachments    Attachment[]    @relation("AttachmentRemover")
 
-  @@index([active])
+  @@index([active, role])
+  @@index([role, active, fullName])
+}
+
+model AuthSession {
+  id            String    @id @default(cuid())
+  userId        Int
+  csrfTokenHash String    @unique
+  issuedAt      DateTime  @default(now())
+  expiresAt     DateTime
+  revokedAt     DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId, revokedAt])
+  @@index([expiresAt])
+  @@index([revokedAt, expiresAt])
 }
 
 // --- Tickets ---------------------------------------------------------------
 
 model Ticket {
-  id                Int          @id @default(autoincrement())
-  ticketNumber      String       @unique
-  requesterId       Int
-  categoryId        Int
-  relatedSystemId   Int
-  requestedPriority Priority
-  summary           String       @db.VarChar(200)
-  description       String       @db.Text
-  currentStatus     TicketStatus @default(NEW)
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
+  id                      Int          @id @default(autoincrement())
+  ticketNumber            String       @unique
+  requesterId             Int
+  categoryId              Int
+  relatedSystemId         Int
+  requestedPriority       Priority
+  itPriority              Priority
+  ownerId                 Int?
+  summary                 String       @db.VarChar(200)
+  description             String       @db.Text
+  currentStatus           TicketStatus @default(NEW)
+  resolutionIndicatedAt   DateTime?
+  resolutionIndicatedById Int?
+  createdAt               DateTime     @default(now())
+  updatedAt               DateTime     @updatedAt
 
-  // Restrict, not Cascade: reference data must not be deletable while tickets
-  // point at it. Deactivate it instead.
-  requester     RequesterUser @relation(fields: [requesterId], references: [id], onDelete: Restrict)
-  category      Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  relatedSystem RelatedSystem @relation(fields: [relatedSystemId], references: [id], onDelete: Restrict)
-  attachments   Attachment[]
+  // Restrict, not Cascade: reference data and historical identities must not
+  // be deletable while tickets or attachments point at them.
+  requester             User            @relation("TicketRequester", fields: [requesterId], references: [id], onDelete: Restrict)
+  owner                 User?           @relation("TicketOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  resolutionIndicatedBy User?           @relation("ResolutionIndication", fields: [resolutionIndicatedById], references: [id], onDelete: Restrict)
+  category              Category        @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  relatedSystem         RelatedSystem   @relation(fields: [relatedSystemId], references: [id], onDelete: Restrict)
+  attachments           Attachment[]
+  publicComments        PublicComment[]
+  internalNotes         InternalNote[]
 
   @@index([requesterId, createdAt])
   @@index([requesterId, categoryId])
   @@index([requesterId, relatedSystemId])
+  @@index([ownerId, currentStatus])
+  @@index([currentStatus, itPriority, createdAt, id])
+  @@index([resolutionIndicatedById])
 }
 
 // An Attachment is active if and only if `removedAt` is null. That single
@@ -118,20 +156,46 @@ model Attachment {
   removedByRequesterId  Int?
   removalReason         String?
 
-  ticket     Ticket         @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  uploadedBy RequesterUser  @relation("AttachmentUploader", fields: [uploadedByRequesterId], references: [id], onDelete: Restrict)
-  removedBy  RequesterUser? @relation("AttachmentRemover", fields: [removedByRequesterId], references: [id], onDelete: Restrict)
+  ticket     Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  uploadedBy User   @relation("AttachmentUploader", fields: [uploadedByRequesterId], references: [id], onDelete: Restrict)
+  removedBy  User?  @relation("AttachmentRemover", fields: [removedByRequesterId], references: [id], onDelete: Restrict)
 
   @@index([ticketId, removedAt])
+}
+
+model PublicComment {
+  id        Int      @id @default(autoincrement())
+  ticketId  Int
+  authorId  Int
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author User   @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([ticketId, createdAt, id])
+  @@index([authorId, createdAt])
+}
+
+model InternalNote {
+  id        Int      @id @default(autoincrement())
+  ticketId  Int
+  authorId  Int
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author User   @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([ticketId, createdAt, id])
+  @@index([authorId, createdAt])
 }
 
 // --- Ticket number allocation ----------------------------------------------
 
 // One row per calendar year. Allocation runs inside the ticket-creation
 // transaction as `UPDATE ... SET lastValue = lastValue + 1 ... RETURNING`,
-// which row-locks the year so concurrent creates serialise on it. Gap-free and
-// race-free with no retry loop; see specification.md §7 for why this beats
-// MAX(ticketNumber)+1 and a per-year sequence.
+// which row-locks the year so concurrent creates serialise on it.
 model TicketCounter {
   year      Int @id
   lastValue Int @default(0)
