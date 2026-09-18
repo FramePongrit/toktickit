@@ -9,9 +9,9 @@ export const REQUESTER_HEADER = "x-requester-id";
  * Resolves the Lab 2 Development Requester from the X-Requester-Id header.
  *
  * This is a testing mechanism, not authentication — it trusts the header
- * completely. Lab 3 replaces the body of this function with token
- * verification; because every handler reads the identity from req.requester
- * rather than from the header, no handler changes then (BR-47).
+ * completely. Issue 6 replaces the header resolution with authenticated
+ * session resolution; Issue 4 still owns the mandatory-password gate so the
+ * legacy route cannot bypass the first-login flow in the interim.
  *
  * The four failure cases are distinguished deliberately (api-spec.md §2):
  * a missing header is 401 because no identity was presented; a malformed one
@@ -22,6 +22,31 @@ export const REQUESTER_HEADER = "x-requester-id";
  */
 export const requireRequester = asyncHandler(
   async (req: Request, _res: Response, next: NextFunction) => {
+    if (req.auth) {
+      if (req.auth.user.role !== "REQUESTER") {
+        throw HttpError.unauthorized(
+          "REQUESTER_NOT_FOUND",
+          "The selected development requester no longer exists."
+        );
+      }
+
+      const suppliedHeader = req.header(REQUESTER_HEADER)?.trim();
+      if (suppliedHeader !== undefined && suppliedHeader !== String(req.auth.userId)) {
+        throw HttpError.unauthorized(
+          "REQUESTER_NOT_FOUND",
+          "The selected development requester no longer exists."
+        );
+      }
+
+      req.requester = {
+        id: req.auth.user.id,
+        fullName: req.auth.user.fullName,
+        email: req.auth.user.email,
+      };
+      next();
+      return;
+    }
+
     const raw = req.header(REQUESTER_HEADER);
 
     if (raw === undefined || raw.trim() === "") {
@@ -41,7 +66,14 @@ export const requireRequester = asyncHandler(
     const id = Number(raw.trim());
     const requester = await getPrisma().user.findUnique({
       where: { id },
-      select: { id: true, fullName: true, email: true, active: true, role: true },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        active: true,
+        role: true,
+        mustChangePassword: true,
+      },
     });
 
     if (!requester) {
@@ -62,6 +94,13 @@ export const requireRequester = asyncHandler(
       throw HttpError.forbidden(
         "REQUESTER_INACTIVE",
         "The selected development requester is inactive."
+      );
+    }
+
+    if (requester.mustChangePassword) {
+      throw HttpError.forbidden(
+        "PASSWORD_CHANGE_REQUIRED",
+        "Change the Initial Password before using this feature."
       );
     }
 

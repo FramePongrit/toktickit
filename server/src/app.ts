@@ -2,8 +2,11 @@ import express, { Request, Response } from "express";
 import cors from "cors";
 import type { SecurityConfig } from "./security/config.js";
 import { createCredentialedCorsOptions } from "./security/cors.js";
+import { JwtService } from "./security/jwt.js";
+import { AuthSessionService } from "./security/session.js";
+import { LoginThrottle } from "./security/throttle.js";
 import { getPrisma } from "./prisma.js";
-import { apiRouter } from "./routes/index.js";
+import { createApiRouter } from "./routes/index.js";
 import { notFound } from "./middleware/notFound.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
@@ -11,6 +14,11 @@ import { errorHandler } from "./middleware/errorHandler.js";
 // Supertest can import `app` without opening a port. Do not merge these files.
 export function createApp(securityConfig: SecurityConfig) {
   const application = express();
+  const jwt = new JwtService({ secret: securityConfig.jwtSecret });
+  const sessions = new AuthSessionService(getPrisma(), {
+    encryptionSecret: securityConfig.jwtSecret,
+  });
+  const throttle = new LoginThrottle();
 
   application.use(cors(createCredentialedCorsOptions(securityConfig)));
   application.use(express.json());
@@ -41,7 +49,7 @@ export function createApp(securityConfig: SecurityConfig) {
   });
 // ---------------------------------------------------------------------------
 
-  application.use("/api", apiRouter);
+  application.use("/api", createApiRouter({ config: securityConfig, jwt, sessions, throttle }));
 
 // Order matters: the catch-all runs after every route, and the error handler
 // must be registered last of all.

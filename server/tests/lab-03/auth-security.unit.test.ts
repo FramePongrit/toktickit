@@ -225,6 +225,8 @@ describe("cookie and startup configuration", () => {
     });
     expect(unspecifiedEnvironment.clientOrigin).toBe("https://client.example");
     expect(unspecifiedEnvironment.cookie.secure).toBe(true);
+    expect(unspecifiedEnvironment.allowLegacyRequesterHeader).toBe(false);
+    expect(createDevelopmentSecurityConfig().allowLegacyRequesterHeader).toBe(true);
   });
 });
 
