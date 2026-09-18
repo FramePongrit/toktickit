@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import request from "supertest";
-import { app } from "../../src/app.js";
+import { app } from "../testApp.js";
 import { getPrisma } from "../../src/prisma.js";
 import {
   formatTicketNumber,

@@ -10,6 +10,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "tsx prisma/seed.ts",
     "test": "vitest run",
+    "test:security": "vitest run --config vitest.security.config.ts",
     "test:migration": "vitest run --config vitest.migration.config.ts"
   },
   "prisma": {
@@ -20,6 +21,7 @@
     "@types/multer": "^2.2.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
     "express": "^4.21.2",
     "multer": "^2.3.0",
     "zod": "^4.5.4"

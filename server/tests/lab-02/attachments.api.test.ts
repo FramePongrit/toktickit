@@ -2,7 +2,7 @@ import fs from "node:fs";
 import { randomUUID } from "node:crypto";
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
 import request from "supertest";
-import { app } from "../../src/app.js";
+import { app } from "../testApp.js";
 import { getPrisma } from "../../src/prisma.js";
 import { UPLOAD_DIR, storedFilePath } from "../../src/lib/paths.js";
 import { isPermittedFile, MAX_ATTACHMENT_BYTES } from "../../src/middleware/upload.js";
