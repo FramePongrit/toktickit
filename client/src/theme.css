@@ -65,6 +65,42 @@ body {
   border-bottom: 3px solid #fff;
 }
 
+.zen-header .navbar-toggler {
+  color: #fff;
+}
+
+@media (min-width: 768px) {
+  .zen-header .navbar-toggler {
+    display: none;
+  }
+
+  .zen-header .navbar-collapse {
+    display: flex !important;
+    flex-basis: auto;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .zen-header .navbar {
+    flex-wrap: wrap;
+  }
+
+  .zen-header .navbar-collapse {
+    display: none;
+    flex-basis: 100%;
+    padding-top: 0.5rem;
+  }
+
+  .zen-header .navbar-collapse.show {
+    display: block;
+  }
+
+  .zen-header .navbar-nav .nav-link {
+    padding-top: 0.65rem;
+    padding-bottom: 0.65rem;
+  }
+}
+
 /* --- Buttons ------------------------------------------------------------- */
 
 .btn-primary {

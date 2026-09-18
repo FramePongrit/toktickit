@@ -1,5 +1,24 @@
 export type Priority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
-export type TicketStatus = "NEW";
+export type TicketStatus =
+  | "NEW"
+  | "OPEN"
+  | "IN_PROGRESS"
+  | "WAITING_FOR_REQUESTER"
+  | "REOPENED"
+  | "RESOLVED"
+  | "CLOSED"
+  | "CANCELLED";
+
+export type Role = "REQUESTER" | "STAFF" | "ADMIN";
+
+export interface SafeUser {
+  id: number;
+  fullName: string;
+  email: string;
+  active: boolean;
+  role: Role;
+  mustChangePassword: boolean;
+}
 
 export interface ReferenceItem {
   id: number;

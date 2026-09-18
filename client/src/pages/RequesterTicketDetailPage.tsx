@@ -109,7 +109,7 @@ export function RequesterTicketDetailPage() {
       </nav>
 
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-4">
-        <h1 className="h3 mb-0">{ticket.ticketNumber}</h1>
+        <h1 className="h3 mb-0" data-page-heading tabIndex={-1}>{ticket.ticketNumber}</h1>
         <Link className="btn btn-outline-primary" to="/tickets">
           Back to My Tickets
         </Link>
