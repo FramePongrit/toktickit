@@ -34,6 +34,8 @@ npx prisma migrate deploy     # applies all migrations
 npx prisma db seed            # idempotent: safe to run repeatedly
 ```
 
+The server automatically loads `server/.env` for both `npm run dev` and `npm start`; environment variables injected by the host take precedence over values in the file. Set `JWT_SECRET`, `CLIENT_ORIGIN`, and the local-development cookie settings from `server/.env.example` before starting Lab 3.
+
 The seed creates the four categories, seven related systems, four active Development Requesters and one inactive one. The inactive Requester is excluded from the selector by the API, which is asserted by a test.
 
 ### 4. Client

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import request from "supertest";
-import { app } from "../../src/app.js";
+import { app } from "../testApp.js";
 void request; void app;
 
 // Issue 4 — write this test yourself, using health.test.ts as the pattern.
