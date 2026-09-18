@@ -88,12 +88,13 @@ model User {
 }
 
 model AuthSession {
-  id            String    @id @default(cuid())
-  userId        Int
-  csrfTokenHash String    @unique
-  issuedAt      DateTime  @default(now())
-  expiresAt     DateTime
-  revokedAt     DateTime?
+  id                  String    @id @default(cuid())
+  userId              Int
+  csrfTokenHash       String    @unique
+  csrfTokenCiphertext String?
+  issuedAt            DateTime  @default(now())
+  expiresAt           DateTime
+  revokedAt           DateTime?
 
   user User @relation(fields: [userId], references: [id], onDelete: Restrict)
 

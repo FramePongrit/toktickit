@@ -34,6 +34,10 @@ export class HttpError extends Error {
     return new HttpError(401, code, message);
   }
 
+  static tooManyRequests(code: string, message: string) {
+    return new HttpError(429, code, message);
+  }
+
   static forbidden(code: string, message: string) {
     return new HttpError(403, code, message);
   }

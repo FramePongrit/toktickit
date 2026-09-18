@@ -11,7 +11,14 @@ import { BCRYPT_COST, LEGACY_INITIAL_PASSWORD, seedDatabase } from "../../prisma
 import { storedFilePath } from "../../src/lib/paths.js";
 import { allocateTicketNumber } from "../../src/services/ticketNumber.service.js";
 
-const LAB3_MIGRATION = "20260918120000_lab3_user_workflow";
+const LAB3_WORKFLOW_MIGRATION = "20260918120000_lab3_user_workflow";
+const LAB3_CSRF_MIGRATION = "20260918130000_auth_session_csrf_ciphertext";
+const LAB3_REVOKE_MIGRATION = "20260918140000_revoke_legacy_auth_sessions";
+const LAB3_MIGRATIONS = [
+  LAB3_WORKFLOW_MIGRATION,
+  LAB3_CSRF_MIGRATION,
+  LAB3_REVOKE_MIGRATION,
+] as const;
 const LAB2_BASE_REF = "103e4be";
 const FIXTURE_YEAR = 2026;
 const LEGACY_ATTACHMENT_TIMESTAMP = new Date("2026-08-01T09:00:00.000Z");
@@ -31,6 +38,14 @@ let legacyTicketId: number;
 let legacyAttachmentId: number;
 let legacyTicketNumber: string;
 let legacyStoredFilename: string;
+let legacyAuthSessionId: string;
+let expiredLegacyAuthSessionId: string;
+let revokedLegacyAuthSessionId: string;
+let ciphertextLegacyAuthSessionId: string;
+const LEGACY_SESSION_EXPIRY = new Date("2099-09-18T17:00:00.000Z");
+const EXPIRED_SESSION_EXPIRY = new Date("2020-09-18T17:00:00.000Z");
+const LEGACY_REVOKED_AT = new Date("2026-09-18T12:00:00.000Z");
+const LEGACY_CIPHERTEXT = "existing-encrypted-csrf-value";
 let migrationProducedNullCredential = false;
 let migrationProducedNoMandatoryChange = false;
 
@@ -161,6 +176,58 @@ async function insertLab2Fixture(client: PrismaClient): Promise<void> {
   );
 }
 
+async function insertIssue48LegacySession(client: PrismaClient): Promise<void> {
+  legacyAuthSessionId = `issue48-session-${randomUUID().replaceAll("-", "")}`;
+  expiredLegacyAuthSessionId = `issue48-expired-${randomUUID().replaceAll("-", "")}`;
+  revokedLegacyAuthSessionId = `issue48-revoked-${randomUUID().replaceAll("-", "")}`;
+  ciphertextLegacyAuthSessionId = `issue48-ciphertext-${randomUUID().replaceAll("-", "")}`;
+  await client.$executeRawUnsafe(
+    `INSERT INTO "AuthSession" ("id", "userId", "csrfTokenHash", "issuedAt", "expiresAt", "revokedAt")
+     VALUES ($1, $2, $3, $4, $5, NULL)`,
+    legacyAuthSessionId,
+    legacyUserId,
+    "legacy-csrf-hash",
+    new Date("2026-09-18T09:00:00.000Z"),
+    LEGACY_SESSION_EXPIRY
+  );
+  await client.$executeRawUnsafe(
+    `INSERT INTO "AuthSession" ("id", "userId", "csrfTokenHash", "issuedAt", "expiresAt", "revokedAt")
+     VALUES ($1, $2, $3, $4, $5, NULL)`,
+    expiredLegacyAuthSessionId,
+    legacyUserId,
+    "expired-legacy-csrf-hash",
+    new Date("2020-09-18T09:00:00.000Z"),
+    EXPIRED_SESSION_EXPIRY
+  );
+  await client.$executeRawUnsafe(
+    `INSERT INTO "AuthSession" ("id", "userId", "csrfTokenHash", "issuedAt", "expiresAt", "revokedAt")
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    revokedLegacyAuthSessionId,
+    legacyUserId,
+    "revoked-legacy-csrf-hash",
+    new Date("2026-09-18T09:00:00.000Z"),
+    LEGACY_SESSION_EXPIRY,
+    LEGACY_REVOKED_AT
+  );
+  await client.$executeRawUnsafe(
+    `INSERT INTO "AuthSession" ("id", "userId", "csrfTokenHash", "issuedAt", "expiresAt", "revokedAt")
+     VALUES ($1, $2, $3, $4, $5, NULL)`,
+    ciphertextLegacyAuthSessionId,
+    legacyUserId,
+    "ciphertext-legacy-csrf-hash",
+    new Date("2026-09-18T09:00:00.000Z"),
+    LEGACY_SESSION_EXPIRY
+  );
+}
+
+async function populateLegacyCiphertextSession(client: PrismaClient): Promise<void> {
+  await client.$executeRawUnsafe(
+    `UPDATE "AuthSession" SET "csrfTokenCiphertext" = $1 WHERE "id" = $2`,
+    LEGACY_CIPHERTEXT,
+    ciphertextLegacyAuthSessionId
+  );
+}
+
 async function cleanupHarness(): Promise<void> {
   await lab3Client?.$disconnect();
   lab3Client = undefined;
@@ -210,10 +277,12 @@ beforeAll(async () => {
     const temporaryPrisma = path.join(temporaryPrismaDirectory, "prisma");
     await fs.cp(SOURCE_PRISMA_DIRECTORY, temporaryPrisma, { recursive: true });
     const lab3Schema = await fs.readFile(path.join(temporaryPrisma, "schema.prisma"), "utf8");
-    await fs.rm(path.join(temporaryPrisma, "migrations", LAB3_MIGRATION), {
-      recursive: true,
-      force: true,
-    });
+    for (const migration of LAB3_MIGRATIONS) {
+      await fs.rm(path.join(temporaryPrisma, "migrations", migration), {
+        recursive: true,
+        force: true,
+      });
+    }
     await fs.writeFile(path.join(temporaryPrisma, "schema.prisma"), loadLab2Schema());
 
     // Production uses prisma migrate deploy. Applying this copied Lab 2-only
@@ -229,13 +298,48 @@ beforeAll(async () => {
       await legacyClient.$disconnect();
     }
 
-    await fs.cp(
-      path.join(SOURCE_PRISMA_DIRECTORY, "migrations", LAB3_MIGRATION),
-      path.join(temporaryPrisma, "migrations", LAB3_MIGRATION),
-      { recursive: true }
-    );
+    for (const migration of LAB3_MIGRATIONS) {
+      await fs.cp(
+        path.join(SOURCE_PRISMA_DIRECTORY, "migrations", migration),
+        path.join(temporaryPrisma, "migrations", migration),
+        { recursive: true }
+      );
+      if (migration === LAB3_WORKFLOW_MIGRATION) {
+        await fs.writeFile(path.join(temporaryPrisma, "schema.prisma"), lab3Schema);
+        runMigrateDeploy(
+          path.join(temporaryPrisma, "schema.prisma"),
+          harnessUrl,
+          "Lab 3 workflow upgrade"
+        );
+
+        const workflowClient = new PrismaClient({ datasources: { db: { url: harnessUrl } } });
+        try {
+          await workflowClient.$connect();
+          await insertIssue48LegacySession(workflowClient);
+        } finally {
+          await workflowClient.$disconnect();
+        }
+      }
+      if (migration === LAB3_CSRF_MIGRATION) {
+        await fs.writeFile(path.join(temporaryPrisma, "schema.prisma"), lab3Schema);
+        runMigrateDeploy(
+          path.join(temporaryPrisma, "schema.prisma"),
+          harnessUrl,
+          "Lab 3 CSRF ciphertext upgrade"
+        );
+
+        const ciphertextClient = new PrismaClient({ datasources: { db: { url: harnessUrl } } });
+        try {
+          await ciphertextClient.$connect();
+          await populateLegacyCiphertextSession(ciphertextClient);
+        } finally {
+          await ciphertextClient.$disconnect();
+        }
+      }
+    }
+
     await fs.writeFile(path.join(temporaryPrisma, "schema.prisma"), lab3Schema);
-    runMigrateDeploy(path.join(temporaryPrisma, "schema.prisma"), harnessUrl, "Lab 3 upgrade");
+    runMigrateDeploy(path.join(temporaryPrisma, "schema.prisma"), harnessUrl, "Lab 3 legacy-session revoke upgrade");
 
     lab3Client = new PrismaClient({ datasources: { db: { url: harnessUrl } } });
     await lab3Client.$connect();
@@ -284,6 +388,18 @@ describe("MIG-01 — actual Lab 2 to Lab 3 upgrade", () => {
     expect(attachmentBeforeSeed.removedByRequesterId).toBe(legacyUserId);
     expect(attachmentBeforeSeed.removedAt).toEqual(LEGACY_ATTACHMENT_TIMESTAMP);
     expect(attachmentBeforeSeed.removalReason).toBe("Historical fixture");
+    const legacySession = await prisma.authSession.findUniqueOrThrow({ where: { id: legacyAuthSessionId } });
+    expect(legacySession.csrfTokenCiphertext).toBeNull();
+    expect(legacySession.revokedAt).not.toBeNull();
+    const expiredSession = await prisma.authSession.findUniqueOrThrow({ where: { id: expiredLegacyAuthSessionId } });
+    expect(expiredSession.expiresAt).toEqual(EXPIRED_SESSION_EXPIRY);
+    expect(expiredSession.revokedAt).toBeNull();
+    const revokedSession = await prisma.authSession.findUniqueOrThrow({ where: { id: revokedLegacyAuthSessionId } });
+    expect(revokedSession.expiresAt).toEqual(LEGACY_SESSION_EXPIRY);
+    expect(revokedSession.revokedAt).toEqual(LEGACY_REVOKED_AT);
+    const ciphertextSession = await prisma.authSession.findUniqueOrThrow({ where: { id: ciphertextLegacyAuthSessionId } });
+    expect(ciphertextSession.csrfTokenCiphertext).toBe(LEGACY_CIPHERTEXT);
+    expect(ciphertextSession.revokedAt).toBeNull();
     expect(await fs.readFile(storedFilePath(legacyStoredFilename), "utf8")).toBe(
       "historical attachment fixture"
     );

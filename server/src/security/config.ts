@@ -4,6 +4,8 @@ export interface SecurityConfig {
   jwtSecret: string;
   clientOrigin: string;
   cookie: CookieConfig;
+  /** Header-only requester identity is permitted only in the Lab2 test app. */
+  allowLegacyRequesterHeader: boolean;
 }
 
 const LOCAL_ENVIRONMENTS = new Set(["development", "test", "local"]);
@@ -73,6 +75,7 @@ export function loadSecurityConfig(env: NodeJS.ProcessEnv = process.env): Securi
   return {
     jwtSecret,
     clientOrigin: validateClientOrigin(env.CLIENT_ORIGIN),
+    allowLegacyRequesterHeader: false,
     cookie: {
       name: cookieName,
       httpOnly: true,
@@ -94,6 +97,7 @@ export function createDevelopmentSecurityConfig(): SecurityConfig {
   return {
     jwtSecret: "local-development-only-jwt-secret-change-me-32chars",
     clientOrigin: "http://localhost:5173",
+    allowLegacyRequesterHeader: true,
     cookie: {
       name: "toktickit_session",
       httpOnly: true,
