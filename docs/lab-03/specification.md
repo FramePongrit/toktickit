@@ -66,7 +66,7 @@ TokTickIT needs real accounts, not a client-selected identity. A Requester remai
 
 - **FR-18** The system shall provide loading, busy, success, validation, empty/no-results, forbidden/not-found/conflict, and safe retryable-failure feedback where meaningful.
 - **FR-19** All required screens shall reuse Zen Green components, remain keyboard accessible, and work without page-level horizontal overflow at 1440x900, 820x1024, and 390x844.
-- **FR-20** Migration and seed operations shall preserve Lab 2 Ticket, Attachment, identity, and ownership data and legacy behavioral assertions; authentication-specific legacy fixtures and obsolete selector/header expectations may be intentionally adapted to the Lab 3 identity contract.
+- **FR-20** Migration and seed operations shall preserve Lab 2 Ticket, Attachment, identity, and ownership data and legacy behavioral assertions. A legacy/migrated Requester with no prior credential hash shall receive the documented local-only Initial Password as a bcrypt hash and `mustChangePassword = true`; that credential may reach only Mandatory Password Change, and repeat migration/seed shall preserve the changed credential/hash with `mustChangePassword = false`. Authentication-specific legacy fixtures and obsolete selector/header expectations may be intentionally adapted to the Lab 3 identity contract.
 - **FR-21** IT Staff and Administrators shall retrieve a deterministic directory of eligible active Ticket Owners for Queue filtering and Reassign, without access to Administrator User Management data.
 
 ## 5. Authorization matrix
@@ -96,14 +96,14 @@ The backend returns `401 UNAUTHENTICATED` before evaluating permissions, `403 FO
 
 - **BR-01** Only an Active User with valid credentials may authenticate. Unknown-email and wrong-password attempts both return the same `401 INVALID_CREDENTIALS`; an inactive account returns `403 USER_INACTIVE` only after password verification.
 - **BR-02** Email is trimmed, lowercased, and unique case-insensitively before storage and lookup.
-- **BR-03** Passwords are bcrypt hashes at cost 12. Plaintext passwords, hashes, JWTs, server-side CSRF storage/derivation secrets, and server secrets are never returned or logged. The opaque session CSRF token is the sole client-returnable CSRF value: it appears only in the documented Login, current-User, and successful password-change JSON responses and is never logged.
+- **BR-03** Passwords, including migration/seed backfills, are bcrypt hashes at cost 12. Plaintext passwords, hashes, JWTs, server-side CSRF storage/derivation secrets, and server secrets are never returned or logged. The opaque session CSRF token is the sole client-returnable CSRF value: it appears only in the documented Login, current-User, and successful password-change JSON responses and is never logged.
 - **BR-04** A valid password is 10-72 trimmed characters, contains at least one letter and one digit, and a changed password cannot match the current password. Confirmation must match.
 - **BR-05** Five failed Login attempts for one normalized email in 15 minutes return `429 LOGIN_THROTTLED`; successful Login clears that email's counter. This is in-memory local-lab throttling, not a permanent lockout.
 - **BR-06** Login creates an `AuthSession` and signed JWT containing only User/session identifiers and expiry. Role, active state, and mandatory-change state are database-authoritative on every protected request.
 - **BR-07** A session and JWT expire after a fixed eight hours. Multiple concurrent sessions are allowed; no sliding expiry, refresh, or remember-me option exists.
 - **BR-08** Logout revokes only the current session. Password change creates a fresh current-device session and revokes every prior session; Administrator reset and User deactivation revoke every session for the affected User.
 - **BR-09** The authentication cookie is HttpOnly, `SameSite=Lax`, `Path=/`, and `Secure` outside local development. Login, successful `GET /api/auth/me`, and successful password change each return the same session's opaque CSRF token in a `Cache-Control: no-store` JSON response; the client holds it only in memory. Authenticated mutations require it in `X-CSRF-Token`; credentialed CORS accepts only the configured client origin for both JSON APIs and the preserved multipart Attachment upload route, with no wildcard or reflected arbitrary Origin.
-- **BR-10** A User in Mandatory Password Change may not enter normal screens or APIs until a successful password change. The server, not route hiding, enforces this.
+- **BR-10** A User in Mandatory Password Change, including a migrated Requester provisioned from a missing legacy credential, may not enter normal screens or APIs until a successful password change. The server, not route hiding, enforces this.
 
 ### Roles and User safety
 
@@ -171,7 +171,7 @@ Routes cover authentication/current User/password/Logout; authenticated Lab 2 Re
 | `Ticket` | expand status enum; nullable `ownerId`; `itPriority`; nullable current Resolution Indication value/time; retain Requester, Ticket Number, classification, Attachments. |
 | Comments/notes | Separate append-only `PublicComment` and `InternalNote`, each with Ticket FK, backend author FK, text, `createdAt`; indexes by Ticket/created time and author. |
 
-Migration is additive/evolutionary and preserves every Ticket ID/number, Attachment row/file, Requester identity, uploader/remover relationship, and Ticket ownership. Existing Tickets receive `itPriority = requestedPriority`; existing Requesters receive an Initial Password only if no hash exists. No migration drops/recreates Tickets or Attachments. Seed is idempotent: four active plus one inactive Requester, three active plus one inactive IT Staff, at least one active Administrator, and realistic assigned/unassigned Tickets across statuses/priorities with safe example communications. Re-running seed neither duplicates rows nor resets changed passwords. Required indexes cover active Role lookup, session lookup, queue scope/sort/owner, and chronological messages.
+Migration is additive/evolutionary and preserves every Ticket ID/number, Attachment row/file, Requester identity, uploader/remover relationship, and Ticket ownership. Existing Tickets receive `itPriority = requestedPriority`; a legacy/migrated Requester receives the documented local-only Initial Password only when no credential hash exists, stored as a bcrypt cost-12 hash with `mustChangePassword = true`. The migration regression proves that Requester can Login with that Initial Password, cannot use normal routes before changing it, can Login with the changed password afterward, and cannot Login with the Initial Password afterward. No migration drops/recreates Tickets or Attachments. Seed is idempotent: four active plus one inactive Requester, three active plus one inactive IT Staff, at least one active Administrator, and realistic assigned/unassigned Tickets across statuses/priorities with safe example communications. Re-running migration/seed neither duplicates rows nor changes the established credential/hash or `mustChangePassword = false`; the changed password remains usable and the Initial Password remains rejected. Tests never place plaintext passwords or hash values in responses or logs. Required indexes cover active Role lookup, session lookup, queue scope/sort/owner, and chronological messages.
 
 ## 10. Acceptance criteria
 
@@ -185,7 +185,7 @@ Migration is additive/evolutionary and preserves every Ticket ID/number, Attachm
 - **AC-08** Waiting for Requester requires an atomic Public Comment; Resolution Indication clears on Reopened; Closed/Cancelled remain Final.
 - **AC-09** Administrator User Management supports list/search/filter/create/edit/reset while enforcing one Role, normalized unique email, write-only passwords, session revocation, self safety, last-admin safety, and non-final ownership safety, including concurrent demotion/deactivation serialization.
 - **AC-10** All major screens use Zen Green, accessible states, role-aware navigation, distinguish public/private content, and have no page-level horizontal overflow at required viewports.
-- **AC-11** Fresh and upgraded Lab 2 databases migrate/seed safely, preserve historical data, and pass Lab 1/Lab 2 regression.
+- **AC-11** Fresh and upgraded Lab 2 databases migrate/seed safely, preserve historical data, provision and enforce the missing-legacy-credential Initial Password lifecycle, preserve a changed credential across repeat migration/seed, and pass Lab 1/Lab 2 regression.
 - **AC-12** Required server, client, E2E, responsive, screenshot, review, AI-use, and traceability artifacts exist and are verified on the integrated branch.
 
 ## 11. Product Definition of Done

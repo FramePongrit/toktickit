@@ -106,7 +106,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 - Add indexes for session lookup, active-role lookup, Staff Queue queries, ownership, and chronological messages.
 - Write a data-preserving Prisma migration without dropping/recreating Ticket or Attachment data.
 - Update idempotent seed data: 4 active + 1 inactive Requesters, 3 active + 1 inactive IT Staff, at least 1 active Administrator, realistic Tickets across status/priority/assignment, and safe example comments/notes.
-- Give existing Lab 2 Requesters an Initial Password only when their hash is missing; rerunning seed must not reset changed passwords.
+- Give existing Lab 2 Requesters the documented local-only Initial Password only when their credential hash is missing; write the bcrypt hash at the established cost, set `mustChangePassword = true`, and rerunning migration/seed must not reset a changed credential or clear its completed mandatory-change state.
 - Document local-only credentials without real secrets.
 
 ### Acceptance Criteria
@@ -114,14 +114,14 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 - Existing requester ownership, ticket numbers, attachments, uploader/remover identities, and files survive migration.
 - Existing Tickets receive IT Priority equal to Requested Priority.
 - Fresh and upgraded Lab 2 databases both migrate and seed successfully.
-- Repeated seed runs create no duplicates and do not reset established credentials.
+- Repeated seed runs create no duplicates and do not reset established credentials; a migrated legacy Requester with no prior credential can authenticate with the documented Initial Password, is blocked from normal routes until changing it, can authenticate with the changed password afterward, and cannot authenticate with the Initial Password afterward.
 - Non-final Ticket Owner data can satisfy the active Staff/Admin invariant; final Tickets retain historical owners.
 - Seed data supports every required demonstration.
 
 ### Tests
 
-- Implement `server/tests/lab-03/migration-seed.regression.test.ts`.
-- Cover fresh/upgraded migration, idempotent seed, historical Ticket/Attachment identity/ownership/file preservation, and Lab 1/Lab 2 regression.
+- Implement `server/tests/lab-03/migration-seed.regression.test.ts`; MIG-01 owns the upgraded legacy-Requester credential backfill lifecycle: non-null bcrypt cost-12 hash, `mustChangePassword = true`, Initial Password Login, mandatory-change route blocking, successful changed-password Login, and rejection of the Initial Password after change, without exposing credential values in responses or logs.
+- MIG-02 owns fresh/upgraded migration and repeat-seed idempotency: after the changed credential is established, rerunning migration/seed preserves the User and credential/hash, keeps `mustChangePassword = false`, continues to accept the changed password, rejects the Initial Password, and creates no duplicates; the same file also covers historical Ticket/Attachment identity/ownership/file preservation and Lab 1/Lab 2 regression.
 - Run all Lab 1 and Lab 2 server tests against the migrated schema.
 
 **Out of scope:** Auth routes, status service, and feature UI.
