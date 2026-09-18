@@ -52,6 +52,7 @@ async function makeTicket(requesterId: number, summary: string) {
       categoryId: category.id,
       relatedSystemId: relatedSystem.id,
       requestedPriority: "MEDIUM",
+      itPriority: "MEDIUM",
       summary,
       description: "A description long enough to satisfy the minimum length rule.",
     },
@@ -60,10 +61,10 @@ async function makeTicket(requesterId: number, summary: string) {
 
 beforeAll(async () => {
   const [owner, stranger] = await Promise.all([
-    prisma.requesterUser.create({
+    prisma.user.create({
       data: { fullName: "Attach Owner", email: `attach-owner-${suiteTag}@lab2.local` },
     }),
-    prisma.requesterUser.create({
+    prisma.user.create({
       data: { fullName: "Attach Stranger", email: `attach-stranger-${suiteTag}@lab2.local` },
     }),
   ]);
@@ -94,7 +95,7 @@ afterAll(async () => {
     where: { ticket: { requesterId: { in: [ownerId, strangerId] } } },
   });
   await prisma.ticket.deleteMany({ where: { requesterId: { in: [ownerId, strangerId] } } });
-  await prisma.requesterUser.deleteMany({ where: { id: { in: [ownerId, strangerId] } } });
+  await prisma.user.deleteMany({ where: { id: { in: [ownerId, strangerId] } } });
   await prisma.$disconnect();
 });
 

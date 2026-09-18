@@ -39,12 +39,19 @@ export const requireRequester = asyncHandler(
     }
 
     const id = Number(raw.trim());
-    const requester = await getPrisma().requesterUser.findUnique({
+    const requester = await getPrisma().user.findUnique({
       where: { id },
-      select: { id: true, fullName: true, email: true, active: true },
+      select: { id: true, fullName: true, email: true, active: true, role: true },
     });
 
     if (!requester) {
+      throw HttpError.unauthorized(
+        "REQUESTER_NOT_FOUND",
+        "The selected development requester no longer exists."
+      );
+    }
+
+    if (requester.role !== "REQUESTER") {
       throw HttpError.unauthorized(
         "REQUESTER_NOT_FOUND",
         "The selected development requester no longer exists."

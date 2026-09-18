@@ -15,6 +15,8 @@ const prisma = getPrisma();
 // one development database (vitest.config.ts sets fileParallelism: false).
 let activeRequesterId: number;
 let inactiveRequesterId: number;
+let activeStaffId: number;
+let activeAdminId: number;
 let categoryId: number;
 let relatedSystemId: number;
 let inactiveCategoryId: number;
@@ -42,14 +44,24 @@ function invalidFields(body: any): string[] {
 }
 
 beforeAll(async () => {
-  const active = await prisma.requesterUser.create({
-    data: { fullName: "Create Suite Active", email: `create-active-${suiteTag}@lab2.local`, active: true },
-  });
-  const inactive = await prisma.requesterUser.create({
-    data: { fullName: "Create Suite Inactive", email: `create-inactive-${suiteTag}@lab2.local`, active: false },
-  });
+  const [active, inactive, staff, admin] = await Promise.all([
+    prisma.user.create({
+      data: { fullName: "Create Suite Active", email: `create-active-${suiteTag}@lab2.local`, active: true },
+    }),
+    prisma.user.create({
+      data: { fullName: "Create Suite Inactive", email: `create-inactive-${suiteTag}@lab2.local`, active: false },
+    }),
+    prisma.user.create({
+      data: { fullName: "Create Suite Staff", email: `create-staff-${suiteTag}@lab2.local`, role: "STAFF" },
+    }),
+    prisma.user.create({
+      data: { fullName: "Create Suite Admin", email: `create-admin-${suiteTag}@lab2.local`, role: "ADMIN" },
+    }),
+  ]);
   activeRequesterId = active.id;
   inactiveRequesterId = inactive.id;
+  activeStaffId = staff.id;
+  activeAdminId = admin.id;
 
   const category = await prisma.category.findFirstOrThrow({ where: { active: true } });
   const relatedSystem = await prisma.relatedSystem.findFirstOrThrow({ where: { active: true } });
@@ -70,8 +82,8 @@ afterAll(async () => {
   await prisma.ticket.deleteMany({
     where: { requesterId: { in: [activeRequesterId, inactiveRequesterId] } },
   });
-  await prisma.requesterUser.deleteMany({
-    where: { id: { in: [activeRequesterId, inactiveRequesterId] } },
+  await prisma.user.deleteMany({
+    where: { id: { in: [activeRequesterId, inactiveRequesterId, activeStaffId, activeAdminId] } },
   });
   await prisma.category.deleteMany({ where: { id: inactiveCategoryId } });
   await prisma.$disconnect();
@@ -259,5 +271,32 @@ describe("POST /api/tickets — requester identity", () => {
     // same distinction for a valid token on a deactivated account.
     expect(res.status).toBe(403);
     expect(res.body.error.code).toBe("REQUESTER_INACTIVE");
+  });
+
+  it("keeps Staff and Administrators out of the retained development requester mechanism", async () => {
+    const staffCalls = await Promise.all([
+      post(validBody(), activeStaffId),
+      request(app).get("/api/tickets").set("X-Requester-Id", String(activeStaffId)),
+      request(app).get("/api/tickets/1").set("X-Requester-Id", String(activeStaffId)),
+    ]);
+    const adminCalls = await Promise.all([
+      post(validBody(), activeAdminId),
+      request(app).get("/api/tickets").set("X-Requester-Id", String(activeAdminId)),
+      request(app).get("/api/tickets/1").set("X-Requester-Id", String(activeAdminId)),
+    ]);
+
+    expect([...staffCalls, ...adminCalls].every((res) => res.status === 401)).toBe(true);
+    expect([...staffCalls, ...adminCalls].every((res) => res.body.error.code === "REQUESTER_NOT_FOUND")).toBe(true);
+  });
+
+  it("lists only active Requester Users in the development selector", async () => {
+    const res = await request(app).get("/api/dev-requesters");
+    const ids = res.body.map((user: { id: number }) => user.id);
+
+    expect(res.status).toBe(200);
+    expect(ids).toContain(activeRequesterId);
+    expect(ids).not.toContain(inactiveRequesterId);
+    expect(ids).not.toContain(activeStaffId);
+    expect(ids).not.toContain(activeAdminId);
   });
 });

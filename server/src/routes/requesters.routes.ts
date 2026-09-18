@@ -13,9 +13,9 @@ export const requestersRouter = Router();
 requestersRouter.get(
   "/",
   asyncHandler(async (_req, res) => {
-    const requesters = await getPrisma().requesterUser.findMany({
-      where: { active: true },
-      select: { id: true, fullName: true, email: true, department: true },
+    const requesters = await getPrisma().user.findMany({
+      where: { active: true, role: "REQUESTER" },
+      select: { id: true, fullName: true, email: true },
       orderBy: { fullName: "asc" },
     });
     res.status(200).json(requesters);

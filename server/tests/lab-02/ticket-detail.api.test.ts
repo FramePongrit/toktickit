@@ -20,13 +20,13 @@ function detail(ticketId: number | string, requesterId: number | null = ownerId)
 
 beforeAll(async () => {
   const [owner, stranger, inactive] = await Promise.all([
-    prisma.requesterUser.create({
+    prisma.user.create({
       data: { fullName: "Detail Owner", email: `detail-owner-${suiteTag}@lab2.local` },
     }),
-    prisma.requesterUser.create({
+    prisma.user.create({
       data: { fullName: "Detail Stranger", email: `detail-stranger-${suiteTag}@lab2.local` },
     }),
-    prisma.requesterUser.create({
+    prisma.user.create({
       data: {
         fullName: "Detail Inactive",
         email: `detail-inactive-${suiteTag}@lab2.local`,
@@ -45,6 +45,7 @@ beforeAll(async () => {
     categoryId: category.id,
     relatedSystemId: relatedSystem.id,
     requestedPriority: "HIGH" as const,
+    itPriority: "HIGH" as const,
     description: "A description long enough to satisfy the minimum length rule.",
   };
 
@@ -102,7 +103,7 @@ afterAll(async () => {
   await prisma.ticket.deleteMany({
     where: { requesterId: { in: [ownerId, strangerId, inactiveId] } },
   });
-  await prisma.requesterUser.deleteMany({
+  await prisma.user.deleteMany({
     where: { id: { in: [ownerId, strangerId, inactiveId] } },
   });
   await prisma.$disconnect();

@@ -8,7 +8,7 @@ import type { CreateTicketInput, ListTicketsQuery } from "../lib/validation.js";
 const detailInclude = {
   category: { select: { id: true, name: true } },
   relatedSystem: { select: { id: true, name: true } },
-  requester: { select: { id: true, fullName: true, email: true, department: true } },
+  requester: { select: { id: true, fullName: true, email: true } },
   attachments: { orderBy: { uploadedAt: "asc" } },
 } satisfies Prisma.TicketInclude;
 
@@ -34,6 +34,7 @@ export function serializeTicketDetail(ticket: TicketWithDetail) {
     summary: ticket.summary,
     description: ticket.description,
     requestedPriority: ticket.requestedPriority,
+    itPriority: ticket.itPriority,
     currentStatus: ticket.currentStatus,
     createdAt: ticket.createdAt,
     updatedAt: ticket.updatedAt,
@@ -77,6 +78,7 @@ const listSelect = {
   ticketNumber: true,
   summary: true,
   requestedPriority: true,
+  itPriority: true,
   currentStatus: true,
   createdAt: true,
   category: { select: { id: true, name: true } },
@@ -174,6 +176,7 @@ export async function createTicket(requesterId: number, input: CreateTicketInput
         categoryId: input.categoryId,
         relatedSystemId: input.relatedSystemId,
         requestedPriority: input.requestedPriority,
+        itPriority: input.requestedPriority,
         summary: input.summary,
         description: input.description,
         // currentStatus defaults to NEW in the schema (BR-02).
