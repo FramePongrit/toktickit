@@ -106,25 +106,27 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 - Add indexes for session lookup, active-role lookup, Staff Queue queries, ownership, and chronological messages.
 - Write a data-preserving Prisma migration without dropping/recreating Ticket or Attachment data.
 - Update idempotent seed data: 4 active + 1 inactive Requesters, 3 active + 1 inactive IT Staff, at least 1 active Administrator, realistic Tickets across status/priority/assignment, and safe example comments/notes.
-- Give existing Lab 2 Requesters the documented local-only Initial Password only when their credential hash is missing; write the bcrypt hash at the established cost, set `mustChangePassword = true`, and rerunning migration/seed must not reset a changed credential or clear its completed mandatory-change state.
-- Document local-only credentials without real secrets.
+- For upgraded Lab 2 Requesters with no credential hash, use the exact local-only fixture seed input `TokTickIT123!` documented in specification §9; write a bcrypt cost-12 hash verifiable by bcrypt comparison and set `mustChangePassword = true`. This migration/seed work does not call or require authentication routes.
+- Simulate a completed password change at fixture/database level by writing a separately generated changed bcrypt hash plus `mustChangePassword = false` directly, then rerun migration/seed and prove the exact established hash/state, User/Ticket/Attachment IDs, and preserved data remain unchanged with no duplicates. Never return or log the plaintext fixture value or any hash; it is not a production secret.
+- Keep general Administrator-entered Initial Password behavior unchanged; the §9 fixture value is local seed/test data only.
 
 ### Acceptance Criteria
 
 - Existing requester ownership, ticket numbers, attachments, uploader/remover identities, and files survive migration.
 - Existing Tickets receive IT Priority equal to Requested Priority.
 - Fresh and upgraded Lab 2 databases both migrate and seed successfully.
-- Repeated seed runs create no duplicates and do not reset established credentials; a migrated legacy Requester with no prior credential can authenticate with the documented Initial Password, is blocked from normal routes until changing it, can authenticate with the changed password afterward, and cannot authenticate with the Initial Password afterward.
+- For an upgraded legacy Requester with no prior hash, migration/seed uses `TokTickIT123!` from specification §9 as seed input, stores a non-null bcrypt cost-12 hash that matches that input, and sets `mustChangePassword = true`; these are fixture/database assertions only, not HTTP Login or route-gate tests.
+- After test setup directly writes a changed bcrypt hash plus `mustChangePassword = false` in the fixture/database, rerunning migration/seed preserves the exact established hash/state and all preserved IDs/data and creates no duplicates.
 - Non-final Ticket Owner data can satisfy the active Staff/Admin invariant; final Tickets retain historical owners.
 - Seed data supports every required demonstration.
 
 ### Tests
 
-- Implement `server/tests/lab-03/migration-seed.regression.test.ts`; MIG-01 owns the upgraded legacy-Requester credential backfill lifecycle: non-null bcrypt cost-12 hash, `mustChangePassword = true`, Initial Password Login, mandatory-change route blocking, successful changed-password Login, and rejection of the Initial Password after change, without exposing credential values in responses or logs.
-- MIG-02 owns fresh/upgraded migration and repeat-seed idempotency: after the changed credential is established, rerunning migration/seed preserves the User and credential/hash, keeps `mustChangePassword = false`, continues to accept the changed password, rejects the Initial Password, and creates no duplicates; the same file also covers historical Ticket/Attachment identity/ownership/file preservation and Lab 1/Lab 2 regression.
-- Run all Lab 1 and Lab 2 server tests against the migrated schema.
+- Implement `server/tests/lab-03/migration-seed.regression.test.ts`; MIG-01 owns only migration-observable assertions for the upgraded legacy fixture: the exact `TokTickIT123!` seed input from specification §9, preserved User/Ticket/Attachment IDs and data, a non-null bcrypt cost-12 hash verified by bcrypt comparison, and `mustChangePassword = true`. It then directly writes a changed bcrypt hash plus `mustChangePassword = false` in the fixture/database and proves repeat migration/seed preserves the exact hash/state and historical data, without HTTP route calls or credential values in output/logs.
+- MIG-02 owns only fresh/upgraded migration and repeat-seed idempotency: required account distribution/workflow fixtures, no duplicate rows, and preservation of the User, exact established credential/hash, `mustChangePassword = false`, and historical Ticket/Attachment identity/ownership/files after the direct changed-state setup. It does not execute authentication or Lab 1/Lab 2 regression routes.
+- The exact Lab 1/Lab 2 server/client regression manifest is owned and executed only by REG-01 under Issue 7.
 
-**Out of scope:** Auth routes, status service, and feature UI.
+**Out of scope:** Auth routes and HTTP Login/password-lifecycle tests, the §5 REG-01 legacy regression manifest, status service, and feature UI.
 
 **Branch:** `feature/2-lab3-data-migration`
 
@@ -186,12 +188,14 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 - Implement self-service Change Password with current password and confirmation.
 - Revoke every previous session and create a fresh current-device session after password change.
 - Gate initial-password Users so only current-user, Change Password, and Logout remain available.
+- Using the migrated legacy Requester fixture defined in specification §9, cover the full HTTP lifecycle in existing API-A03: Login with `TokTickIT123!`, mandatory route gate, Change Password, Login with the changed password, and rejection of the old Initial Password.
 - Apply fixed expiry, throttling, normalized email, CSRF, and safe errors.
 
 ### Acceptance Criteria
 
 - Valid active Users authenticate; invalid/inactive cases match the contract.
 - Initial-password Users cannot access normal APIs until successful change.
+- API-A03 proves the migrated legacy Requester HTTP lifecycle using the §9 local fixture; migration tests remain database/fixture-only and do not duplicate these route assertions.
 - Logout invalidates the current JWT immediately.
 - Password change verifies current password, rejects reuse, revokes old sessions, and retains access on the current device.
 - Responses contain no password, hash, token secret, or internal session data.
@@ -301,6 +305,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 - Preserve Create Ticket, My Tickets, Ticket Detail, upload, download, and soft-removal behavior.
 - Preserve ticket-number allocation, query validation, stable pagination, attachment limits/types, removal reason, and ownership-safe 404s.
 - Make `server/tests/lab-03/requester-regression.api.test.ts` the sole Lab 3 owner for authenticated Lab 2 create/list/detail/Attachment regression; communications tests do not duplicate this scope.
+- Make REG-01 the sole Issue 7 owner and executor of the exact existing Lab 1/Lab 2 server/client manifest in `docs/lab-03/tests.md` §5; only its authenticated identity setup and obsolete selector/`X-Requester-Id` expectations may be adapted.
 - Send Attachment uploads as credentialed `FormData` with CSRF and no manually set multipart boundary; preserve configured-origin CORS.
 - Apply attachment precedence: parser failures before application guards; then auth/Requester Role/CSRF/ownership/Final/state/payload rules; delete every new temp/orphan file and avoid unintended rows on every rejection/failure.
 - Adapt only Lab 2 identity setup and obsolete Development Requester selector/`X-Requester-Id` expectations to authenticated multi-Requester fixtures; retain Ticket, Attachment, validation, and safe-response behavioral assertions as regression evidence.
@@ -309,7 +314,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 
 - An authenticated Requester completes every Lab 2 workflow without a selector.
 - Supplying another requester ID cannot alter create/list/detail/attachment ownership.
-- All Lab 1/Lab 2 behavioral assertions remain green after intentional authentication-fixture and obsolete selector/header expectation changes.
+- REG-01 runs the exact §5 Lab 1/Lab 2 server/client manifest against the migrated schema; all assertions remain green after only the intentional authentication-fixture and obsolete selector/header expectation changes.
 - No Development Requester endpoint, header, route, action, or client state remains.
 
 ### Tests
@@ -317,7 +322,7 @@ This plan decomposes Sprint 3 into one reviewed Pull Request per GitHub Issue. I
 - Add focused Lab 3 Requester regression tests and update existing Lab 2 setup.
 - Implement `server/tests/lab-03/requester-regression.api.test.ts` (`API-R01`) for authenticated Lab 2 create/list/detail/Attachment ownership regression, absent selector endpoint, Ticket creation, Requested-to-IT Priority initialization, and immutable Requested Priority.
 - Implement `server/tests/lab-03/attachments.api.test.ts` for configured-origin CORS/preflight, multipart transport, ownership/finality precedence, type/size/count/removal rules, and temp/orphan cleanup.
-- Run complete server/client regression suites.
+- Execute REG-01, and only REG-01, using the exact server/client manifest in `docs/lab-03/tests.md` §5; no migration ID or Issue 2 test executes or owns that manifest.
 
 **Out of scope:** Comments, Resolution Indication, Staff screens, and Admin screens.
 
