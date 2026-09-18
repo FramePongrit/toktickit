@@ -36,7 +36,11 @@ The only conflict metadata shapes are:
 { "error": { "code": "OWNER_NOT_ELIGIBLE", "message": "Select an active IT Staff member or Administrator." } }
 ```
 
-`error.meta.owner` has exactly `id`, `fullName`, and `role`; `error.meta.nonFinalOwnedTicketCount` is a non-negative integer. `OWNER_NOT_ELIGIBLE` has no `error.meta` or `details`. A client must not infer or require additional metadata from any conflict.
+```json
+{ "error": { "code": "TICKET_OWNER_CHANGED", "message": "Ticket ownership changed. Refresh and try again.", "meta": { "owner": { "id": 8, "fullName": "Ploy Administrator", "role": "ADMIN" } } } }
+```
+
+`error.meta.owner` has exactly `id`, `fullName`, and `role`; it is used only by `TICKET_ALREADY_ASSIGNED` and `TICKET_OWNER_CHANGED`. `error.meta.nonFinalOwnedTicketCount` is a non-negative integer. `OWNER_NOT_ELIGIBLE` has no `error.meta` or `details`. A client must not infer or require additional metadata from any conflict.
 
 ### 1.1 Authentication, cookies, and CSRF
 
@@ -74,9 +78,10 @@ An unparseable JSON body is a transport failure: it returns generic `400 VALIDAT
 6. Reject a `CLOSED`/`CANCELLED` Ticket with `409 TICKET_FINAL`.
 7. Enforce payload-independent operation state prerequisites: Claim requires Unassigned; Reassign requires an existing Owner; status change requires a current active eligible Owner; Attachment removal rejects an already-removed Attachment with `409 ALREADY_REMOVED`.
 8. Validate payload fields and payload-dependent rules: enums, required/extra status-comment combinations, 1-2,000 character plain-text bodies, and parsed upload `NO_FILE`, extension/MIME, active-count, and stored-file metadata rules; a valid requested status is then checked against the allowed transition matrix.
-9. Validate referenced targets, when any: Reassign validates a positive `ownerId`, then returns the exact `409 OWNER_NOT_ELIGIBLE` response for an absent, inactive, or wrong-Role target.
+9. Validate referenced targets, when any: Reassign validates positive, distinct `ownerId` and `expectedOwnerId`, then returns the exact `409 OWNER_NOT_ELIGIBLE` response for an absent, inactive, or wrong-Role `ownerId` target. `expectedOwnerId` is a precondition, not a User lookup.
+10. Apply an atomic mutation precondition when required: Reassign updates only when the stored Owner still equals `expectedOwnerId`. A conditional-update miss is re-read in this order: Final returns `409 TICKET_FINAL`; Unassigned returns `409 TICKET_UNASSIGNED`; otherwise it returns `409 TICKET_OWNER_CHANGED` with the safe current `error.meta.owner` representation.
 
-This order applies to `POST /api/tickets/:id/attachments`, `PATCH /api/attachments/:id/remove`, `POST /api/tickets/:id/comments`, `PUT /api/tickets/:id/resolution-indication`, `PATCH /api/staff/tickets/:id/claim`, `/owner`, `/it-priority`, `/status`, and `POST /api/staff/tickets/:id/notes`; routes without a particular guard simply skip that stage. Consequently, a Final Ticket wins over competing parsed semantic errors: Final plus an invalid Attachment upload/removal payload, priority, status, Public Comment, Internal Note, or Owner target returns `409 TICKET_FINAL`. For a Non-final Ticket, Claim/Reassign/status/removal state prerequisites win over later payload/target checks. This precedence does not weaken the requester anti-enumeration rule in step 5. Every upload parser, guard, validation, database, or filesystem failure deletes every newly created temp/orphan file and leaves no unintended Attachment row; soft removal never deletes an existing stored file.
+This order applies to `POST /api/tickets/:id/attachments`, `PATCH /api/attachments/:id/remove`, `POST /api/tickets/:id/comments`, `PUT /api/tickets/:id/resolution-indication`, `PATCH /api/staff/tickets/:id/claim`, `/owner`, `/it-priority`, `/status`, and `POST /api/staff/tickets/:id/notes`; routes without a particular guard simply skip that stage. Consequently, a Final Ticket wins over competing parsed semantic errors: Final plus an invalid Attachment upload/removal payload, priority, status, Public Comment, Internal Note, or Owner target returns `409 TICKET_FINAL`. For a Non-final Ticket, Claim/Reassign/status/removal state prerequisites win over later payload/target checks, and a stale Reassign never becomes last-write-wins. This precedence does not weaken the requester anti-enumeration rule in step 5. Every upload parser, guard, validation, database, or filesystem failure deletes every newly created temp/orphan file and leaves no unintended Attachment row; soft removal never deletes an existing stored file.
 
 ### 1.4 Safe User and Ticket representations
 
@@ -157,7 +162,7 @@ The existing Lab 2 routes remain at their paths and retain their body/response/v
 | `GET /api/attachments/:id`, `/download` | Own Attachment; preserved `410 ATTACHMENT_REMOVED`. | Staff/Admin only may download through the same route for any Ticket. |
 | `PATCH /api/attachments/:id/remove` | Own Non-final Ticket only; preserved soft-removal contract. | `403 FORBIDDEN` |
 
-`POST /api/tickets`, attachment upload, and soft removal require CSRF. Creation rejects a Mandatory Password Change User or a non-Requester. Existing Lab 2 response fields remain, except `requester.department` is removed and Ticket read representations may add `itPriority`, `owner`, `resolutionIndication`, and `publicComments` as defined below. Requester Ticket Detail never includes Internal Notes. Ticket-targeted mutations use the precedence in §1.3.
+`POST /api/tickets`, attachment upload, and soft removal require CSRF. Creation rejects a Mandatory Password Change User or a non-Requester. On successful Ticket creation, the server sets `itPriority` to the submitted `requestedPriority` exactly; the create request has no `itPriority` field and a supplied one is `400 VALIDATION_FAILED`. Later Staff/Admin priority updates never change `requestedPriority`. Existing Lab 2 response fields remain, except `requester.department` is removed and Ticket read representations may add `itPriority`, `owner`, `resolutionIndication`, and `publicComments` as defined below. Requester Ticket Detail never includes Internal Notes. Ticket-targeted mutations use the precedence in §1.3.
 
 ### Attachment mutation transport and precedence
 
@@ -257,7 +262,7 @@ No body. The server checks the Final-Ticket guard before ownership state: a `CLO
 
 ### `PATCH /api/staff/tickets/:id/owner`
 
-Request `{ "ownerId": 8 }`. The Final-Ticket guard runs first. A Non-final Ticket without a current Owner returns `409 TICKET_UNASSIGNED`; callers must use Claim instead. Only after these guards is `ownerId` validated and its target resolved. Target must be a current Active `STAFF` or `ADMIN`; unassigning is not an operation. **200:** safe owner representation. A malformed id is `400 VALIDATION_FAILED`. An absent, inactive, or wrong-Role target returns the same exact `409 OWNER_NOT_ELIGIBLE` body defined in §1, with no `meta` or `details`; this endpoint never returns `USER_NOT_FOUND` for `ownerId`. A Final Ticket returns `409 TICKET_FINAL`.
+Request `{ "ownerId": 8, "expectedOwnerId": 7 }`. `expectedOwnerId` is the current Owner id observed in Detail; both ids are required positive integers and must differ. The Final-Ticket guard runs first. A Non-final Ticket without a current Owner returns `409 TICKET_UNASSIGNED`; callers must use Claim instead. Only after these guards are the fields validated and `ownerId` resolved. Target must be a current Active `STAFF` or `ADMIN`; unassigning is not an operation. The server conditionally updates only when the stored Owner remains `expectedOwnerId`. **200:** safe new owner representation. A malformed/missing/equal id is `400 VALIDATION_FAILED`. An absent, inactive, or wrong-Role target returns the same exact `409 OWNER_NOT_ELIGIBLE` body defined in §1, with no `meta` or `details`; this endpoint never returns `USER_NOT_FOUND` for `ownerId`. If the conditional update loses a concurrent Reassign, the server re-reads the Ticket: Final returns `409 TICKET_FINAL`, Unassigned returns `409 TICKET_UNASSIGNED`, otherwise `409 TICKET_OWNER_CHANGED` with the exact safe current `error.meta.owner` representation. Thus concurrent Reassign requests sharing one expected Owner have exactly one success and one `TICKET_OWNER_CHANGED`. Starting Unassigned, Reassign always returns `TICKET_UNASSIGNED` and a concurrent Claim is the sole operation that may acquire ownership. Starting owned, a concurrent Claim remains `TICKET_ALREADY_ASSIGNED` with the safe current Owner and cannot overwrite a Reassign result.
 
 ### `PATCH /api/staff/tickets/:id/it-priority`
 
@@ -316,7 +321,7 @@ Request `{ "initialPassword": "replacement-password2", "confirmation": "replacem
 | `UNAUTHENTICATED`, `INVALID_CREDENTIALS`, `CURRENT_PASSWORD_INVALID` | 401 |
 | `USER_INACTIVE`, `PASSWORD_CHANGE_REQUIRED`, `FORBIDDEN`, `CSRF_INVALID` | 403 |
 | `TICKET_NOT_FOUND`, `ATTACHMENT_NOT_FOUND`, `USER_NOT_FOUND`, `ROUTE_NOT_FOUND` | 404 |
-| `TICKET_FINAL`, `TICKET_ALREADY_ASSIGNED`, `TICKET_UNASSIGNED`, `OWNER_NOT_ELIGIBLE`, `TICKET_OWNER_REQUIRED`, `INVALID_STATUS_TRANSITION`, `RESOLUTION_ALREADY_INDICATED`, `RESOLUTION_INDICATION_NOT_ALLOWED`, `EMAIL_ALREADY_EXISTS`, `ADMIN_SELF_PROTECTION`, `LAST_ACTIVE_ADMINISTRATOR`, `USER_OWNS_NON_FINAL_TICKETS` | 409 |
+| `TICKET_FINAL`, `TICKET_ALREADY_ASSIGNED`, `TICKET_OWNER_CHANGED`, `TICKET_UNASSIGNED`, `OWNER_NOT_ELIGIBLE`, `TICKET_OWNER_REQUIRED`, `INVALID_STATUS_TRANSITION`, `RESOLUTION_ALREADY_INDICATED`, `RESOLUTION_INDICATION_NOT_ALLOWED`, `EMAIL_ALREADY_EXISTS`, `ADMIN_SELF_PROTECTION`, `LAST_ACTIVE_ADMINISTRATOR`, `USER_OWNS_NON_FINAL_TICKETS` | 409 |
 | `LOGIN_THROTTLED` | 429 |
 | `ATTACHMENT_REMOVED` | 410 |
 | `FILE_TOO_LARGE` | 413 |

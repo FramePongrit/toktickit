@@ -43,7 +43,7 @@ TokTickIT needs real accounts, not a client-selected identity. A Requester remai
 
 ### Requester continuation and communication
 
-- **FR-06** An authenticated Requester shall retain all Lab 2 Ticket and Attachment capabilities only for Tickets they submitted, without Development Requester Selector or Change Requester controls.
+- **FR-06** An authenticated Requester shall retain all Lab 2 Ticket and Attachment capabilities only for Tickets they submitted, without Development Requester Selector or Change Requester controls; every newly created Ticket shall initialize IT Priority to Requested Priority.
 - **FR-07** A Requester shall read Public Comment history on a Ticket they submitted and append Public Comments only while it is Non-final.
 - **FR-08** A Requester shall record one Resolution Indication on an eligible Non-final, non-Resolved Ticket they submitted without changing Ticket status.
 
@@ -51,7 +51,7 @@ TokTickIT needs real accounts, not a client-selected identity. A Requester remai
 
 - **FR-09** IT Staff and Administrators shall retrieve a paginated Staff Queue across Requesters with documented search, filters, ordering, scope, safe metadata, and a safe eligible-Owner filter.
 - **FR-10** IT Staff and Administrators shall read Staff Ticket Detail, including all permitted operational data and existing Attachment metadata/downloads.
-- **FR-11** IT Staff and Administrators shall Claim an Unassigned Ticket or Reassign a Ticket that already has an Owner to an eligible active IT Staff member or Administrator, without an implicit status change. Reassigning an Unassigned Ticket is rejected with `409 TICKET_UNASSIGNED`; Claim is the required operation.
+- **FR-11** IT Staff and Administrators shall Claim an Unassigned Ticket or Reassign a Ticket that already has an Owner to an eligible active IT Staff member or Administrator, without an implicit status change. Reassign requires the observed current Owner as an optimistic-concurrency precondition. Reassigning an Unassigned Ticket is rejected with `409 TICKET_UNASSIGNED`; Claim is the required operation.
 - **FR-12** IT Staff and Administrators shall change IT Priority independently of Requested Priority.
 - **FR-13** IT Staff and Administrators shall make only documented status transitions, with an eligible active Owner and required confirmation/comment behavior.
 - **FR-14** IT Staff and Administrators shall read Public Comment and Internal Note history, including Final Tickets, and append either only while the Ticket is Non-final; only Staff/Administrators may read or add Internal Notes.
@@ -66,7 +66,7 @@ TokTickIT needs real accounts, not a client-selected identity. A Requester remai
 
 - **FR-18** The system shall provide loading, busy, success, validation, empty/no-results, forbidden/not-found/conflict, and safe retryable-failure feedback where meaningful.
 - **FR-19** All required screens shall reuse Zen Green components, remain keyboard accessible, and work without page-level horizontal overflow at 1440x900, 820x1024, and 390x844.
-- **FR-20** Migration and seed operations shall preserve Lab 2 Ticket, Attachment, identity, and ownership data and all legacy automated behavior.
+- **FR-20** Migration and seed operations shall preserve Lab 2 Ticket, Attachment, identity, and ownership data and legacy behavioral assertions; authentication-specific legacy fixtures and obsolete selector/header expectations may be intentionally adapted to the Lab 3 identity contract.
 - **FR-21** IT Staff and Administrators shall retrieve a deterministic directory of eligible active Ticket Owners for Queue filtering and Reassign, without access to Administrator User Management data.
 
 ## 5. Authorization matrix
@@ -116,9 +116,9 @@ The backend returns `401 UNAUTHENTICATED` before evaluating permissions, `403 FO
 ### Ticket ownership, priorities, and workflow
 
 - **BR-16** The authenticated Requester identity fixes Ticket submission ownership; client `requesterId` values are ignored/rejected and never widen access.
-- **BR-17** A Ticket begins `NEW`, may be Unassigned, and has Requested Priority immutable from creation. IT Priority is initialized to Requested Priority and only Staff/Administrators may change it.
+- **BR-17** A Ticket begins `NEW`, may be Unassigned, and has Requested Priority immutable from creation. Creation always initializes IT Priority to exactly Requested Priority; only Staff/Administrators may subsequently change IT Priority.
 - **BR-18** A Ticket Owner is one active User with Role `STAFF` or `ADMIN`. Claim atomically assigns only an Unassigned Ticket to the caller; Reassign selects another active eligible User only when the Ticket already has an Owner. Reassigning an Unassigned Ticket returns `409 TICKET_UNASSIGNED` and neither action changes status.
-- **BR-19** Every status transition requires a current active eligible Ticket Owner. A Claim/Reassign race never overwrites an existing Owner: the loser receives `409 TICKET_ALREADY_ASSIGNED` with only the documented safe `error.meta.owner` representation.
+- **BR-19** Every status transition requires a current active eligible Ticket Owner. Claim uses an atomic Unassigned-only update; concurrent Claims produce one success and one `409 TICKET_ALREADY_ASSIGNED` with the documented safe `error.meta.owner`. Reassign requires the observed `expectedOwnerId` and uses one conditional update requiring that current Owner. Concurrent/stale Reassign requests with the same expected Owner produce one success and one `409 TICKET_OWNER_CHANGED` with only the documented safe current `error.meta.owner`; it never silently overwrites another Staff/Administrator action. A Claim against an already owned Ticket remains `TICKET_ALREADY_ASSIGNED`; Reassign against an Unassigned Ticket remains `TICKET_UNASSIGNED`.
 - **BR-20** `CLOSED` and `CANCELLED` are Final and completely read-only for mutations, while permitted historical content remains readable under BR-23/BR-24. `RESOLVED` is Non-final. A later problem after Closed is a new Ticket (Recurrence), not a reopen.
 - **BR-21** Transitioning to `WAITING_FOR_REQUESTER` requires a trimmed 1-2,000 character Public Comment in the same database transaction. A Requester reply does not implicitly change status.
 - **BR-22** Transitioning to `RESOLVED`, `CLOSED`, `CANCELLED`, or `REOPENED` requires explicit UI confirmation. On `REOPENED`, clear the Resolution Indication. Only `RESOLVED` can transition to `REOPENED`.
@@ -176,10 +176,10 @@ Migration is additive/evolutionary and preserves every Ticket ID/number, Attachm
 - **AC-01** Active valid credentials create authenticated access with safe identity/Role data; invalid and inactive cases follow the API contract.
 - **AC-02** Mandatory Password Change blocks normal screens and APIs until a valid new password succeeds; Logout then blocks direct access.
 - **AC-03** Protected operations enforce current session, active state, Role, CSRF, Requester ownership, and configured-origin credentialed CORS server-side.
-- **AC-04** Lab 2 requester Ticket/Attachment behavior, including browser multipart upload and rejection cleanup, works through authenticated identity with no selector/change-requester state.
+- **AC-04** Lab 2 requester Ticket/Attachment behavior, including browser multipart upload, rejection cleanup, and Requested-to-IT Priority initialization on Ticket creation, works through authenticated identity with no selector/change-requester state.
 - **AC-05** Public Comments may be appended on every permitted Non-final Ticket, including `RESOLVED`; Resolution Indication obeys its separate non-Resolved/no-status-change rule; Final Tickets reject appends before competing semantic body errors; Internal Notes never reach a Requester.
 - **AC-06** Staff/Admin Queue supports documented search, AND filters, scope, stable sort, page sizes, pagination metadata, safe failures, and eligible Owner filtering from the safe Owner directory.
-- **AC-07** Staff/Admin Ticket Detail supports authorized read/download, safe eligible-Owner selection, atomic Claim/Reassign, IT Priority, and every permitted status edge while rejecting absent edges/final mutations according to the guard-precedence contract.
+- **AC-07** Staff/Admin Ticket Detail supports authorized read/download, safe eligible-Owner selection, atomic Claim and optimistic-concurrency Reassign, IT Priority, and every permitted status edge while rejecting absent edges/final mutations according to the guard-precedence contract.
 - **AC-08** Waiting for Requester requires an atomic Public Comment; Resolution Indication clears on Reopened; Closed/Cancelled remain Final.
 - **AC-09** Administrator User Management supports list/search/filter/create/edit/reset while enforcing one Role, normalized unique email, write-only passwords, session revocation, self safety, last-admin safety, and non-final ownership safety.
 - **AC-10** All major screens use Zen Green, accessible states, role-aware navigation, distinguish public/private content, and have no page-level horizontal overflow at required viewports.
@@ -190,7 +190,7 @@ Migration is additive/evolutionary and preserves every Ticket ID/number, Attachm
 
 - [ ] All FRs, BRs, API/UI contracts, ADRs, and glossary terms are implemented consistently; every AC has passing planned tests documented in `tests.md`.
 - [ ] Every protected route has authentication, Mandatory Password Change, Role, ownership, CSRF, input, safe-error, and Final-state enforcement as applicable.
-- [ ] Fresh and upgraded database migration/seed preserve Lab 2 records and are idempotent; legacy and Lab 3 server/client suites pass.
+- [ ] Fresh and upgraded database migration/seed preserve Lab 2 records and are idempotent; legacy behavioral assertions and Lab 3 server/client suites pass, with only authentication setup and obsolete selector/header expectations intentionally adapted.
 - [ ] Required API, component, E2E, authorization/security, responsive, and screenshot tests pass from `main`; evidence paths are populated and readable.
 - [ ] Desktop/tablet/mobile visual checklist passes for Login, password change/shell, Requester Ticket Detail, Staff Queue, Staff Detail, and User Management; keyboard/focus/dialog/feedback behavior is verified.
 - [ ] Peer review, Issue/PR/Kanban evidence, reviewer record, selected AI-use prompts/reflection, README setup, and `.gitignore` safety audit are complete; no secrets/runtime uploads/build outputs are tracked.
