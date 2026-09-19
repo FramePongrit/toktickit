@@ -3,6 +3,8 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import request from "supertest";
 import { app } from "../testApp.js";
 import { getPrisma } from "../../src/prisma.js";
+import { hashPassword } from "../../src/security/password.js";
+import { loginAs, TEST_PASSWORD, withAuth, type AuthSessionFixture } from "../support/auth.js";
 import {
   formatTicketNumber,
   TICKET_NUMBER_PATTERN,
@@ -17,6 +19,9 @@ let activeRequesterId: number;
 let inactiveRequesterId: number;
 let activeStaffId: number;
 let activeAdminId: number;
+let activeAuth: AuthSessionFixture;
+let staffAuth: AuthSessionFixture;
+let adminAuth: AuthSessionFixture;
 let categoryId: number;
 let relatedSystemId: number;
 let inactiveCategoryId: number;
@@ -33,9 +38,9 @@ function validBody() {
   };
 }
 
-function post(body: object, requesterId: number | null = activeRequesterId) {
+function post(body: object, auth: AuthSessionFixture | null = activeAuth) {
   const req = request(app).post("/api/tickets").send(body);
-  return requesterId === null ? req : req.set("X-Requester-Id", String(requesterId));
+  return auth ? withAuth(req, auth) : req;
 }
 
 /** Field names carried in a 400 VALIDATION_FAILED body. */
@@ -44,24 +49,28 @@ function invalidFields(body: any): string[] {
 }
 
 beforeAll(async () => {
+  const passwordHash = await hashPassword(TEST_PASSWORD);
   const [active, inactive, staff, admin] = await Promise.all([
     prisma.user.create({
-      data: { fullName: "Create Suite Active", email: `create-active-${suiteTag}@lab2.local`, active: true },
+      data: { fullName: "Create Suite Active", email: `create-active-${suiteTag}@lab2.local`, active: true, passwordHash },
     }),
     prisma.user.create({
-      data: { fullName: "Create Suite Inactive", email: `create-inactive-${suiteTag}@lab2.local`, active: false },
+      data: { fullName: "Create Suite Inactive", email: `create-inactive-${suiteTag}@lab2.local`, active: false, passwordHash },
     }),
     prisma.user.create({
-      data: { fullName: "Create Suite Staff", email: `create-staff-${suiteTag}@lab2.local`, role: "STAFF" },
+      data: { fullName: "Create Suite Staff", email: `create-staff-${suiteTag}@lab2.local`, role: "STAFF", passwordHash },
     }),
     prisma.user.create({
-      data: { fullName: "Create Suite Admin", email: `create-admin-${suiteTag}@lab2.local`, role: "ADMIN" },
+      data: { fullName: "Create Suite Admin", email: `create-admin-${suiteTag}@lab2.local`, role: "ADMIN", passwordHash },
     }),
   ]);
   activeRequesterId = active.id;
   inactiveRequesterId = inactive.id;
   activeStaffId = staff.id;
   activeAdminId = admin.id;
+  activeAuth = await loginAs(active.email);
+  staffAuth = await loginAs(staff.email);
+  adminAuth = await loginAs(admin.email);
 
   const category = await prisma.category.findFirstOrThrow({ where: { active: true } });
   const relatedSystem = await prisma.relatedSystem.findFirstOrThrow({ where: { active: true } });
@@ -81,6 +90,9 @@ afterAll(async () => {
   // FK order: tickets before the requesters they point at.
   await prisma.ticket.deleteMany({
     where: { requesterId: { in: [activeRequesterId, inactiveRequesterId] } },
+  });
+  await prisma.authSession.deleteMany({
+    where: { userId: { in: [activeRequesterId, inactiveRequesterId, activeStaffId, activeAdminId] } },
   });
   await prisma.user.deleteMany({
     where: { id: { in: [activeRequesterId, inactiveRequesterId, activeStaffId, activeAdminId] } },
@@ -239,64 +251,31 @@ describe("POST /api/tickets — validation", () => {
   });
 });
 
-describe("POST /api/tickets — requester identity", () => {
-  it("API-12: rejects a request with no identity header", async () => {
+describe("POST /api/tickets — authenticated identity", () => {
+  it("rejects a request with no authenticated session", async () => {
     const res = await post(validBody(), null);
 
     expect(res.status).toBe(401);
-    expect(res.body.error.code).toBe("REQUESTER_HEADER_MISSING");
+    expect(res.body.error.code).toBe("UNAUTHENTICATED");
   });
 
-  it("API-13: rejects a malformed identity header", async () => {
+  it("requires the session CSRF token for mutation", async () => {
     const res = await request(app)
       .post("/api/tickets")
-      .set("X-Requester-Id", "abc")
+      .set("Cookie", activeAuth.cookie)
       .send(validBody());
 
-    expect(res.status).toBe(400);
-    expect(res.body.error.code).toBe("REQUESTER_HEADER_INVALID");
-  });
-
-  it("API-14: rejects an identity that cannot be resolved", async () => {
-    const res = await post(validBody(), 999_999);
-
-    expect(res.status).toBe(401);
-    expect(res.body.error.code).toBe("REQUESTER_NOT_FOUND");
-  });
-
-  it("API-15: refuses an inactive requester", async () => {
-    const res = await post(validBody(), inactiveRequesterId);
-
-    // 403, not 401: the identity resolved but is not permitted. Lab 3 needs the
-    // same distinction for a valid token on a deactivated account.
     expect(res.status).toBe(403);
-    expect(res.body.error.code).toBe("REQUESTER_INACTIVE");
+    expect(res.body.error.code).toBe("CSRF_INVALID");
   });
 
-  it("keeps Staff and Administrators out of the retained development requester mechanism", async () => {
-    const staffCalls = await Promise.all([
-      post(validBody(), activeStaffId),
-      request(app).get("/api/tickets").set("X-Requester-Id", String(activeStaffId)),
-      request(app).get("/api/tickets/1").set("X-Requester-Id", String(activeStaffId)),
-    ]);
-    const adminCalls = await Promise.all([
-      post(validBody(), activeAdminId),
-      request(app).get("/api/tickets").set("X-Requester-Id", String(activeAdminId)),
-      request(app).get("/api/tickets/1").set("X-Requester-Id", String(activeAdminId)),
-    ]);
+  it("keeps Staff and Administrators out of Requester Ticket creation", async () => {
+    const staff = await post(validBody(), staffAuth);
+    const admin = await post(validBody(), adminAuth);
 
-    expect([...staffCalls, ...adminCalls].every((res) => res.status === 401)).toBe(true);
-    expect([...staffCalls, ...adminCalls].every((res) => res.body.error.code === "REQUESTER_NOT_FOUND")).toBe(true);
-  });
-
-  it("lists only active Requester Users in the development selector", async () => {
-    const res = await request(app).get("/api/dev-requesters");
-    const ids = res.body.map((user: { id: number }) => user.id);
-
-    expect(res.status).toBe(200);
-    expect(ids).toContain(activeRequesterId);
-    expect(ids).not.toContain(inactiveRequesterId);
-    expect(ids).not.toContain(activeStaffId);
-    expect(ids).not.toContain(activeAdminId);
+    expect(staff.status).toBe(403);
+    expect(staff.body.error.code).toBe("FORBIDDEN");
+    expect(admin.status).toBe(403);
+    expect(admin.body.error.code).toBe("FORBIDDEN");
   });
 });

@@ -2,9 +2,9 @@
 
 TokTickIT is an IT service desk application for Account and Access, Hardware, Software, and Network requests.
 
-As of Lab 2 a Requester can select a development identity, create a ticket and receive an official ticket number, find their own tickets through search, filters, sorting and pagination, open a ticket, and upload, download and soft-remove attachments. Ownership is enforced by the backend: one Requester cannot read another's ticket or attachment.
+An authenticated Requester can create a ticket and receive an official ticket number, find their own tickets through search, filters, sorting and pagination, open a ticket, and upload, download and soft-remove attachments. Ownership is enforced by the backend: one Requester cannot read another's ticket or attachment.
 
-Authentication arrives in Lab 3. Until then the **Development Requester Selector is a testing mechanism, not a login screen**, and the identity it supplies is trusted without verification.
+Lab 3 authentication uses an eight-hour session cookie. The browser restores the current User through `/api/auth/me`; the server derives Ticket and Attachment ownership from that authenticated User and never from a client-supplied requester id. State-changing requests also send the session's `X-CSRF-Token` header.
 
 ## Setup
 
@@ -36,7 +36,7 @@ npx prisma db seed            # idempotent: safe to run repeatedly
 
 The server automatically loads `server/.env` for both `npm run dev` and `npm start`; environment variables injected by the host take precedence over values in the file. Set `JWT_SECRET`, `CLIENT_ORIGIN`, and the local-development cookie settings from `server/.env.example` before starting Lab 3.
 
-The seed creates the four categories, seven related systems, four active Development Requesters and one inactive one. The inactive Requester is excluded from the selector by the API, which is asserted by a test.
+The seed creates the four categories, seven related systems, active local Users, and the Lab 3 authentication fixtures used by the application and tests.
 
 ### 4. Client
 
@@ -81,14 +81,16 @@ Notes worth knowing before changing the test setup:
 
 ## API
 
-Identity travels in the `X-Requester-Id` header on every ticket and attachment endpoint. The three reference-data endpoints do not require it, because the selection screen must work before a Requester has been chosen.
+Ticket and Attachment identity comes from the authenticated session cookie. The server reads the current User from that session and rejects ownership attempts based on client-provided identity fields. Browser mutations additionally require the session-bound `X-CSRF-Token` header; read-only requests use the session cookie without CSRF.
 
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/api/health` | Service health |
 | GET | `/api/categories` | Active categories |
 | GET | `/api/related-systems` | Active related systems |
-| GET | `/api/dev-requesters` | Active development requesters |
+| POST | `/api/auth/login` | Authenticate and establish the session cookie |
+| GET | `/api/auth/me` | Return the authenticated User and CSRF token |
+| POST | `/api/auth/logout` | Revoke the current session |
 | POST | `/api/tickets` | Create a ticket |
 | GET | `/api/tickets` | The caller's tickets, paginated, with search, filters and sorting |
 | GET | `/api/tickets/:id` | One ticket the caller owns |

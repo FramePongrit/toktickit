@@ -3,6 +3,8 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import request from "supertest";
 import { app } from "../testApp.js";
 import { getPrisma } from "../../src/prisma.js";
+import { hashPassword } from "../../src/security/password.js";
+import { loginAs, TEST_PASSWORD, withAuth, type AuthSessionFixture } from "../support/auth.js";
 
 const prisma = getPrisma();
 const suiteTag = randomUUID();
@@ -10,33 +12,40 @@ const suiteTag = randomUUID();
 let ownerId: number;
 let strangerId: number;
 let inactiveId: number;
+let ownerAuth: AuthSessionFixture;
+let strangerAuth: AuthSessionFixture;
 let ownedTicketId: number;
 let strangerTicketId: number;
 
 function detail(ticketId: number | string, requesterId: number | null = ownerId) {
   const req = request(app).get(`/api/tickets/${ticketId}`);
-  return requesterId === null ? req : req.set("X-Requester-Id", String(requesterId));
+  if (requesterId === null) return req;
+  return withAuth(req, requesterId === ownerId ? ownerAuth : strangerAuth, false);
 }
 
 beforeAll(async () => {
+  const passwordHash = await hashPassword(TEST_PASSWORD);
   const [owner, stranger, inactive] = await Promise.all([
     prisma.user.create({
-      data: { fullName: "Detail Owner", email: `detail-owner-${suiteTag}@lab2.local` },
+      data: { fullName: "Detail Owner", email: `detail-owner-${suiteTag}@lab2.local`, passwordHash },
     }),
     prisma.user.create({
-      data: { fullName: "Detail Stranger", email: `detail-stranger-${suiteTag}@lab2.local` },
+      data: { fullName: "Detail Stranger", email: `detail-stranger-${suiteTag}@lab2.local`, passwordHash },
     }),
     prisma.user.create({
       data: {
         fullName: "Detail Inactive",
         email: `detail-inactive-${suiteTag}@lab2.local`,
         active: false,
+        passwordHash,
       },
     }),
   ]);
   ownerId = owner.id;
   strangerId = stranger.id;
   inactiveId = inactive.id;
+  ownerAuth = await loginAs(owner.email);
+  strangerAuth = await loginAs(stranger.email);
 
   const category = await prisma.category.findFirstOrThrow({ where: { active: true } });
   const relatedSystem = await prisma.relatedSystem.findFirstOrThrow({ where: { active: true } });
@@ -102,6 +111,9 @@ afterAll(async () => {
   });
   await prisma.ticket.deleteMany({
     where: { requesterId: { in: [ownerId, strangerId, inactiveId] } },
+  });
+  await prisma.authSession.deleteMany({
+    where: { userId: { in: [ownerId, strangerId] } },
   });
   await prisma.user.deleteMany({
     where: { id: { in: [ownerId, strangerId, inactiveId] } },
@@ -209,34 +221,11 @@ describe("GET /api/tickets/:id — invalid identifiers", () => {
   });
 });
 
-describe("GET /api/tickets/:id — requester identity", () => {
-  it("API-38: rejects a request with no identity header", async () => {
+describe("GET /api/tickets/:id — authenticated identity", () => {
+  it("rejects a request with no authenticated session", async () => {
     const res = await detail(ownedTicketId, null);
 
     expect(res.status).toBe(401);
-    expect(res.body.error.code).toBe("REQUESTER_HEADER_MISSING");
-  });
-
-  it("API-38: rejects a malformed identity header", async () => {
-    const res = await request(app)
-      .get(`/api/tickets/${ownedTicketId}`)
-      .set("X-Requester-Id", "not-a-number");
-
-    expect(res.status).toBe(400);
-    expect(res.body.error.code).toBe("REQUESTER_HEADER_INVALID");
-  });
-
-  it("API-38: rejects an identity that cannot be resolved", async () => {
-    const res = await detail(ownedTicketId, 999_999);
-
-    expect(res.status).toBe(401);
-    expect(res.body.error.code).toBe("REQUESTER_NOT_FOUND");
-  });
-
-  it("API-38: refuses an inactive requester before reaching the ticket", async () => {
-    const res = await detail(ownedTicketId, inactiveId);
-
-    expect(res.status).toBe(403);
-    expect(res.body.error.code).toBe("REQUESTER_INACTIVE");
+    expect(res.body.error.code).toBe("UNAUTHENTICATED");
   });
 });

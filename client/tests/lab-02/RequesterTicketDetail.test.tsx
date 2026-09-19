@@ -3,9 +3,6 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { RequesterTicketDetailPage } from "../../src/pages/RequesterTicketDetailPage.js";
 import * as ticketsApi from "../../src/api/tickets.js";
-import * as referenceData from "../../src/api/referenceData.js";
-import { RequesterProvider } from "../../src/context/RequesterContext.js";
-import { AppRoutes } from "../../src/AppRouter.js";
 import { ApiError } from "../../src/lib/http.js";
 import type { TicketDetail } from "../../src/types/index.js";
 
@@ -20,12 +17,11 @@ const TICKET: TicketDetail = {
   updatedAt: "2026-09-01T09:14:00.000Z",
   category: { id: 2, name: "Hardware" },
   relatedSystem: { id: 8, name: "Corporate Laptop" },
-  requester: {
-    id: 1,
-    fullName: "Jennifer Anderson",
-    email: "jennifer@kmutt.ac.th",
-    department: "Engineering",
-  },
+    requester: {
+      id: 1,
+      fullName: "Jennifer Anderson",
+      email: "jennifer@kmutt.ac.th",
+    },
   attachments: [],
 };
 
@@ -133,22 +129,5 @@ describe("Ticket Detail — access and failure", () => {
     screen.getByRole("button", { name: /Retry/i }).click();
 
     expect(await screen.findByRole("heading", { name: "TKT-2026-000042" })).toBeInTheDocument();
-  });
-
-  it("UI-18: redirects to the selector when no requester is selected", async () => {
-    vi.spyOn(referenceData, "fetchDevRequesters").mockResolvedValue([]);
-    vi.spyOn(ticketsApi, "fetchTicket").mockResolvedValue(TICKET);
-
-    render(
-      <MemoryRouter initialEntries={["/tickets/42"]}>
-        <RequesterProvider>
-          <AppRoutes />
-        </RequesterProvider>
-      </MemoryRouter>
-    );
-
-    expect(
-      await screen.findByRole("heading", { name: /Select Development Requester/i })
-    ).toBeInTheDocument();
   });
 });
