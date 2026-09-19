@@ -261,3 +261,74 @@ export const staffStatusMutationSchema = z
   .strict();
 
 export type StaffStatusMutationInput = z.infer<typeof staffStatusMutationSchema>;
+
+const userRole = z.enum(["REQUESTER", "STAFF", "ADMIN"], {
+  error: "Role must be one of REQUESTER, STAFF or ADMIN.",
+});
+
+const userFullName = z
+  .string({ error: "Full name is required." })
+  .trim()
+  .min(1, "Full name is required.")
+  .max(120, "Full name must be at most 120 characters.");
+
+const userEmail = z
+  .string({ error: "Email is required." })
+  .trim()
+  .toLowerCase()
+  .email("Email must be valid.");
+
+const userPasswordField = z.string({ error: "Initial Password is required." });
+
+const suppliedTrimmedQuery = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess(
+    (value) => (typeof value === "string" ? value.trim() : value),
+    schema.optional()
+  );
+
+export const adminUsersQuerySchema = z
+  .object({
+    q: suppliedTrimmedQuery(
+      z
+        .string()
+        .min(1, "Search text must not be blank.")
+        .max(100, "Search text must be at most 100 characters.")
+    ),
+    role: z.preprocess((value) => (value === "" ? undefined : value), userRole.optional()),
+  })
+  .strict();
+
+export const adminCreateUserSchema = z
+  .object({
+    fullName: userFullName,
+    email: userEmail,
+    role: userRole,
+    active: z.boolean({ error: "Active state is required." }),
+    initialPassword: userPasswordField,
+    confirmation: z.string({ error: "Confirmation is required." }),
+  })
+  .strict();
+
+export const adminEditUserSchema = z
+  .object({
+    fullName: userFullName.optional(),
+    email: userEmail.optional(),
+    role: userRole.optional(),
+    active: z.boolean({ error: "Active state must be true or false." }).optional(),
+  })
+  .strict()
+  .refine((value) => Object.keys(value).length > 0, {
+    message: "At least one User field is required.",
+  });
+
+export const adminResetPasswordSchema = z
+  .object({
+    initialPassword: userPasswordField,
+    confirmation: z.string({ error: "Confirmation is required." }),
+  })
+  .strict();
+
+export type AdminUsersQuery = z.infer<typeof adminUsersQuerySchema>;
+export type AdminCreateUserInput = z.infer<typeof adminCreateUserSchema>;
+export type AdminEditUserInput = z.infer<typeof adminEditUserSchema>;
+export type AdminResetPasswordInput = z.infer<typeof adminResetPasswordSchema>;
