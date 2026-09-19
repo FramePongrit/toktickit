@@ -13,6 +13,7 @@ interface AttachmentSectionProps {
   ticketId: number;
   attachments: AttachmentMeta[];
   onChanged: (attachments: AttachmentMeta[]) => void;
+  readOnly?: boolean;
 }
 
 function formatSize(bytes: number): string {
@@ -25,7 +26,12 @@ function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString();
 }
 
-export function AttachmentSection({ ticketId, attachments, onChanged }: AttachmentSectionProps) {
+export function AttachmentSection({
+  ticketId,
+  attachments,
+  onChanged,
+  readOnly = false,
+}: AttachmentSectionProps) {
   const fileInput = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -119,23 +125,25 @@ export function AttachmentSection({ ticketId, attachments, onChanged }: Attachme
           Attachments ({activeCount} active of {MAX_ACTIVE_ATTACHMENTS})
         </h2>
 
-        <div>
-          <label className="btn btn-outline-primary mb-0" htmlFor="attachment-input">
-            {uploading ? "Uploading…" : "Add attachment"}
-          </label>
-          <input
-            id="attachment-input"
-            ref={fileInput}
-            type="file"
-            className="visually-hidden"
-            accept=".jpg,.jpeg,.png,.webp,.pdf"
-            disabled={uploading || limitReached}
-            onChange={handleFile}
-          />
-        </div>
+        {!readOnly && (
+          <div>
+            <label className="btn btn-outline-primary mb-0" htmlFor="attachment-input">
+              {uploading ? "Uploading…" : "Add attachment"}
+            </label>
+            <input
+              id="attachment-input"
+              ref={fileInput}
+              type="file"
+              className="visually-hidden"
+              accept=".jpg,.jpeg,.png,.webp,.pdf"
+              disabled={uploading || limitReached}
+              onChange={handleFile}
+            />
+          </div>
+        )}
       </div>
 
-      {limitReached && (
+      {limitReached && !readOnly && (
         <p className="zen-warning-panel mb-3" role="status">
           This ticket already has {MAX_ACTIVE_ATTACHMENTS} active attachments. Remove one before
           adding another.
@@ -194,13 +202,15 @@ export function AttachmentSection({ ticketId, attachments, onChanged }: Attachme
                   >
                     Download
                   </button>
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-outline-danger"
-                    onClick={() => openRemoveDialog(attachment)}
-                  >
-                    Remove
-                  </button>
+                  {!readOnly && (
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-danger"
+                      onClick={() => openRemoveDialog(attachment)}
+                    >
+                      Remove
+                    </button>
+                  )}
                 </div>
               )}
             </li>

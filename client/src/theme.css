@@ -305,6 +305,38 @@ body {
   max-width: 1140px;
 }
 
+/* Requester Ticket Detail communication content stays readable when a user
+   pastes a long URL or backend-authored text at every supported breakpoint. */
+.zen-ticket-detail,
+.zen-communication-card,
+.zen-comment-timeline,
+.zen-comment-item {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.zen-comment-item {
+  border-top: 1px solid var(--zen-border);
+  padding: 1rem 0;
+}
+
+.zen-comment-item:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.zen-comment-body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.zen-communication-card .zen-badge {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 /* Touch targets stay comfortable on small screens. The pagination controls and
    the navbar toggler are not .btn, so they need naming explicitly — measuring
    them found both sitting at 38px and 40px. */
