@@ -31,6 +31,24 @@ export interface UserSummary {
   email: string;
 }
 
+export interface CommunicationAuthor {
+  id: number;
+  fullName: string;
+  role: Role;
+}
+
+export interface PublicComment {
+  id: number;
+  body: string;
+  createdAt: string;
+  author: CommunicationAuthor;
+}
+
+export interface ResolutionIndication {
+  indicatedAt: string;
+  indicatedBy: CommunicationAuthor;
+}
+
 export interface AttachmentMeta {
   id: number;
   originalFilename: string;
@@ -60,6 +78,8 @@ export interface TicketDetail {
   summary: string;
   description: string;
   requestedPriority: Priority;
+  /** Optional keeps Lab 2 fixture objects source-compatible; the API always returns it. */
+  itPriority?: Priority;
   currentStatus: TicketStatus;
   createdAt: string;
   updatedAt: string;
@@ -67,6 +87,10 @@ export interface TicketDetail {
   relatedSystem: ReferenceItem;
   requester: UserSummary;
   attachments: AttachmentMeta[];
+  /** Optional keeps Lab 2 fixture objects source-compatible; the API always returns it. */
+  publicComments?: PublicComment[];
+  /** Optional keeps Lab 2 fixture objects source-compatible; the API always returns it. */
+  resolutionIndication?: ResolutionIndication | null;
 }
 
 export interface PagedResult<T> {

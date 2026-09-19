@@ -16,9 +16,15 @@ function titleCase(value: string): string {
  * meaning on its own, so the value stays legible to anyone who cannot
  * distinguish the ramp (ui-spec §5).
  */
-export function PriorityBadge({ priority }: { priority: Priority }) {
+export function PriorityBadge({
+  priority,
+  testId = "priority-badge",
+}: {
+  priority: Priority;
+  testId?: string;
+}) {
   return (
-    <span className={`zen-badge ${PRIORITY_CLASS[priority]}`} data-testid="priority-badge">
+    <span className={`zen-badge ${PRIORITY_CLASS[priority]}`} data-testid={testId}>
       {titleCase(priority)}
     </span>
   );
