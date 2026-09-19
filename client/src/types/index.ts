@@ -72,6 +72,27 @@ export interface TicketListItem {
   attachmentCount: number;
 }
 
+export interface TicketOwnerOption {
+  id: number;
+  fullName: string;
+  role: Extract<Role, "STAFF" | "ADMIN">;
+}
+
+export interface StaffQueueItem {
+  id: number;
+  ticketNumber: string;
+  summary: string;
+  requestedPriority: Priority;
+  itPriority: Priority;
+  currentStatus: TicketStatus;
+  createdAt: string;
+  updatedAt: string;
+  category: ReferenceItem;
+  requester: UserSummary;
+  owner: TicketOwnerOption | null;
+  resolutionIndication: ResolutionIndication | null;
+}
+
 export interface TicketDetail {
   id: number;
   ticketNumber: string;

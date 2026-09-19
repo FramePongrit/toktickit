@@ -10,6 +10,7 @@ import { LoginPage } from "./pages/LoginPage.js";
 import { MyTicketsPage } from "./pages/MyTicketsPage.js";
 import { NotFoundPage } from "./pages/NotFoundPage.js";
 import { RequesterTicketDetailPage } from "./pages/RequesterTicketDetailPage.js";
+import { StaffTicketQueuePage } from "./pages/StaffTicketQueuePage.js";
 
 function BootstrapFailure() {
   const { refresh } = useAuth();
@@ -76,7 +77,7 @@ export function AppRoutes() {
             <Route path="/tickets/:id" element={<RequesterTicketDetailPage />} />
           </Route>
           <Route element={<RequireRole roles={["STAFF", "ADMIN"]} />}>
-            <Route path="/staff/tickets" element={<RolePlaceholderPage role="staff" />} />
+            <Route path="/staff/tickets" element={<StaffTicketQueuePage />} />
           </Route>
           <Route element={<RequireRole roles={["ADMIN"]} />}>
             <Route path="/admin/users" element={<RolePlaceholderPage role="admin" />} />

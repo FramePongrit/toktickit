@@ -4,6 +4,8 @@ import type {
   Priority,
   PublicComment,
   ResolutionIndication,
+  StaffQueueItem,
+  TicketOwnerOption,
   TicketDetail,
   TicketListItem,
 } from "../types/index.js";
@@ -64,6 +66,31 @@ export interface TicketQuery {
   order: "asc" | "desc";
 }
 
+export type StaffQueueScope = "active" | "all";
+export type StaffQueueSortField = "itPriority" | "createdAt" | "updatedAt" | "ticketNumber" | "status";
+export type SortOrder = "asc" | "desc";
+
+export interface StaffQueueQuery {
+  scope: StaffQueueScope;
+  page: number;
+  pageSize: 10 | 20 | 50;
+  q?: string;
+  status?: import("../types/index.js").TicketStatus;
+  itPriority?: Priority;
+  categoryId?: number;
+  owner?: "me" | "unassigned" | number;
+  sort: StaffQueueSortField;
+  order: SortOrder;
+}
+
+export interface StaffQueueResult {
+  data: StaffQueueItem[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
 export function fetchMyTickets(query: TicketQuery): Promise<PagedResult<TicketListItem>> {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(query)) {
@@ -74,4 +101,16 @@ export function fetchMyTickets(query: TicketQuery): Promise<PagedResult<TicketLi
     }
   }
   return request<PagedResult<TicketListItem>>(`/api/tickets?${params.toString()}`);
+}
+
+export function fetchStaffQueue(query: StaffQueueQuery): Promise<StaffQueueResult> {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined && value !== "") params.set(key, String(value));
+  }
+  return request<StaffQueueResult>(`/api/staff/tickets?${params.toString()}`);
+}
+
+export function fetchTicketOwners(): Promise<TicketOwnerOption[]> {
+  return request<{ data: TicketOwnerOption[] }>("/api/staff/ticket-owners").then((response) => response.data);
 }

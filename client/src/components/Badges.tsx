@@ -8,7 +8,11 @@ const PRIORITY_CLASS: Record<Priority, string> = {
 };
 
 function titleCase(value: string): string {
-  return value.charAt(0) + value.slice(1).toLowerCase();
+  return value
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 /**
