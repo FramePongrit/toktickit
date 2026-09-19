@@ -148,15 +148,11 @@ body {
   --bs-pagination-active-border-color: var(--zen-primary);
 }
 
-/* A Requester with enough tickets to reach several pages produces more
-   page-link buttons than a narrow viewport can hold once each one carries
-   the 44px touch-target minimum below. Scrolling the strip itself keeps
-   every page reachable without ever scrolling the document (FR-27 / D-07). */
+/* Pagination uses a bounded window of page links, so every page remains
+   reachable without a horizontal strip or page-level overflow on mobile. */
 .zen-pagination-nav {
   max-width: 100%;
   min-width: 0;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
 /* --- Surfaces ------------------------------------------------------------ */
@@ -303,6 +299,85 @@ body {
 
 .zen-page {
   max-width: 1140px;
+}
+
+/* Staff Queue: keep the desktop table readable without creating a page-level
+   horizontal scroll. Long backend-authored values wrap inside their cell. */
+.staff-queue-table {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.staff-queue-table table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.staff-queue-table th,
+.staff-queue-table td {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  vertical-align: top;
+}
+
+.staff-queue-table .queue-col-ticket { width: 13%; }
+.staff-queue-table .queue-col-summary { width: 18%; }
+.staff-queue-table .queue-col-category { width: 12%; }
+.staff-queue-table .queue-col-priority { width: 16%; }
+.staff-queue-table .queue-col-status { width: 12%; }
+.staff-queue-table .queue-col-owner { width: 13%; }
+.staff-queue-table .queue-col-updated { width: 16%; }
+
+.staff-queue-card {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.staff-queue-card .zen-badge {
+  white-space: normal;
+}
+
+.queue-indication {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  color: var(--zen-secondary);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.queue-scope button[aria-pressed="true"] {
+  background: var(--zen-primary);
+  border-color: var(--zen-primary);
+  color: #fff;
+}
+
+.queue-skeleton-block {
+  display: block;
+  min-height: 1rem;
+  border-radius: 0.25rem;
+  background: linear-gradient(90deg, var(--zen-readonly-bg) 25%, #e6ece8 37%, var(--zen-readonly-bg) 63%);
+  background-size: 400% 100%;
+  animation: queue-skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+.queue-skeleton-row td {
+  height: 5.5rem;
+}
+
+.queue-skeleton-card {
+  min-height: 10rem;
+}
+
+@keyframes queue-skeleton-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: 0 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .queue-skeleton-block {
+    animation: none;
+  }
 }
 
 /* Requester Ticket Detail communication content stays readable when a user
