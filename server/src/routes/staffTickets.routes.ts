@@ -9,6 +9,13 @@ import {
   listInternalNotes,
 } from "../services/communications.service.js";
 import { listEligibleTicketOwners, listStaffQueue } from "../services/staffQueue.service.js";
+import {
+  claimStaffTicket,
+  getStaffTicketDetail,
+  reassignStaffTicket,
+  updateStaffItPriority,
+  updateStaffTicketStatus,
+} from "../services/staffTicketOperations.service.js";
 
 export interface StaffTicketsRouteDependencies {
   authentication: RequestHandler;
@@ -25,6 +32,60 @@ export function createStaffTicketsRouter(dependencies: StaffTicketsRouteDependen
     asyncHandler(async (req, res) => {
       const query = staffQueueQuerySchema.parse(req.query);
       res.status(200).json(await listStaffQueue(req.auth!.userId, query));
+    })
+  );
+
+  router.get(
+    "/:id",
+    dependencies.authentication,
+    requireStaffRole,
+    asyncHandler(async (req, res) => {
+      const { id } = idParamSchema.parse(req.params);
+      res.status(200).json(await getStaffTicketDetail(id));
+    })
+  );
+
+  router.patch(
+    "/:id/claim",
+    dependencies.authentication,
+    requireStaffRole,
+    dependencies.csrf,
+    asyncHandler(async (req, res) => {
+      const { id } = idParamSchema.parse(req.params);
+      res.status(200).json(await claimStaffTicket(req.auth!.userId, id));
+    })
+  );
+
+  router.patch(
+    "/:id/owner",
+    dependencies.authentication,
+    requireStaffRole,
+    dependencies.csrf,
+    asyncHandler(async (req, res) => {
+      const { id } = idParamSchema.parse(req.params);
+      res.status(200).json(await reassignStaffTicket(id, req.body));
+    })
+  );
+
+  router.patch(
+    "/:id/it-priority",
+    dependencies.authentication,
+    requireStaffRole,
+    dependencies.csrf,
+    asyncHandler(async (req, res) => {
+      const { id } = idParamSchema.parse(req.params);
+      res.status(200).json(await updateStaffItPriority(id, req.body));
+    })
+  );
+
+  router.patch(
+    "/:id/status",
+    dependencies.authentication,
+    requireStaffRole,
+    dependencies.csrf,
+    asyncHandler(async (req, res) => {
+      const { id } = idParamSchema.parse(req.params);
+      res.status(200).json(await updateStaffTicketStatus(req.auth!.userId, id, req.body));
     })
   );
 

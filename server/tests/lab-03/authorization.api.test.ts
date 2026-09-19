@@ -441,7 +441,8 @@ describe("API-Z03 — direct Role boundaries and restricted representations", ()
   it("lets Administrator pass the Staff boundary while preserving feature scope", async () => {
     const admin = await login(adminId, `authz-admin-${suiteTag}@example.test`);
     const staffFeature = await request(app).get(`/api/staff/tickets/${ticketAId}`).set("Cookie", admin.cookie);
-    safeError(staffFeature, 404, "ROUTE_NOT_FOUND");
+    expect(staffFeature.status).toBe(200);
+    expect(staffFeature.body.id).toBe(ticketAId);
 
     const staff = await login(staffId, `authz-staff-${suiteTag}@example.test`);
     const adminFeature = await request(app).get("/api/admin/users").set("Cookie", staff.cookie);

@@ -222,3 +222,42 @@ export const staffQueueQuerySchema = z
   });
 
 export type StaffQueueQuery = z.infer<typeof staffQueueQuerySchema>;
+
+const ticketStatus = z.enum(TICKET_STATUSES, {
+  error: `Status must be one of ${TICKET_STATUSES.join(", ")}.`,
+});
+
+const positiveIntegerBody = (label: string) =>
+  z.number({ error: `${label} is required.` }).int(`${label} must be a whole number.`).positive(`${label} is required.`);
+
+export const staffOwnerMutationSchema = z
+  .object({
+    ownerId: positiveIntegerBody("Owner"),
+    expectedOwnerId: positiveIntegerBody("Expected Owner"),
+  })
+  .strict()
+  .refine((value) => value.ownerId !== value.expectedOwnerId, {
+    path: ["ownerId"],
+    message: "Owner and Expected Owner must be different.",
+  });
+
+export type StaffOwnerMutationInput = z.infer<typeof staffOwnerMutationSchema>;
+
+export const staffPriorityMutationSchema = z
+  .object({
+    itPriority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"], {
+      error: "IT Priority must be one of LOW, MEDIUM, HIGH or URGENT.",
+    }),
+  })
+  .strict();
+
+export type StaffPriorityMutationInput = z.infer<typeof staffPriorityMutationSchema>;
+
+export const staffStatusMutationSchema = z
+  .object({
+    status: ticketStatus,
+    publicComment: z.string().optional(),
+  })
+  .strict();
+
+export type StaffStatusMutationInput = z.infer<typeof staffStatusMutationSchema>;
