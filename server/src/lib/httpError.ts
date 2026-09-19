@@ -13,13 +13,21 @@ export class HttpError extends Error {
   readonly status: number;
   readonly code: string;
   readonly details?: FieldIssue[];
+  readonly meta?: Record<string, unknown>;
 
-  constructor(status: number, code: string, message: string, details?: FieldIssue[]) {
+  constructor(
+    status: number,
+    code: string,
+    message: string,
+    details?: FieldIssue[],
+    meta?: Record<string, unknown>
+  ) {
     super(message);
     this.name = "HttpError";
     this.status = status;
     this.code = code;
     this.details = details;
+    this.meta = meta;
   }
 
   static badRequest(code: string, message: string, details?: FieldIssue[]) {
@@ -46,8 +54,8 @@ export class HttpError extends Error {
     return new HttpError(404, code, message);
   }
 
-  static conflict(code: string, message: string) {
-    return new HttpError(409, code, message);
+  static conflict(code: string, message: string, meta?: Record<string, unknown>) {
+    return new HttpError(409, code, message, undefined, meta);
   }
 
   static gone(code: string, message: string) {
