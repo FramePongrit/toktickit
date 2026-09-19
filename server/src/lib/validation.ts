@@ -126,3 +126,99 @@ export const listTicketsQuerySchema = z.object({
 });
 
 export type ListTicketsQuery = z.infer<typeof listTicketsQuerySchema>;
+
+export const TICKET_STATUSES = [
+  "NEW",
+  "OPEN",
+  "IN_PROGRESS",
+  "WAITING_FOR_REQUESTER",
+  "REOPENED",
+  "RESOLVED",
+  "CLOSED",
+  "CANCELLED",
+] as const;
+
+export const STAFF_QUEUE_SORT_FIELDS = [
+  "itPriority",
+  "createdAt",
+  "updatedAt",
+  "ticketNumber",
+  "status",
+] as const;
+
+const trimmedOptionalParam = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess((value) => {
+    if (value === undefined || value === "") return undefined;
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      return trimmed === "" ? undefined : trimmed;
+    }
+    return value;
+  }, schema.optional());
+
+const suppliedTrimmedOptionalParam = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess(
+    (value) => (typeof value === "string" ? value.trim() : value),
+    schema.optional()
+  );
+
+const staffQueueOwner = z
+  .string()
+  .refine(
+    (value) => value === "me" || value === "unassigned" || /^[1-9]\d*$/.test(value),
+    "Owner must be me, unassigned, or a positive whole number."
+  );
+
+/** Exact query contract for the Staff Queue. Values are rejected, never clamped. */
+export const staffQueueQuerySchema = z
+  .object({
+    scope: trimmedOptionalParam(z.enum(["active", "all"], {
+      error: "Scope must be active or all.",
+    })),
+    // An omitted q means no search. Once q is supplied, trimming it to an
+    // empty string is still invalid rather than silently changing the query.
+    q: suppliedTrimmedOptionalParam(
+      z
+        .string()
+        .min(1, "Search text must not be blank.")
+        .max(100, "Search text must be at most 100 characters.")
+    ),
+    status: trimmedOptionalParam(z.enum(TICKET_STATUSES, {
+      error: `Status must be one of ${TICKET_STATUSES.join(", ")}.`,
+    })),
+    itPriority: trimmedOptionalParam(z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"], {
+      error: "IT Priority must be one of LOW, MEDIUM, HIGH or URGENT.",
+    })),
+    categoryId: trimmedOptionalParam(numericParam("Category")),
+    owner: trimmedOptionalParam(staffQueueOwner),
+    sort: trimmedOptionalParam(z.enum(STAFF_QUEUE_SORT_FIELDS, {
+      error: `Sort must be one of ${STAFF_QUEUE_SORT_FIELDS.join(", ")}.`,
+    })),
+    order: trimmedOptionalParam(z.enum(["asc", "desc"], {
+      error: "Order must be asc or desc.",
+    })),
+    page: trimmedOptionalParam(numericParam("Page")),
+    pageSize: trimmedOptionalParam(
+      z
+        .string()
+        .transform(Number)
+        .refine(
+          (value) => (TICKET_PAGE_SIZES as readonly number[]).includes(value),
+          `Page size must be one of ${TICKET_PAGE_SIZES.join(", ")}.`
+        )
+    ),
+  })
+  .strict()
+  .transform((query) => {
+    const sort = query.sort ?? "itPriority";
+    return {
+      ...query,
+      scope: query.scope ?? "active",
+      sort,
+      order: query.order ?? (sort === "itPriority" ? "desc" : "asc"),
+      page: query.page ?? 1,
+      pageSize: query.pageSize ?? 10,
+    };
+  });
+
+export type StaffQueueQuery = z.infer<typeof staffQueueQuerySchema>;
