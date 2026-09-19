@@ -7,7 +7,11 @@ import { MAX_ATTACHMENT_BYTES } from "./upload.js";
 function zodIssues(error: ZodError): FieldIssue[] {
   return error.issues.map((issue) => ({
     field: issue.path.join(".") || "(body)",
-    message: issue.message,
+    // Zod's strict-object error includes every unknown key in its message.
+    // Do not echo secret-shaped client field names such as `passwordHash`.
+    message: issue.code === "unrecognized_keys"
+      ? "The submitted data contains an unsupported field."
+      : issue.message,
   }));
 }
 
