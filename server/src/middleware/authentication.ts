@@ -60,28 +60,6 @@ export function createAuthenticationMiddleware(dependencies: AuthenticationDepen
   });
 }
 
-/**
- * Legacy Lab 2 requester routes remain callable by header-only regression
- * tests until Issue 6 replaces that contract. If a cookie is present,
- * however, it must be the authoritative identity; otherwise a mandatory
- * password-change session could be bypassed with another requester header.
- */
-export function createOptionalAuthenticationMiddleware(dependencies: AuthenticationDependencies) {
-  const required = createAuthenticationMiddleware(dependencies);
-  const cookieName = dependencies.config?.cookie.name ?? "toktickit_session";
-  return (req: Request, res: Response, next: NextFunction) => {
-    if (!readCookie(req.header("cookie"), cookieName)) {
-      if (!dependencies.config?.allowLegacyRequesterHeader) {
-        next(unauthenticated());
-        return;
-      }
-      next();
-      return;
-    }
-    required(req, res, next);
-  };
-}
-
 const MUTATING_METHODS = new Set(["POST", "PATCH", "PUT", "DELETE"]);
 
 export function createCsrfMiddleware(dependencies: {
