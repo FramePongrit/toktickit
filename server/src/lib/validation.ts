@@ -52,6 +52,22 @@ export const removeAttachmentSchema = z.object({
     .max(200, "The removal reason must be at most 200 characters."),
 });
 
+/**
+ * Communication bodies are deliberately plain strings. The API stores and
+ * returns the literal value; consumers must render it as text rather than
+ * interpreting it as HTML. Trimming is part of validation so whitespace-only
+ * messages cannot become append-only records.
+ */
+export const communicationBodySchema = z.object({
+  body: z
+    .string({ error: "Message body is required." })
+    .trim()
+    .min(1, "Message body must not be blank.")
+    .max(2000, "Message body must be at most 2,000 characters."),
+});
+
+export type CommunicationBodyInput = z.infer<typeof communicationBodySchema>;
+
 export const TICKET_SORT_FIELDS = [
   "createdAt",
   "ticketNumber",
