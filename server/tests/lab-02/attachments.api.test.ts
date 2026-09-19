@@ -6,12 +6,16 @@ import { app } from "../testApp.js";
 import { getPrisma } from "../../src/prisma.js";
 import { UPLOAD_DIR, storedFilePath } from "../../src/lib/paths.js";
 import { isPermittedFile, MAX_ATTACHMENT_BYTES } from "../../src/middleware/upload.js";
+import { hashPassword } from "../../src/security/password.js";
+import { loginAs, TEST_PASSWORD, withAuth, type AuthSessionFixture } from "../support/auth.js";
 
 const prisma = getPrisma();
 const suiteTag = randomUUID();
 
 let ownerId: number;
 let strangerId: number;
+let ownerAuth: AuthSessionFixture;
+let strangerAuth: AuthSessionFixture;
 let ticketId: number;
 let strangerTicketId: number;
 
@@ -26,13 +30,14 @@ function upload(
   bytes: Buffer = PNG_BYTES,
   requesterId: number = ownerId
 ) {
-  return (
+  const auth = requesterId === ownerId ? ownerAuth : strangerAuth;
+  return withAuth(
     request(app)
       .post(`/api/tickets/${target}/attachments`)
-      .set("X-Requester-Id", String(requesterId))
       // Never set Content-Type by hand here: supertest owns the multipart
       // boundary, and overriding it corrupts the body.
-      .attach("file", bytes, { filename, contentType })
+      .attach("file", bytes, { filename, contentType }),
+    auth
   );
 }
 
@@ -60,16 +65,19 @@ async function makeTicket(requesterId: number, summary: string) {
 }
 
 beforeAll(async () => {
+  const passwordHash = await hashPassword(TEST_PASSWORD);
   const [owner, stranger] = await Promise.all([
     prisma.user.create({
-      data: { fullName: "Attach Owner", email: `attach-owner-${suiteTag}@lab2.local` },
+      data: { fullName: "Attach Owner", email: `attach-owner-${suiteTag}@lab2.local`, passwordHash },
     }),
     prisma.user.create({
-      data: { fullName: "Attach Stranger", email: `attach-stranger-${suiteTag}@lab2.local` },
+      data: { fullName: "Attach Stranger", email: `attach-stranger-${suiteTag}@lab2.local`, passwordHash },
     }),
   ]);
   ownerId = owner.id;
   strangerId = stranger.id;
+  ownerAuth = await loginAs(owner.email);
+  strangerAuth = await loginAs(stranger.email);
 
   strangerTicketId = (await makeTicket(strangerId, "Stranger ticket")).id;
 });
@@ -95,6 +103,7 @@ afterAll(async () => {
     where: { ticket: { requesterId: { in: [ownerId, strangerId] } } },
   });
   await prisma.ticket.deleteMany({ where: { requesterId: { in: [ownerId, strangerId] } } });
+  await prisma.authSession.deleteMany({ where: { userId: { in: [ownerId, strangerId] } } });
   await prisma.user.deleteMany({ where: { id: { in: [ownerId, strangerId] } } });
   await prisma.$disconnect();
 });
@@ -160,10 +169,10 @@ describe("POST /api/tickets/:id/attachments — upload", () => {
   });
 
   it("API-46: refuses a request with no file part", async () => {
-    const res = await request(app)
-      .post(`/api/tickets/${ticketId}/attachments`)
-      .set("X-Requester-Id", String(ownerId))
-      .field("unrelated", "value");
+    const res = await withAuth(
+      request(app).post(`/api/tickets/${ticketId}/attachments`).field("unrelated", "value"),
+      ownerAuth
+    );
 
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("NO_FILE");
@@ -208,10 +217,12 @@ describe("POST /api/tickets/:id/attachments — upload", () => {
 
     expect((await upload(ticketId, "blocked.png", "image/png")).status).toBe(409);
 
-    const removal = await request(app)
-      .patch(`/api/attachments/${uploaded[0].id}/remove`)
-      .set("X-Requester-Id", String(ownerId))
-      .send({ removalReason: "Freeing a slot" });
+    const removal = await withAuth(
+      request(app)
+        .patch(`/api/attachments/${uploaded[0].id}/remove`)
+        .send({ removalReason: "Freeing a slot" }),
+      ownerAuth
+    );
     expect(removal.status).toBe(200);
 
     // Removed attachments do not count toward the limit (BR-31).
@@ -234,9 +245,11 @@ describe("GET /api/attachments/:id — metadata", () => {
   it("returns metadata for an attachment the caller owns", async () => {
     const created = (await upload(ticketId, "evidence.pdf", "application/pdf")).body;
 
-    const res = await request(app)
-      .get(`/api/attachments/${created.id}`)
-      .set("X-Requester-Id", String(ownerId));
+    const res = await withAuth(
+      request(app).get(`/api/attachments/${created.id}`),
+      ownerAuth,
+      false
+    );
 
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({
@@ -250,9 +263,11 @@ describe("GET /api/attachments/:id — metadata", () => {
   it("API-56: refuses metadata for an attachment on another requester's ticket", async () => {
     const created = (await upload(ticketId, "private.png", "image/png")).body;
 
-    const res = await request(app)
-      .get(`/api/attachments/${created.id}`)
-      .set("X-Requester-Id", String(strangerId));
+    const res = await withAuth(
+      request(app).get(`/api/attachments/${created.id}`),
+      strangerAuth,
+      false
+    );
 
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe("ATTACHMENT_NOT_FOUND");
@@ -263,9 +278,11 @@ describe("GET /api/attachments/:id/download", () => {
   it("API-49: serves an active attachment with its original filename", async () => {
     const created = (await upload(ticketId, "evidence.png", "image/png")).body;
 
-    const res = await request(app)
-      .get(`/api/attachments/${created.id}/download`)
-      .set("X-Requester-Id", String(ownerId));
+    const res = await withAuth(
+      request(app).get(`/api/attachments/${created.id}/download`),
+      ownerAuth,
+      false
+    );
 
     expect(res.status).toBe(200);
     expect(res.headers["content-type"]).toContain("image/png");
@@ -277,14 +294,18 @@ describe("GET /api/attachments/:id/download", () => {
   it("API-50: refuses to serve a removed attachment", async () => {
     const created = (await upload(ticketId, "mistake.png", "image/png")).body;
 
-    await request(app)
-      .patch(`/api/attachments/${created.id}/remove`)
-      .set("X-Requester-Id", String(ownerId))
-      .send({ removalReason: "Uploaded the wrong screenshot" });
+    await withAuth(
+      request(app)
+        .patch(`/api/attachments/${created.id}/remove`)
+        .send({ removalReason: "Uploaded the wrong screenshot" }),
+      ownerAuth
+    );
 
-    const res = await request(app)
-      .get(`/api/attachments/${created.id}/download`)
-      .set("X-Requester-Id", String(ownerId));
+    const res = await withAuth(
+      request(app).get(`/api/attachments/${created.id}/download`),
+      ownerAuth,
+      false
+    );
 
     // 410 rather than 404: the caller owns it and already knows it exists from
     // the ticket detail response, so a precise status leaks nothing and lets
@@ -296,9 +317,11 @@ describe("GET /api/attachments/:id/download", () => {
   it("API-51: refuses a download for another requester's attachment", async () => {
     const created = (await upload(ticketId, "confidential.pdf", "application/pdf")).body;
 
-    const res = await request(app)
-      .get(`/api/attachments/${created.id}/download`)
-      .set("X-Requester-Id", String(strangerId));
+    const res = await withAuth(
+      request(app).get(`/api/attachments/${created.id}/download`),
+      strangerAuth,
+      false
+    );
 
     expect(res.status).toBe(404);
   });
@@ -308,10 +331,12 @@ describe("PATCH /api/attachments/:id/remove — soft removal", () => {
   it("API-52: records who removed it, when, and why, keeping the row", async () => {
     const created = (await upload(ticketId, "wrong.png", "image/png")).body;
 
-    const res = await request(app)
-      .patch(`/api/attachments/${created.id}/remove`)
-      .set("X-Requester-Id", String(ownerId))
-      .send({ removalReason: "Uploaded the wrong screenshot" });
+    const res = await withAuth(
+      request(app)
+        .patch(`/api/attachments/${created.id}/remove`)
+        .send({ removalReason: "Uploaded the wrong screenshot" }),
+      ownerAuth
+    );
 
     expect(res.status).toBe(200);
     expect(res.body.isRemoved).toBe(true);
@@ -326,10 +351,12 @@ describe("PATCH /api/attachments/:id/remove — soft removal", () => {
     const created = (await upload(ticketId, "keep-bytes.png", "image/png")).body;
     const saved = await prisma.attachment.findUniqueOrThrow({ where: { id: created.id } });
 
-    await request(app)
-      .patch(`/api/attachments/${created.id}/remove`)
-      .set("X-Requester-Id", String(ownerId))
-      .send({ removalReason: "No longer relevant" });
+    await withAuth(
+      request(app)
+        .patch(`/api/attachments/${created.id}/remove`)
+        .send({ removalReason: "No longer relevant" }),
+      ownerAuth
+    );
 
     expect(fs.existsSync(storedFilePath(saved.storedFilename))).toBe(true);
   });
@@ -337,10 +364,10 @@ describe("PATCH /api/attachments/:id/remove — soft removal", () => {
   it("API-53: requires a removal reason", async () => {
     const created = (await upload(ticketId, "reasonless.png", "image/png")).body;
 
-    const res = await request(app)
-      .patch(`/api/attachments/${created.id}/remove`)
-      .set("X-Requester-Id", String(ownerId))
-      .send({});
+    const res = await withAuth(
+      request(app).patch(`/api/attachments/${created.id}/remove`).send({}),
+      ownerAuth
+    );
 
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("VALIDATION_FAILED");
@@ -352,10 +379,12 @@ describe("PATCH /api/attachments/:id/remove — soft removal", () => {
   it("API-54: rejects a reason shorter than the minimum", async () => {
     const created = (await upload(ticketId, "short-reason.png", "image/png")).body;
 
-    const res = await request(app)
-      .patch(`/api/attachments/${created.id}/remove`)
-      .set("X-Requester-Id", String(ownerId))
-      .send({ removalReason: "no" });
+    const res = await withAuth(
+      request(app)
+        .patch(`/api/attachments/${created.id}/remove`)
+        .send({ removalReason: "no" }),
+      ownerAuth
+    );
 
     expect(res.status).toBe(400);
   });
@@ -363,10 +392,12 @@ describe("PATCH /api/attachments/:id/remove — soft removal", () => {
   it("API-55: reports a second removal as a conflict rather than succeeding quietly", async () => {
     const created = (await upload(ticketId, "double.png", "image/png")).body;
     const remove = () =>
-      request(app)
-        .patch(`/api/attachments/${created.id}/remove`)
-        .set("X-Requester-Id", String(ownerId))
-        .send({ removalReason: "Removing this one" });
+      withAuth(
+        request(app)
+          .patch(`/api/attachments/${created.id}/remove`)
+          .send({ removalReason: "Removing this one" }),
+        ownerAuth
+      );
 
     expect((await remove()).status).toBe(200);
 
@@ -379,10 +410,12 @@ describe("PATCH /api/attachments/:id/remove — soft removal", () => {
   it("API-56: refuses removal by a requester who does not own the ticket", async () => {
     const created = (await upload(ticketId, "not-yours.png", "image/png")).body;
 
-    const res = await request(app)
-      .patch(`/api/attachments/${created.id}/remove`)
-      .set("X-Requester-Id", String(strangerId))
-      .send({ removalReason: "Trying to remove someone else's file" });
+    const res = await withAuth(
+      request(app)
+        .patch(`/api/attachments/${created.id}/remove`)
+        .send({ removalReason: "Trying to remove someone else's file" }),
+      strangerAuth
+    );
 
     expect(res.status).toBe(404);
 
@@ -391,11 +424,11 @@ describe("PATCH /api/attachments/:id/remove — soft removal", () => {
   });
 });
 
-describe("Attachment endpoints — requester identity", () => {
-  it("rejects a request with no identity header", async () => {
+describe("Attachment endpoints — authenticated identity", () => {
+  it("rejects a request with no authenticated session", async () => {
     const res = await request(app).get("/api/attachments/1");
 
     expect(res.status).toBe(401);
-    expect(res.body.error.code).toBe("REQUESTER_HEADER_MISSING");
+    expect(res.body.error.code).toBe("UNAUTHENTICATED");
   });
 });

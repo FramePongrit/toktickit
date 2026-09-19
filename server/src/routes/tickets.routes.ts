@@ -15,7 +15,7 @@ export interface TicketRouteDependencies {
 /**
  * Preserved Requester Ticket routes. Authentication and role checks are
  * attached to every route rather than relying on a UI decision or a client
- * identity header. The upload route intentionally puts its multipart parser
+ * identity override. The upload route intentionally puts its multipart parser
  * first; parser failures are transport failures and must not reveal auth,
  * ownership, or Ticket state.
  */

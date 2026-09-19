@@ -43,8 +43,8 @@ export function removeAttachment(
 
 /**
  * Fetches the bytes and hands them to the browser. A plain link cannot be used:
- * it could not carry the X-Requester-Id header across origins, so the download
- * would fail the ownership check (D-06).
+ * it must include the browser session cookie, so the download goes through the
+ * authenticated API boundary rather than a plain cross-origin link.
  */
 export function downloadAttachment(attachment: AttachmentMeta): Promise<void> {
   return downloadFile(

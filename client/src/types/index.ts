@@ -25,11 +25,10 @@ export interface ReferenceItem {
   name: string;
 }
 
-export interface DevRequester {
+export interface UserSummary {
   id: number;
   fullName: string;
   email: string;
-  department: string | null;
 }
 
 export interface AttachmentMeta {
@@ -66,7 +65,7 @@ export interface TicketDetail {
   updatedAt: string;
   category: ReferenceItem;
   relatedSystem: ReferenceItem;
-  requester: DevRequester;
+  requester: UserSummary;
   attachments: AttachmentMeta[];
 }
 

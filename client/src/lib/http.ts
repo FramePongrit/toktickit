@@ -44,17 +44,6 @@ export function setAuthFailureHandler(handler: ((error: ApiError) => void) | nul
   authFailureHandler = handler;
 }
 
-/** @deprecated Lab 3 uses the authenticated cookie instead of requester headers. */
-export function setRequesterId(_id: number | null): void {
-  // Kept as a no-op so older isolated Lab 2 component fixtures can compile
-  // while their selector expectations are migrated by Issue 7.
-}
-
-/** @deprecated Lab 3 does not expose client-side requester identity storage. */
-export function getRequesterId(): number | null {
-  return null;
-}
-
 async function toApiError(response: Response): Promise<ApiError> {
   try {
     const body = await response.json();

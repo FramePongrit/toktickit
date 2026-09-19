@@ -190,8 +190,7 @@ describe("API-A03 — migrated legacy Requester password lifecycle", () => {
       })
     );
     const response = await request(productionApp)
-      .get("/api/tickets")
-      .set("X-Requester-Id", String(activeUserId));
+      .get("/api/tickets");
 
     expect(response.status).toBe(401);
     expect(response.body.error.code).toBe("UNAUTHENTICATED");
@@ -203,21 +202,18 @@ describe("API-A03 — migrated legacy Requester password lifecycle", () => {
 
     const blocked = await request(app)
       .get("/api/tickets")
-      .set("Cookie", first.cookie!)
-      .set("X-Requester-Id", String(legacyUserId));
+      .set("Cookie", first.cookie!);
     expect(blocked.status).toBe(403);
     expect(blocked.body.error.code).toBe("PASSWORD_CHANGE_REQUIRED");
 
     const spoofed = await request(app)
       .get("/api/tickets")
-      .set("Cookie", first.cookie!)
-      .set("X-Requester-Id", String(activeUserId));
+      .set("Cookie", first.cookie!);
     expect(spoofed.status).toBe(403);
     expect(spoofed.body.error.code).toBe("PASSWORD_CHANGE_REQUIRED");
 
     const noSession = await request(app)
-      .get("/api/tickets")
-      .set("X-Requester-Id", String(legacyUserId));
+      .get("/api/tickets");
     // Issue 6 removes the Development Requester header as an authority. A
     // request without the authenticated session is unauthenticated, so it
     // cannot reach the mandatory-password gate.
