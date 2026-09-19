@@ -44,6 +44,13 @@ export interface PublicComment {
   author: CommunicationAuthor;
 }
 
+export interface InternalNote {
+  id: number;
+  body: string;
+  createdAt: string;
+  author: CommunicationAuthor;
+}
+
 export interface ResolutionIndication {
   indicatedAt: string;
   indicatedBy: CommunicationAuthor;
@@ -107,11 +114,14 @@ export interface TicketDetail {
   category: ReferenceItem;
   relatedSystem: ReferenceItem;
   requester: UserSummary;
+  owner?: TicketOwnerOption | null;
   attachments: AttachmentMeta[];
   /** Optional keeps Lab 2 fixture objects source-compatible; the API always returns it. */
   publicComments?: PublicComment[];
+  internalNotes?: InternalNote[];
   /** Optional keeps Lab 2 fixture objects source-compatible; the API always returns it. */
   resolutionIndication?: ResolutionIndication | null;
+  allowedTransitions?: TicketStatus[];
 }
 
 export interface PagedResult<T> {

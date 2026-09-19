@@ -8,6 +8,8 @@ import type {
   TicketOwnerOption,
   TicketDetail,
   TicketListItem,
+  InternalNote,
+  TicketStatus,
 } from "../types/index.js";
 
 // Named exports on their own module so tests can spy on them directly; never
@@ -31,6 +33,57 @@ export function createTicket(payload: CreateTicketPayload): Promise<TicketDetail
 
 export function fetchTicket(id: number): Promise<TicketDetail> {
   return request<TicketDetail>(`/api/tickets/${id}`);
+}
+
+export function fetchStaffTicket(id: number): Promise<TicketDetail> {
+  return request<TicketDetail>(`/api/staff/tickets/${id}`);
+}
+
+export function claimStaffTicket(id: number): Promise<{ owner: TicketOwnerOption }> {
+  return request<{ owner: TicketOwnerOption }>(`/api/staff/tickets/${id}/claim`, { method: "PATCH" });
+}
+
+export function reassignStaffTicket(
+  id: number,
+  ownerId: number,
+  expectedOwnerId: number
+): Promise<{ owner: TicketOwnerOption }> {
+  return request<{ owner: TicketOwnerOption }>(`/api/staff/tickets/${id}/owner`, {
+    method: "PATCH",
+    body: JSON.stringify({ ownerId, expectedOwnerId }),
+  });
+}
+
+export function updateStaffItPriority(
+  id: number,
+  itPriority: Priority
+): Promise<{ itPriority: Priority }> {
+  return request<{ itPriority: Priority }>(`/api/staff/tickets/${id}/it-priority`, {
+    method: "PATCH",
+    body: JSON.stringify({ itPriority }),
+  });
+}
+
+export function updateStaffTicketStatus(
+  id: number,
+  status: TicketStatus,
+  publicComment?: string
+): Promise<Pick<TicketDetail, "currentStatus" | "resolutionIndication" | "allowedTransitions">> {
+  return request<Pick<TicketDetail, "currentStatus" | "resolutionIndication" | "allowedTransitions">>(
+    `/api/staff/tickets/${id}/status`,
+    { method: "PATCH", body: JSON.stringify({ status, ...(publicComment === undefined ? {} : { publicComment }) }) }
+  );
+}
+
+export function postStaffPublicComment(id: number, body: string): Promise<PublicComment> {
+  return postPublicComment(id, body);
+}
+
+export function postInternalNote(id: number, body: string): Promise<InternalNote> {
+  return request<InternalNote>(`/api/staff/tickets/${id}/notes`, {
+    method: "POST",
+    body: JSON.stringify({ body }),
+  });
 }
 
 export function fetchPublicComments(id: number): Promise<PublicComment[]> {
