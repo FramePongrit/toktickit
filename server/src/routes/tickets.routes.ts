@@ -3,7 +3,13 @@ import { asyncHandler } from "../lib/asyncHandler.js";
 import { HttpError } from "../lib/httpError.js";
 import { createTicketSchema, idParamSchema, listTicketsQuerySchema } from "../lib/validation.js";
 import { requireRequester } from "../middleware/requireRequester.js";
+import { requireRequesterRole } from "../middleware/authorization.js";
 import { parseSingleAttachment, cleanupUploadedFileOnError } from "../middleware/upload.js";
+import {
+  createPublicComment,
+  listPublicComments,
+  setResolutionIndication,
+} from "../services/communications.service.js";
 import { createTicket, getOwnedTicket, listTickets } from "../services/tickets.service.js";
 import { addAttachment, assertTicketIsOwned } from "../services/attachments.service.js";
 
@@ -21,6 +27,39 @@ export interface TicketRouteDependencies {
  */
 export function createTicketsRouter(dependencies: TicketRouteDependencies): Router {
   const router = Router();
+
+  router.get(
+    "/:id/comments",
+    dependencies.authentication,
+    asyncHandler(async (req, res) => {
+      const { id } = idParamSchema.parse(req.params);
+      const comments = await listPublicComments(req.auth!.userId, req.auth!.user.role, id);
+      res.status(200).json({ data: comments });
+    })
+  );
+
+  router.post(
+    "/:id/comments",
+    dependencies.authentication,
+    dependencies.csrf,
+    asyncHandler(async (req, res) => {
+      const { id } = idParamSchema.parse(req.params);
+      const comment = await createPublicComment(req.auth!.userId, req.auth!.user.role, id, req.body);
+      res.status(201).json(comment);
+    })
+  );
+
+  router.put(
+    "/:id/resolution-indication",
+    dependencies.authentication,
+    requireRequesterRole,
+    dependencies.csrf,
+    asyncHandler(async (req, res) => {
+      const { id } = idParamSchema.parse(req.params);
+      const resolutionIndication = await setResolutionIndication(req.auth!.userId, id);
+      res.status(200).json({ resolutionIndication });
+    })
+  );
 
   router.post(
     "/",

@@ -3,6 +3,7 @@ import { relatedSystemsRouter } from "./relatedSystems.routes.js";
 import { createTicketsRouter } from "./tickets.routes.js";
 import { createAttachmentsRouter } from "./attachments.routes.js";
 import { createAuthRouter, type AuthRouterDependencies } from "./auth.routes.js";
+import { createStaffTicketsRouter } from "./staffTickets.routes.js";
 import { createAuthenticationMiddleware, createCsrfMiddleware } from "../middleware/authentication.js";
 import { requireRoles } from "../middleware/authorization.js";
 import { HttpError } from "../lib/httpError.js";
@@ -19,6 +20,7 @@ export function createApiRouter(auth: AuthRouterDependencies): Router {
   const csrf = createCsrfMiddleware({ sessions: auth.sessions });
   apiRouter.use("/tickets", createTicketsRouter({ authentication, csrf }));
   apiRouter.use("/attachments", createAttachmentsRouter({ authentication, csrf }));
+  apiRouter.use("/staff/tickets", createStaffTicketsRouter({ authentication, csrf }));
 
   // Feature routers for these namespaces arrive in later issues. Keep their
   // authorization boundary active now so a direct Requester call cannot turn
