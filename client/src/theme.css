@@ -369,6 +369,81 @@ body {
   min-height: 10rem;
 }
 
+/* Staff Ticket Detail: action cards stay independent, and communication
+   surfaces use both colour and explicit labels so public/private meaning is
+   never carried by colour alone. */
+.staff-ticket-detail,
+.staff-ticket-detail section,
+.staff-ticket-detail form,
+.staff-ticket-detail .row,
+.staff-ticket-detail .col-12 {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.staff-ticket-detail {
+  overflow-x: clip;
+}
+
+.staff-detail-description {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.staff-action-card {
+  border-left: 4px solid var(--zen-secondary);
+}
+
+.staff-indication-card {
+  border-left: 4px solid var(--zen-warning);
+}
+
+.staff-communication-public {
+  border-left: 4px solid var(--zen-secondary);
+}
+
+.staff-communication-internal {
+  border-left: 4px solid var(--zen-warning);
+  background: #fffdf8;
+}
+
+.staff-communication-public .zen-comment-body,
+.staff-communication-internal .zen-comment-body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.staff-detail-dialog {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.staff-ticket-detail .form-select,
+.staff-ticket-detail .form-control {
+  max-width: 100%;
+}
+
+@media (max-width: 767.98px) {
+  .staff-ticket-detail .btn {
+    width: 100%;
+  }
+
+  .staff-ticket-detail .d-flex > .btn,
+  .staff-ticket-detail .d-flex .btn-sm {
+    width: auto;
+  }
+
+  .staff-detail-dialog .d-flex {
+    flex-direction: column-reverse;
+  }
+
+  .staff-detail-dialog .d-flex .btn {
+    width: 100%;
+  }
+}
+
 @keyframes queue-skeleton-shimmer {
   0% { background-position: 100% 0; }
   100% { background-position: 0 0; }
