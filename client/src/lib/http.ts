@@ -10,13 +10,15 @@ export class ApiError extends Error {
   readonly status: number;
   readonly code: string;
   readonly details: FieldIssue[];
+  readonly meta: Record<string, unknown> | undefined;
 
-  constructor(status: number, code: string, message: string, details: FieldIssue[] = []) {
+  constructor(status: number, code: string, message: string, details: FieldIssue[] = [], meta?: Record<string, unknown>) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.code = code;
     this.details = details;
+    this.meta = meta;
   }
 
   /** The message for one field, if the server reported one. */
@@ -49,7 +51,7 @@ async function toApiError(response: Response): Promise<ApiError> {
     const body = await response.json();
     const error = body?.error;
     if (error?.code) {
-      return new ApiError(response.status, error.code, error.message, error.details ?? []);
+      return new ApiError(response.status, error.code, error.message, error.details ?? [], error.meta);
     }
   } catch {
     // A non-JSON error body is still a failure; fall through to the generic case.

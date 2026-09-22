@@ -5,13 +5,14 @@ import { StateBlock } from "./components/StateBlock.js";
 import { AuthProvider, landingPath, useAuth } from "./context/AuthContext.js";
 import { ChangePasswordPage } from "./pages/ChangePasswordPage.js";
 import { CreateTicketPage } from "./pages/CreateTicketPage.js";
-import { ForbiddenPage, RolePlaceholderPage } from "./pages/RolePlaceholderPage.js";
+import { ForbiddenPage } from "./pages/RolePlaceholderPage.js";
 import { LoginPage } from "./pages/LoginPage.js";
 import { MyTicketsPage } from "./pages/MyTicketsPage.js";
 import { NotFoundPage } from "./pages/NotFoundPage.js";
 import { RequesterTicketDetailPage } from "./pages/RequesterTicketDetailPage.js";
 import { StaffTicketQueuePage } from "./pages/StaffTicketQueuePage.js";
 import { StaffTicketDetailPage } from "./pages/StaffTicketDetailPage.js";
+import { UserManagementPage } from "./pages/UserManagementPage.js";
 
 function BootstrapFailure() {
   const { refresh } = useAuth();
@@ -82,7 +83,7 @@ export function AppRoutes() {
             <Route path="/staff/tickets/:id" element={<StaffTicketDetailPage />} />
           </Route>
           <Route element={<RequireRole roles={["ADMIN"]} />}>
-            <Route path="/admin/users" element={<RolePlaceholderPage role="admin" />} />
+            <Route path="/admin/users" element={<UserManagementPage />} />
           </Route>
         </Route>
       </Route>
