@@ -1,6 +1,6 @@
 # Lab 3 Test-Driven Delivery Plan
 
-**Status:** Final integrated evidence recorded from `lab3-staging` commit `a994d0e`, the merge commit for PR #79. Issue #62's own reviewer/approval/Kanban fields remain pending and are tracked in [reviewer.md](./reviewer.md).
+**Status:** Post-PR #80 integrated evidence is recorded from `lab3-staging` merge commit `7db4e1d`. Issue #62 and PR #80 are merged/closed/Done. Issue #81 is **Open / Backlog**; its reproducibility fixes and the verification below are currently uncommitted changes in `feature/18-release-reproducibility`, so this document makes no claim that `main` has been verified.
 **Related documents:** [specification](./specification.md) · [API contract](./api-spec.md) · [UI specification](./ui-spec.md)
 
 The catalog tables below preserve the approved contract assertions. The final execution status and exact observed totals are centralized in §6 so that a test-plan description is not mistaken for a command result.
@@ -54,7 +54,7 @@ All security/authorization assertions call the API directly in addition to hidin
 
 | Test ID | Type | Requirement / AC | Planned assertion | Exact file | Final |
 | --- | --- | --- | --- | --- | --- |
-| API-U01 | API | AC-09, BR-11, BR-15 | Admin list/search/one Role filter ordering; non-Admin denial; safe representation has no sensitive fields | `server/tests/lab-03/users-admin.api.test.ts` | Planned |
+| API-U01 | API | AC-09, BR-11, BR-15 | Admin list/search/Role and active-status filters with AND semantics; non-Admin denial; safe representation has no sensitive fields | `server/tests/lab-03/users-admin.api.test.ts` | Planned |
 | API-U02 | API | AC-09, BR-02-BR-04, BR-11, BR-15 | Create with each Role/active state, normalized duplicate email, invalid Role/password, initial mandatory change | `server/tests/lab-03/users-admin.api.test.ts` | Planned |
 | API-U03 | API/interleaving | AC-09, BR-12-BR-15, BR-35 | Edit/activate/deactivate/Role change/revoke sessions; own name/email succeeds while own Role/active state is rejected; `ADMIN` to `STAFF` succeeds with owned Non-final Tickets; deactivation/Role-to-Requester, self reset, last active Admin, and owned-Ticket conflicts; Final historical Owner allowed; controlled concurrent demotion/deactivation of two active Administrators proves at least one remains active and the losing write returns `LAST_ACTIVE_ADMINISTRATOR` | `server/tests/lab-03/users-admin.api.test.ts` | Planned |
 | API-U04 | API | AC-09, BR-08, BR-15 | Reset password revokes sessions, forces next-login change, never returns password/hash | `server/tests/lab-03/users-admin.api.test.ts` | Planned |
@@ -74,7 +74,7 @@ All security/authorization assertions call the API directly in addition to hidin
 | UI-Q02 | Responsive | AC-10 | Desktop seven-column/table and smaller-card representation classes, labels and no overflow guards | `client/tests/lab-03/StaffTicketQueue.test.tsx` | Planned |
 | UI-S01 | UI/style | AC-07, AC-08, AC-10, BR-19, BR-30, BR-31 | Claim/Reassign captures `expectedOwnerId` with safe eligible-Owner directory loading/retry and no Admin-User/visible-owner inference; `TICKET_OWNER_CHANGED` refreshes owner and requires explicit retry; IT Priority, allowed transitions/dialogs/Waiting Comment, Final response takes precedence over local field feedback, terminal read-only | `client/tests/lab-03/StaffTicketDetail.test.tsx` | Planned |
 | UI-S02 | UI/style | AC-05, AC-07, AC-10, BR-25, BR-31 | Public/Internal composer separation, malicious Public Comment and Internal Note markup rendered literally with no created HTML/event-capable DOM node, `RESOLVED` comment/note availability, indication, Attachment download-only, Final response takes precedence over local composer validation, action-specific busy/error/success, accessibility | `client/tests/lab-03/StaffTicketDetail.test.tsx` | Planned |
-| UI-U01 | UI/style | AC-09, AC-10 | User list/search/filter/create/edit/reset, validation, password non-repopulation, own-name/email, Admin-to-Staff eligible-owner success, and self/last-admin/owned-Ticket conflict messaging | `client/tests/lab-03/UserManagement.test.tsx` | Planned |
+| UI-U01 | UI/style | AC-09, AC-10 | User list/search/Role-and-active-status filters, AND query wiring, create/edit/reset, validation, password non-repopulation, own-name/email, Admin-to-Staff eligible-owner success, and self/last-admin/owned-Ticket conflict messaging | `client/tests/lab-03/UserManagement.test.tsx` | Planned |
 | UI-U02 | Responsive | AC-09, AC-10 | User table/card representation, dialog focus/return focus, forbidden navigation and feedback states | `client/tests/lab-03/UserManagement.test.tsx` | Planned |
 
 ### 2.6 End-to-end, direct security, and screenshot evidence
@@ -83,7 +83,7 @@ All security/authorization assertions call the API directly in addition to hidin
 | --- | --- | --- | --- | --- | --- |
 | E2E-A01 | E2E/security | AC-01, AC-02, AC-03, AC-04, AC-10 | Valid/invalid/inactive Login, first change, Role landing/navigation, Logout/direct access blocked, direct authorization/CSRF checks | `e2e/lab-03/authentication.spec.ts` | Planned |
 | E2E-S01 | E2E | AC-04, AC-05, AC-06, AC-07, AC-08, AC-10, BR-19, BR-30-BR-33 | Requester/staff flow: safe eligible-Owner directory drives Queue filter and Reassign; stale Reassign refreshes current ownership rather than overwriting; queue Search/filter/sort/page, Claim/Reassign, IT Priority, status edges/Waiting comment and indication clearing on `RESOLVED -> REOPENED`, Public Comments and Internal Notes on `RESOLVED`, configured-origin browser Attachment upload/removal, indication, and Final-over-invalid attachment/priority/status/comment/note feedback | `e2e/lab-03/staff-ticket-flow.spec.ts` | Planned |
-| E2E-U01 | E2E | AC-09, AC-10 | Admin list/search/filter/create/duplicate/edit/activate/reset/next-login change, Admin-to-Staff eligible-owner edit, self+last-admin protections/non-Admin rejection | `e2e/lab-03/user-administration.spec.ts` | Planned |
+| E2E-U01 | E2E | AC-09, AC-10 | Admin list/search/Role-and-active-status filtering with visible-row assertions, create/duplicate/edit/activate/deactivate/reset/next-login change, Admin-to-Staff eligible-owner edit, self+last-admin protections/non-Admin rejection | `e2e/lab-03/user-administration.spec.ts` | Planned |
 | E2E-R01 | Responsive/evidence | AC-10, AC-12 | Login, shell, Requester Ticket Detail, Staff Queue, Staff Ticket Detail, and User Management at 1440x900/820x1024/390x844; assert no page overflow/clipping/overlap; capture only the four required artifact groups | `e2e/lab-03/capture.screens.ts` | Planned |
 
 ### 2.7 Documentation and evidence completion
@@ -222,7 +222,7 @@ client/tests/lab-02/RequesterTicketDetail.test.tsx
 client/tests/lab-02/AttachmentSection.test.tsx
 ```
 
-The final results recorded in §6 are the exact observed totals from the integrated `lab3-staging` state at commit `a994d0e` (the merge of PR #79). A repeat verification on the released `main` branch is intentionally pending Issue #63, so this document does not claim that `main` has been verified yet:
+The final results recorded in §6 are the exact observed totals from the post-PR #80 integrated `lab3-staging` state at merge commit `7db4e1d`, exercised with the uncommitted Issue #81 reproducibility changes in this worktree. A repeat verification on the released `main` branch is still pending release integration, so this document does not claim that `main` has been verified yet:
 
 ```bash
 # Fresh and upgraded database migration/seed regression
@@ -238,20 +238,18 @@ npx playwright test --project=screenshots
 
 ## 6. Final results and evidence checklist
 
-Evidence source: integrated `lab3-staging` at `a994d0e`, which contains the merged commit from PR [#79](https://github.com/FramePongrit/toktickit/pull/79). The bounded runner used isolated task-owned PostgreSQL schemas and ports `3001`/`5174` because the default API port `3000` was occupied by an unrelated existing process.
+Evidence source: integrated `lab3-staging` at merge commit `7db4e1d`, which contains merged PR [#80](https://github.com/FramePongrit/toktickit/pull/80), plus the uncommitted Issue #81 changes in branch `feature/18-release-reproducibility`. The bounded runner used isolated task-owned PostgreSQL schemas and ports `3001`/`5174`; screenshots were written to ignored `test-results/issue81-screenshots-6e5686558f824378b9023f75136d3dc4/` and committed artifacts were not overwritten.
 
 | Command | Exact observed result |
 | --- | --- |
-| `e2e/run-issue61-full.ps1 -ApiPort 3001 -ClientPort 5174` | All bounded verification steps passed; isolated server suite **16 files / 197 tests**, client suite **14 files / 150 tests**, migration regression **3/3**, Lab 3 E2E **6/6**, legacy authenticated E2E **1/1**, and screenshot suite **4/4**. Task-owned schemas were cleaned up. |
-| `e2e/run-issue61.ps1 -ApiPort 3001 -ClientPort 5174` | Lab 3 authenticated E2E **6/6 passed**. |
-| `e2e/run-issue61.ps1 -Legacy -ApiPort 3001 -ClientPort 5174` | Legacy authenticated E2E **1/1 passed**. |
-| `e2e/run-issue61.ps1 -Screenshots -ApiPort 3001 -ClientPort 5174` | Screenshot capture **4/4 passed**. |
-| `cd server && npm test` through the bounded isolated runner | **16 test files, 197 tests passed**; this includes the Lab 1, Lab 2, and Lab 3 server test paths. |
-| `cd client && npm test` through the bounded runner | **14 test files, 150 tests passed**; this includes the Lab 1, Lab 2, and Lab 3 client test paths. |
-| `cd server && npm run test:migration` through the bounded runner | Fresh/upgraded migration regression **3/3 passed**. |
-| Server/client production builds and `git diff --check` | Passed. The report noted only existing CRLF normalization warnings from the diff check. |
+| `e2e/run-issue61-full.ps1 -ApiPort 3001 -ClientPort 5174` | All bounded verification steps passed: isolated server suite **16 files / 197 tests**, client suite **14 files / 150 tests**, fresh/upgraded migration regression **3/3**, Lab 3 authenticated E2E **7/7**, legacy authenticated E2E **1/1**, and safe screenshot suite **4/4**. Both task-owned schemas were dropped and the cleanup assertion reported **0** remaining `issue61_verify_*` schemas. |
+| `cd server && npm test` through the bounded isolated runner | **16 test files, 197 tests passed** on the first task-owned schema. |
+| `cd client && npm test` through the bounded runner | **14 test files, 150 tests passed**. |
+| `cd server && npm run test:migration` through the bounded runner | Fresh/upgraded migration regression **3/3 passed**; its own disposable migration schemas and fixture file were cleaned by the suite. |
+| `e2e/run-issue61.ps1` browser steps through the bounded runner | Lab 3 authenticated E2E **7/7 passed**, legacy authenticated E2E **1/1 passed**, and responsive screenshot capture **4/4 passed**. |
+| Safe screenshot and repository checks | 15 screenshot PNGs were generated under ignored `test-results/issue81-screenshots-6e5686558f824378b9023f75136d3dc4/`; `git diff --check` passed and `git diff --name-only -- artifacts` was empty. |
 
-No password, bcrypt hash, JWT, CSRF token, or server secret was emitted in the captured verification evidence. The runner used disposable `issue61_verify_*` schemas and did not reset or use the public schema for E2E fixtures.
+No password, bcrypt hash, JWT, CSRF token, or server secret was emitted in the captured verification evidence. The runner used disposable `issue61_verify_*` schemas, validated the public/omitted base schema without writing test fixtures there, and did not reset, drop, or mutate the public schema.
 
 ## 7. Visual, path, and safety audit
 
@@ -269,9 +267,10 @@ The required viewport widths are represented by 1440, 820, and 390 pixels. Full-
 ### Required paths and links
 
 - [Issue #62](https://github.com/FramePongrit/toktickit/issues/62) is linked from `docs/lab-03/issue-plan.md`.
+- [Issue #81](https://github.com/FramePongrit/toktickit/issues/81) tracks clean-checkout release reproducibility; it remains **Open / Backlog** while these changes are uncommitted.
 - The required Lab 3 E2E files exist under `e2e/lab-03/`.
 - All 15 required Lab 3 screenshot files exist under the four required artifact groups.
-- `docs/lab-03/reviewer.md` and `docs/lab-03/ai-use.md` now exist and are linked from README and this test plan.
+- `docs/lab-03/reviewer.md` and `docs/lab-03/ai-use.md` record the merged PR #80 review and AI-use history; this Issue #81 verification update is still uncommitted.
 - Cross-document links to `specification.md`, `api-spec.md`, `ui-spec.md`, and `tests.md` resolve as repository-relative Markdown paths.
 
 ### Repository safety audit

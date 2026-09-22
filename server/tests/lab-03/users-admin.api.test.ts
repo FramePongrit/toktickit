@@ -166,7 +166,7 @@ describe("Issue #59 — Administrator User Management API", () => {
     }
   });
 
-  it("API-U01: searches normalized name/email, applies the single Role filter, and rejects unknown query input", async () => {
+  it("API-U01: searches normalized name/email, applies Role and active-status filters, and rejects unknown query input", async () => {
     const alpha = await createDbUser({ fullName: `Issue 59 Search Alpha ${suiteTag}`, email: `issue59.search.alpha.${suiteTag}@example.test`, role: "STAFF" });
     const inactive = await createDbUser({ fullName: `Issue 59 Search Inactive ${suiteTag}`, email: `issue59.search.inactive.${suiteTag}@example.test`, role: "STAFF", active: false });
     const byEmail = await adminList(adminAAuth, { q: `  SEARCH.ALPHA.${suiteTag}@EXAMPLE.TEST ` });
@@ -177,9 +177,16 @@ describe("Issue #59 — Administrator User Management API", () => {
     expect(staff.status).toBe(200);
     expect(staff.body.data.map((user: { id: number }) => user.id)).toEqual([alpha.id, inactive.id]);
     expect(staff.body.data.every((user: { role: string }) => user.role === "STAFF")).toBe(true);
+    const inactiveStaff = await adminList(adminAAuth, { q: "issue 59 search", role: "STAFF", active: "false" });
+    expect(inactiveStaff.status).toBe(200);
+    expect(inactiveStaff.body.data.map((user: { id: number }) => user.id)).toEqual([inactive.id]);
+    const activeStaff = await adminList(adminAAuth, { q: "issue 59 search", role: "STAFF", active: "true" });
+    expect(activeStaff.status).toBe(200);
+    expect(activeStaff.body.data.map((user: { id: number }) => user.id)).toEqual([alpha.id]);
     safeError(await adminList(adminAAuth, { unsupported: "value" }), 400);
     safeError(await adminList(adminAAuth, { q: "   " }), 400);
     safeError(await adminList(adminAAuth, { role: "OWNER" }), 400);
+    safeError(await adminList(adminAAuth, { active: "unknown" }), 400);
   });
 
   it("API-U02: creates every Role/active combination with a mandatory next-login change", async () => {

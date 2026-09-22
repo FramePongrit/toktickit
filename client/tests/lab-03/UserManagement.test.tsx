@@ -87,7 +87,7 @@ afterEach(() => {
 });
 
 describe("Issue #60 Administrator User Management", () => {
-  it("UI-U01/UI-U02: renders deterministic table/cards, badges, search and one Role filter", async () => {
+  it("UI-U01/UI-U02: renders deterministic table/cards, badges, search, Role, and active-status filters", async () => {
     const user = userEvent.setup();
     const fetchUsers = vi.mocked(usersApi.fetchAdminUsers);
     renderPage();
@@ -102,9 +102,11 @@ describe("Issue #60 Administrator User Management", () => {
     expect(screen.getByRole("button", { name: "Create User" })).toBeInTheDocument();
 
     await user.type(screen.getByRole("searchbox", { name: "Search" }), "sam");
-    await waitFor(() => expect(fetchUsers).toHaveBeenLastCalledWith({ q: "sam", role: undefined }));
+    await waitFor(() => expect(fetchUsers).toHaveBeenLastCalledWith({ q: "sam", role: undefined, active: undefined }));
     await user.selectOptions(screen.getByLabelText("Role"), "STAFF");
-    await waitFor(() => expect(fetchUsers).toHaveBeenLastCalledWith({ q: "sam", role: "STAFF" }));
+    await waitFor(() => expect(fetchUsers).toHaveBeenLastCalledWith({ q: "sam", role: "STAFF", active: undefined }));
+    await user.selectOptions(screen.getByLabelText("Active status"), "false");
+    await waitFor(() => expect(fetchUsers).toHaveBeenLastCalledWith({ q: "sam", role: "STAFF", active: false }));
   });
 
   it("UI-U01: creates a User, validates fields, clears sensitive values, refreshes, and announces success", async () => {

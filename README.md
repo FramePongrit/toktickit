@@ -89,9 +89,9 @@ Notes worth knowing before changing the test setup:
 - Server test files run **sequentially** (`fileParallelism: false`). They share one development database, so parallel suites that create and mutate tickets interfere with each other.
 - A global setup runs the seed once. It deliberately does **not** reset the database: the Lab 1 categories test asserts Category ids 1–4, and a truncate would restart the identity sequence.
 - Each Lab 2 suite creates its own Requester rows with randomised emails and deletes only what it made, including any files it uploaded.
-- `npx playwright test` runs both the end-to-end project and the screenshot capture. Use `npm run e2e` for the tests alone, or `npm run screenshots` to refresh the committed evidence in `artifacts/lab-03/screenshots/`.
-- For the isolated Lab 3 verification used by Issue #61, run `powershell -ExecutionPolicy Bypass -File e2e/run-issue61-full.ps1 -ApiPort 3001 -ClientPort 5174`. The runner creates and drops task-owned PostgreSQL schemas and refuses to stop an unrelated process using a port.
-- Use `powershell -ExecutionPolicy Bypass -File e2e/run-issue61.ps1 -Legacy -ApiPort 3001 -ClientPort 5174` for the authenticated legacy browser regression and `... -Screenshots ...` to refresh Lab 3 screenshot evidence.
+- `npx playwright test` runs both the end-to-end project and the screenshot capture. Use `npm run e2e` for the tests alone. Screenshot capture defaults to an ignored temporary root when invoked through `e2e/run-issue61.ps1`; use `-ScreenshotRoot artifacts/lab-03/screenshots` only when intentionally refreshing committed evidence.
+- For the isolated Lab 3 verification used by Issues #61 and #81, first set an explicit local Docker `DATABASE_URL`, then run `powershell -ExecutionPolicy Bypass -File e2e/run-issue61-full.ps1 -ApiPort 3001 -ClientPort 5174`. The runner validates a public/unspecified base schema, creates and drops only task-owned PostgreSQL schemas, writes screenshots under ignored `test-results/`, and refuses to stop an unrelated process using a port.
+- Use `powershell -ExecutionPolicy Bypass -File e2e/run-issue61.ps1 -Legacy -ApiPort 3001 -ClientPort 5174` for the authenticated legacy browser regression. Add `-Screenshots` for safe temporary screenshot verification, or explicitly add `-ScreenshotRoot artifacts/lab-03/screenshots` when a deliberate committed-artifact refresh is intended.
 
 ## API
 

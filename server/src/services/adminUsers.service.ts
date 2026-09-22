@@ -166,6 +166,7 @@ export async function listAdminUsers(rawQuery: unknown) {
         ],
       }),
       ...(query.role && { role: query.role }),
+      ...(query.active !== undefined && { active: query.active }),
     },
     select: safeUserSelect,
     orderBy: [{ fullName: "asc" }, { id: "asc" }],

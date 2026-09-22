@@ -289,7 +289,7 @@ Every route below requires `ADMIN` and CSRF on mutations. These endpoints expose
 
 ### `GET /api/admin/users`
 
-`q` is optional trimmed case-insensitive 1-100 character substring over full name or normalized email; `role` optionally equals one valid Role. They combine with AND. No pagination. **200:** `{ "data": [SafeUser] }`, sorted `fullName` ascending then `id` ascending. Unknown query values are `400 VALIDATION_FAILED`.
+`q` is optional trimmed case-insensitive 1-100 character substring over full name or normalized email; `role` optionally equals one valid Role; `active` optionally equals the string `true` or `false` and filters the account status. They combine with AND. No pagination. **200:** `{ "data": [SafeUser] }`, sorted `fullName` ascending then `id` ascending. Unknown query values are `400 VALIDATION_FAILED`.
 
 ### `POST /api/admin/users`
 

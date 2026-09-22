@@ -13,7 +13,10 @@ import {
   loginUi,
 } from "../support/fixtures.js";
 
-const ROOT = "artifacts/lab-03/screenshots";
+// Release verification supplies an ignored temporary root so a verification
+// run can never overwrite committed evidence. Direct screenshot refreshes may
+// still opt into the committed artifact root explicitly.
+const ROOT = process.env.PW_SCREENSHOT_ROOT ?? "artifacts/lab-03/screenshots";
 const VIEWPORTS = [
   { name: "desktop", width: 1440, height: 900 },
   { name: "tablet", width: 820, height: 1024 },
