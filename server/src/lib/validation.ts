@@ -295,6 +295,10 @@ export const adminUsersQuerySchema = z
         .max(100, "Search text must be at most 100 characters.")
     ),
     role: z.preprocess((value) => (value === "" ? undefined : value), userRole.optional()),
+    active: z.preprocess(
+      (value) => (value === "" ? undefined : value),
+      z.enum(["true", "false"]).transform((value) => value === "true").optional()
+    ),
   })
   .strict();
 

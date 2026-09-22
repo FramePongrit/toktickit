@@ -1,6 +1,7 @@
 param(
   [switch]$ReuseExistingApi,
   [switch]$AdminLastActiveOnly,
+  [string]$ScreenshotRoot,
   [int]$ApiPort = 3000,
   [int]$ClientPort = 5173
 )
@@ -15,6 +16,40 @@ $baseDatabaseUrl = $originalDatabaseUrl
 $serverEnvPath = Join-Path $serverRoot ".env"
 $results = [System.Collections.Generic.List[object]]::new()
 $lastStepStdout = ""
+$runId = [guid]::NewGuid().ToString("N")
+
+function Resolve-ScreenshotRoot([string]$RequestedRoot) {
+  $root = if ($RequestedRoot) {
+    if ([System.IO.Path]::IsPathRooted($RequestedRoot)) { $RequestedRoot } else { Join-Path $repoRoot $RequestedRoot }
+  } else {
+    Join-Path $repoRoot ("test-results\issue81-screenshots-" + $runId)
+  }
+  $resolved = [System.IO.Path]::GetFullPath($root)
+  $committedArtifacts = [System.IO.Path]::GetFullPath((Join-Path $repoRoot "artifacts"))
+  if ($resolved.Equals($committedArtifacts, [System.StringComparison]::OrdinalIgnoreCase) -or
+      $resolved.StartsWith($committedArtifacts + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase)) {
+    throw "Refusing to write release verification screenshots under committed artifacts. Use the default ignored test-results root."
+  }
+  New-Item -ItemType Directory -Path $resolved -Force | Out-Null
+  return $resolved
+}
+
+function Assert-SafeBaseDatabaseUrl([string]$DatabaseUrl) {
+  try { $url = [System.Uri]$DatabaseUrl } catch { throw "DATABASE_URL must be a valid PostgreSQL URL." }
+  if ($url.Scheme -notin @("postgresql", "postgres")) { throw "DATABASE_URL must use PostgreSQL." }
+  $configuredSchema = $null
+  foreach ($part in $url.Query.TrimStart("?").Split("&")) {
+    if (-not $part) { continue }
+    $pair = $part.Split("=", 2)
+    $key = [System.Uri]::UnescapeDataString($pair[0].Replace("+", " "))
+    if ($key -eq "schema" -and $pair.Count -eq 2) {
+      $configuredSchema = [System.Uri]::UnescapeDataString($pair[1].Replace("+", " "))
+    }
+  }
+  if ($configuredSchema -and $configuredSchema -ne "public") {
+    throw "Release verification requires the base DATABASE_URL schema to be public or omitted; all test schemas are task-owned."
+  }
+}
 
 function Stop-HarnessProcessTree([int]$ProcessId) {
   if ($ProcessId -gt 0) {
@@ -53,9 +88,15 @@ function Invoke-VerificationStep(
     $escapedFilePath = $FilePath.Replace("'", "''")
     $argumentExpression = "@(" + (($ArgumentList | ForEach-Object { "'" + $_.Replace("'", "''") + "'" }) -join ",") + ")"
     $wrapper = @"
-`$ErrorActionPreference = "Continue"
-& '$escapedFilePath' $argumentExpression
-`$childExitCode = if (`$null -eq `$LASTEXITCODE) { 0 } else { [int]`$LASTEXITCODE }
+`$ErrorActionPreference = "Stop"
+try {
+  `$command = Get-Command -Name '$escapedFilePath' -ErrorAction Stop
+  & `$command.Source $argumentExpression
+  `$childExitCode = if (`$null -eq `$LASTEXITCODE) { 0 } else { [int]`$LASTEXITCODE }
+} catch {
+  Write-Error `$_.Exception.Message
+  `$childExitCode = 1
+}
 Write-Output "__ISSUE61_EXIT_CODE__=`$childExitCode"
 exit `$childExitCode
 "@
@@ -99,6 +140,9 @@ try {
   }
   if (-not $baseDatabaseUrl) { throw "DATABASE_URL is required for isolated verification." }
   if ($ReuseExistingApi) { throw "Full Issue #61 verification requires an API started against its isolated E2E schema; do not use -ReuseExistingApi." }
+  Assert-SafeBaseDatabaseUrl $baseDatabaseUrl
+  $ScreenshotRoot = Resolve-ScreenshotRoot $ScreenshotRoot
+  Write-Host "Safe screenshot verification root: $ScreenshotRoot"
 
   $tsxCommand = Join-Path $serverRoot "node_modules\.bin\tsx.cmd"
   $prismaCommand = Join-Path $serverRoot "node_modules\.bin\prisma.cmd"
@@ -146,7 +190,7 @@ try {
   } else {
     Invoke-VerificationStep "Expanded Lab 3 authenticated E2E" $powershellCommand $e2eBaseArgs $repoRoot 180
     Invoke-VerificationStep "Legacy authenticated E2E regression" $powershellCommand ($e2eBaseArgs + "-Legacy") $repoRoot 120
-    Invoke-VerificationStep "Lab 3 screenshot evidence" $powershellCommand ($e2eBaseArgs + "-Screenshots") $repoRoot 180
+    Invoke-VerificationStep "Lab 3 screenshot evidence (safe temporary root)" $powershellCommand ($e2eBaseArgs + @("-Screenshots", "-ScreenshotRoot", $ScreenshotRoot)) $repoRoot 180
   }
 } finally {
   if ($e2eSchema) {
@@ -156,6 +200,10 @@ try {
   if ($schema) {
     $env:DATABASE_URL = $baseDatabaseUrl
     Invoke-VerificationStep "Cleanup task-owned isolated schema" $tsxCommand @("tests/support/issue61-isolated-schema.ts", "drop", $schema) $serverRoot 30
+  }
+  if ($baseDatabaseUrl -and (Test-Path $tsxCommand)) {
+    $env:DATABASE_URL = $baseDatabaseUrl
+    Invoke-VerificationStep "Assert task-owned schema cleanup" $tsxCommand @("tests/support/issue61-isolated-schema.ts", "assert-clean") $serverRoot 30
   }
   if ($null -eq $originalDatabaseUrl) { Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue } else { $env:DATABASE_URL = $originalDatabaseUrl }
 }

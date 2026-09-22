@@ -230,6 +230,7 @@ export function UserManagementPage() {
   const [reload, setReload] = useState(0);
   const [search, setSearch] = useState("");
   const [role, setRole] = useState<"" | Role>("");
+  const [active, setActive] = useState<"" | "true" | "false">("");
   const debouncedSearch = useDebouncedValue(search);
   const [dialog, setDialog] = useState<DialogKind>(null);
   const [editing, setEditing] = useState<AdminUser | null>(null);
@@ -283,7 +284,11 @@ export function UserManagementPage() {
     let cancelled = false;
     setLoadState("loading");
     setLoadError(null);
-    fetchAdminUsers({ q: debouncedSearch.trim() || undefined, role: role || undefined })
+    fetchAdminUsers({
+      q: debouncedSearch.trim() || undefined,
+      role: role || undefined,
+      active: active === "" ? undefined : active === "true",
+    })
       .then((response) => {
         if (cancelled) return;
         setUsers(response.data);
@@ -296,7 +301,7 @@ export function UserManagementPage() {
         setLoadState(apiError?.status === 403 ? "forbidden" : "error");
       });
     return () => { cancelled = true; };
-  }, [debouncedSearch, role, reload]);
+  }, [active, debouncedSearch, role, reload]);
 
   function openCreate() {
     activeTriggerRef.current = createTriggerRef.current;
@@ -447,7 +452,7 @@ export function UserManagementPage() {
     setDialog("reset");
   }
 
-  const filtersActive = Boolean(search || role);
+  const filtersActive = Boolean(search || role || active);
 
   return (
     <section className="admin-user-management" data-testid="user-management-page">
@@ -463,26 +468,34 @@ export function UserManagementPage() {
 
       <section className="zen-card p-3 mb-4" aria-label="User filters">
         <div className="row g-3 align-items-end">
-          <div className="col-12 col-md-7">
+          <div className="col-12 col-md-5">
             <label className="form-label fw-semibold" htmlFor="admin-user-search">Search</label>
             <input id="admin-user-search" className="form-control" type="search" value={search} placeholder="Name or email" onChange={(event) => setSearch(event.target.value)} />
           </div>
-          <div className="col-12 col-md-5">
+          <div className="col-12 col-md-3">
             <label className="form-label fw-semibold" htmlFor="admin-user-role-filter">Role</label>
             <select id="admin-user-role-filter" className="form-select" value={role} onChange={(event) => setRole(event.target.value as "" | Role)}>
               <option value="">All Roles</option>
               {ROLES.map((value) => <option key={value} value={value}>{formatRole(value)}</option>)}
             </select>
           </div>
+          <div className="col-12 col-md-4">
+            <label className="form-label fw-semibold" htmlFor="admin-user-active-filter">Active status</label>
+            <select id="admin-user-active-filter" className="form-select" value={active} onChange={(event) => setActive(event.target.value as "" | "true" | "false")}>
+              <option value="">All account statuses</option>
+              <option value="true">Active</option>
+              <option value="false">Inactive</option>
+            </select>
+          </div>
         </div>
-        {filtersActive && <button type="button" className="btn btn-outline-primary mt-3" onClick={() => { setSearch(""); setRole(""); }}>Clear Filters</button>}
+        {filtersActive && <button type="button" className="btn btn-outline-primary mt-3" onClick={() => { setSearch(""); setRole(""); setActive(""); }}>Clear Filters</button>}
       </section>
 
       {loadState === "loading" && <UserListSkeleton />}
       {loadState === "forbidden" && <StateBlock kind="error" title="You do not have access to User Management" description="Only Administrators can manage User accounts." action={<button type="button" className="btn btn-outline-primary" onClick={() => navigate("/")}>Return to your workspace</button>} />}
       {loadState === "error" && <StateBlock kind="error" title="Could not load Users" description="The service did not respond. Your filters have been kept, so you can safely retry." action={<button type="button" className="btn btn-outline-primary" onClick={() => setReload((value) => value + 1)}>Retry</button>} />}
       {loadState === "ready" && users.length === 0 && !filtersActive && <StateBlock kind="empty" title="No Users found." description="Create the first User to give them access to TokTickIT." action={<button type="button" className="btn btn-primary" onClick={openCreate}>Create User</button>} />}
-      {loadState === "ready" && users.length === 0 && filtersActive && <StateBlock kind="no-results" title="No Users match these filters." description="Try a different Search or Role filter." action={<button type="button" className="btn btn-outline-primary" onClick={() => { setSearch(""); setRole(""); }}>Clear Filters</button>} />}
+      {loadState === "ready" && users.length === 0 && filtersActive && <StateBlock kind="no-results" title="No Users match these filters." description="Try a different Search, Role, or Active status filter." action={<button type="button" className="btn btn-outline-primary" onClick={() => { setSearch(""); setRole(""); setActive(""); }}>Clear Filters</button>} />}
       {loadState === "ready" && users.length > 0 && (
         <>
           <div className="admin-user-table d-none d-md-block zen-card" data-testid="admin-users-table">

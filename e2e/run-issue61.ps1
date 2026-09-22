@@ -3,6 +3,7 @@ param(
   [switch]$Legacy,
   [switch]$AdminLastActiveOnly,
   [switch]$ReuseExistingApi,
+  [string]$ScreenshotRoot,
   [int]$ApiPort = 3000,
   [int]$ClientPort = 5173
 )
@@ -13,6 +14,8 @@ $serverRoot = Join-Path $repoRoot "server"
 $clientRoot = Join-Path $repoRoot "client"
 $serverProcess = $null
 $clientProcess = $null
+$exitCode = 1
+$originalScreenshotRoot = $env:PW_SCREENSHOT_ROOT
 
 function Assert-PortFree([int]$Port) {
   $listener = netstat -ano | Select-String (":$Port\s+.*LISTENING")
@@ -48,6 +51,15 @@ try {
   $env:COOKIE_SECURE = "false"
   $env:PW_REUSE_SERVER = "true"
 
+  if ($Screenshots) {
+    if (-not $ScreenshotRoot) {
+      $ScreenshotRoot = Join-Path $repoRoot ("test-results\issue61-screenshots-" + [guid]::NewGuid().ToString("N"))
+    }
+    New-Item -ItemType Directory -Path $ScreenshotRoot -Force | Out-Null
+    $env:PW_SCREENSHOT_ROOT = $ScreenshotRoot
+    Write-Host "Screenshot output: $ScreenshotRoot"
+  }
+
   if (-not $ReuseExistingApi) {
     $serverProcess = Start-Process node -ArgumentList @("--import", "tsx/esm", "src/index.ts") -WorkingDirectory $serverRoot -WindowStyle Hidden -PassThru
   }
@@ -68,6 +80,7 @@ try {
 } finally {
   if ($clientProcess -and -not $clientProcess.HasExited) { Stop-Process -Id $clientProcess.Id -Force -ErrorAction SilentlyContinue }
   if ($serverProcess -and -not $serverProcess.HasExited) { Stop-Process -Id $serverProcess.Id -Force -ErrorAction SilentlyContinue }
+  if ($null -eq $originalScreenshotRoot) { Remove-Item Env:PW_SCREENSHOT_ROOT -ErrorAction SilentlyContinue } else { $env:PW_SCREENSHOT_ROOT = $originalScreenshotRoot }
 }
 
 exit $exitCode

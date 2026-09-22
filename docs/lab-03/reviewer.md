@@ -6,24 +6,24 @@
 
 **Integration branch:** `lab3-staging`
 
-**Evidence source inspected for this document:** `lab3-staging` at merge commit `a994d0e` (PR #79 merged on 2026-09-22). This file is being prepared on Issue #62 branch `feature/17-lab3-final-evidence`; it has not been committed, pushed, or opened as a PR.
+**Evidence source inspected for this document:** `lab3-staging` at merge commit `7db4e1d` (PR #80 merged on 2026-09-22). This Issue #81 update is being prepared on branch `feature/18-release-reproducibility`; it is uncommitted and has not been pushed or opened as a PR.
 
 ## 1. Issue #62 review record
 
 | Item | Verified value |
 |---|---|
 | Issue | [#62 — Final visual review and evidence documents](https://github.com/FramePongrit/toktickit/issues/62) |
-| GitHub state at audit time | **Open** |
-| Project status at audit time | **Backlog** |
+| GitHub state at audit time | **Closed** on 2026-09-22 |
+| Project status at audit time | **Done** |
 | Branch | `feature/17-lab3-final-evidence` |
-| PR | **Not opened yet** — student to create after reviewing this worktree |
-| Reviewer identity | **To be filled after human peer review** |
-| Review comments | **To be filled from the Issue #62 PR conversation** |
-| Author responses | **To be filled after responding to every actionable comment** |
-| Approval | **Not yet available** |
-| Kanban transition | **To be recorded after the PR is linked: Backlog → PR Review → Done** |
+| PR | [#80](https://github.com/FramePongrit/toktickit/pull/80) — merged into `lab3-staging` at `7db4e1d` |
+| Reviewer identity | [@Leviathan-c137](https://github.com/Leviathan-c137) |
+| Review comments | [PR #80 review](https://github.com/FramePongrit/toktickit/pull/80#pullrequestreview-3296828411) — approved after verifying evidence, isolation, review audit, AI-use record, and README guidance |
+| Author responses | [@FramePongrit issue comment](https://github.com/FramePongrit/toktickit/pull/80#issuecomment-5776548837); no unresolved review thread was reported |
+| Approval | **Approved** by [@Leviathan-c137](https://github.com/Leviathan-c137) |
+| Kanban transition | **Backlog → PR Review → Done**; Issue #62 is closed |
 
-The placeholders above are deliberate. GitHub currently provides no Issue #62 PR, reviewer, response, approval, or Done transition to cite.
+PR #80 and Issue #62 are now complete. The current release follow-up is Issue [#81](https://github.com/FramePongrit/toktickit/issues/81), which remains Open / Backlog while its reproducibility changes are reviewed.
 
 ## 2. Lab 3 PR history authored by the student
 
@@ -47,6 +47,7 @@ GitHub history shows that the student authored the following Lab 3 PRs, all of w
 | #59 | [#77](https://github.com/FramePongrit/toktickit/pull/77) | `feature/14-admin-users-api` | [@Leviathan-c137](https://github.com/Leviathan-c137) — Approved | [@FramePongrit](https://github.com/FramePongrit) | [@Leviathan-c137](https://github.com/Leviathan-c137) | Merged |
 | #60 | [#78](https://github.com/FramePongrit/toktickit/pull/78) | `feature/15-admin-users-ui` | [@Sxr1n](https://github.com/Sxr1n) — Approved | [@FramePongrit](https://github.com/FramePongrit) | [@Sxr1n](https://github.com/Sxr1n) | Merged |
 | #61 | [#79](https://github.com/FramePongrit/toktickit/pull/79) | `feature/16-lab3-e2e-evidence` | [@Leviathan-c137](https://github.com/Leviathan-c137) — Approved | [@FramePongrit](https://github.com/FramePongrit) | [@Leviathan-c137](https://github.com/Leviathan-c137) | Merged |
+| #62 | [#80](https://github.com/FramePongrit/toktickit/pull/80) | `feature/17-lab3-final-evidence` | [@Leviathan-c137](https://github.com/Leviathan-c137) — Approved | [@FramePongrit](https://github.com/FramePongrit) | [@Leviathan-c137](https://github.com/Leviathan-c137) | Merged |
 
 All rows above were verified against GitHub PR metadata, submitted reviews, issue comments, and `mergedBy`; no reviewer or merge identity is inferred from a local document.
 
@@ -54,13 +55,21 @@ All rows above were verified against GitHub PR metadata, submitted reviews, issu
 
 PR [#79](https://github.com/FramePongrit/toktickit/pull/79) was approved by [@Leviathan-c137](https://github.com/Leviathan-c137) and merged into `lab3-staging`. The review explicitly confirmed isolated PostgreSQL schemas, authentication/password-change coverage, ticket lifecycle and resolution indication coverage, concurrent last-active-Administrator protection, responsive/accessibility checks, and 15 responsive screenshots across the three required viewport sizes.
 
-The current Issue #62 work is the final evidence/documentation pass over that integrated state. It does not claim that PR #79 is the Issue #62 review.
+The current Issue #62 work was the final evidence/documentation pass over that integrated state. PR #79 was the E2E evidence change; PR #80 was the separate final documentation/evidence PR and is now merged.
 
-## 4. Human review completion checklist for Issue #62
+## 4. PR #80 review summary
 
-- [ ] Create the Issue #62 PR from `feature/17-lab3-final-evidence` into `lab3-staging`.
-- [ ] Link the PR to [Issue #62](https://github.com/FramePongrit/toktickit/issues/62) in GitHub's Development panel.
-- [ ] Record the human reviewer login and review URL here.
-- [ ] Record each actionable comment and the student's response here.
-- [ ] Record the approval URL and timestamp here.
-- [ ] Move the Project card to `PR Review`, then `Done` only after merge and Issue closure.
+PR [#80](https://github.com/FramePongrit/toktickit/pull/80) was approved by [@Leviathan-c137](https://github.com/Leviathan-c137) and merged by the same reviewer into `lab3-staging` at `7db4e1d`. GitHub reports the PR as approved and merged, and Issue #62 is closed with its Project card in Done. The approval review verified the recorded 197 server tests, 150 client tests, migration/E2E/screenshot evidence, isolated PostgreSQL runner, review audit, AI-use history, and repository safety guidance.
+
+## 5. Issue #81 release verification status
+
+| Item | Verified value |
+|---|---|
+| Issue | [#81 — Release verification reproducibility and final evidence](https://github.com/FramePongrit/toktickit/issues/81) |
+| GitHub state at audit time | **Open** |
+| Project status at audit time | **Backlog** |
+| Branch | `feature/18-release-reproducibility` |
+| PR | **Not opened** — this worktree is intentionally uncommitted per the implementation request |
+| Release base | `lab3-staging` merge commit `7db4e1d` / PR #80 |
+| Verification | Server 197/197, client 150/150, migration 3/3, Lab 3 E2E 7/7, legacy E2E 1/1, screenshots 4/4; task-owned schemas remaining 0 |
+| Safety | Safe screenshot output under ignored `test-results/`; no tracked artifact diff and no public schema mutation |

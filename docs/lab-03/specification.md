@@ -1,7 +1,7 @@
 # Lab 3 Sprint Engineering Specification
 
 **Project:** TokTickIT - IT Support Ticketing System
-**Status:** Approved engineering contract before implementation
+**Status:** Approved engineering contract; implementation is integrated on `lab3-staging` at merge commit `7db4e1d` (PR #80). Issue #81 is the current **Open / Backlog** release-reproducibility follow-up; its verification changes are uncommitted in `feature/18-release-reproducibility`.
 **Related documents:** [API contract](./api-spec.md) · [UI specification](./ui-spec.md) · [test plan](./tests.md) · [domain glossary](../../CONTEXT.md) · [ADRs](../adr/)
 
 ---
@@ -21,7 +21,7 @@ TokTickIT needs real accounts, not a client-selected identity. A Requester remai
 - Cookie-based Login, Logout, current User retrieval, forced initial-password change, role-aware shell, and server-side authorization.
 - Preserved Requester Ticket creation, list, detail, and Attachment workflows using the authenticated identity, plus Public Comments and Resolution Indication.
 - Staff Queue, Staff Ticket Detail, Claim/Reassign, IT Priority, status transitions, Public Comments, and Internal Notes.
-- Minimal Administrator User Management: list/search/one Role filter, create, edit name/email/Role/active state, and reset another User's Initial Password.
+- Minimal Administrator User Management: list/search/Role and active-status filters, create, edit name/email/Role/active state, and reset another User's Initial Password.
 - Data-preserving Lab 2 migration, idempotent local seed data, automated tests, responsive evidence, and review/evidence documents.
 
 ### Excluded
@@ -58,7 +58,7 @@ TokTickIT needs real accounts, not a client-selected identity. A Requester remai
 
 ### User administration
 
-- **FR-15** An Administrator shall list Users, search name/email, and optionally filter one Role without receiving passwords, hashes, session secrets, or Internal Notes.
+- **FR-15** An Administrator shall list Users, search name/email, and optionally filter Role and active/inactive account status without receiving passwords, hashes, session secrets, or Internal Notes. These filters combine with AND semantics.
 - **FR-16** An Administrator shall create one Active or Inactive User with one valid Role and an Initial Password, and shall edit name/email for any User plus Role/active state for another User subject to safety rules; an Administrator may edit their own name/email but not their own Role or active state.
 - **FR-17** An Administrator shall reset another User's Initial Password, force Mandatory Password Change, and immediately revoke that User's sessions.
 
@@ -153,7 +153,7 @@ The backend returns `401 UNAUTHENTICATED` before evaluating permissions, `403 FO
 
 The complete visual contract is in [ui-spec.md](./ui-spec.md). Login and Change Password are focused accessible cards with field-level validation, busy, safe invalid/inactive/throttled/failure, and forced-change states. The authenticated shell loads `GET /api/auth/me` before revealing identity/navigation, retains the returned in-memory CSRF token, shows only Role-permitted navigation, and has Logout.
 
-Authenticated Requesters keep Lab 2 Create, My Tickets, Ticket Detail, and Attachment behavior without a selector, and gain clearly public comments plus a non-status-changing Resolution Indication. Staff/Admin receive a URL-reproducible Queue and Staff Detail whose independent owner, priority, status, public-comment, and restricted-note actions have independent feedback. Administrator receives one responsive User Management list with accessible Create/Edit/Reset dialogs. Every screen uses Zen Green, visible focus, text-plus-colour badges, labelled controls, live feedback, and desktop/tablet/mobile layouts at 1440x900, 820x1024, and 390x844 without page-level horizontal overflow. Final Ticket histories stay readable but all mutation controls are unavailable.
+Authenticated Requesters keep Lab 2 Create, My Tickets, Ticket Detail, and Attachment behavior without a selector, and gain clearly public comments plus a non-status-changing Resolution Indication. Staff/Admin receive a URL-reproducible Queue and Staff Detail whose independent owner, priority, status, public-comment, and restricted-note actions have independent feedback. Administrator receives one responsive User Management list with Search, Role/active-status filters, and accessible Create/Edit/Reset dialogs. Every screen uses Zen Green, visible focus, text-plus-colour badges, labelled controls, live feedback, and desktop/tablet/mobile layouts at 1440x900, 820x1024, and 390x844 without page-level horizontal overflow. Final Ticket histories stay readable but all mutation controls are unavailable.
 
 ## 8. API Contract Summary
 
@@ -185,7 +185,7 @@ Migration is additive/evolutionary and preserves every User/Ticket/Attachment ID
 - **AC-06** Staff/Admin Queue supports documented search, AND filters, scope, stable sort, page sizes, pagination metadata, safe failures, and eligible Owner filtering from the safe Owner directory.
 - **AC-07** Staff/Admin Ticket Detail supports authorized read/download, safe eligible-Owner selection, atomic Claim and optimistic-concurrency Reassign, IT Priority, and every permitted status edge while rejecting absent edges/final mutations according to the guard-precedence contract; concurrent User ineligibility cannot produce an ineligible Owner.
 - **AC-08** Waiting for Requester requires an atomic Public Comment; Resolution Indication clears on Reopened; Closed/Cancelled remain Final.
-- **AC-09** Administrator User Management supports list/search/filter/create/edit/reset while enforcing one Role, normalized unique email, write-only passwords, session revocation, self safety, last-admin safety, and non-final ownership safety, including concurrent demotion/deactivation serialization.
+- **AC-09** Administrator User Management supports list/search/Role-and-active-status filtering/create/edit/reset while enforcing normalized unique email, write-only passwords, session revocation, self safety, last-admin safety, and non-final ownership safety, including concurrent demotion/deactivation serialization.
 - **AC-10** All major screens use Zen Green, accessible states, role-aware navigation, distinguish public/private content, and have no page-level horizontal overflow at required viewports.
 - **AC-11** Fresh and upgraded Lab 2 databases migrate/seed safely, preserve historical data, provision the missing-legacy-credential state from the §9 fixture input, preserve a directly established changed credential across repeat migration/seed, and create no duplicates.
 - **AC-12** Required server, client, E2E, responsive, screenshot, review, AI-use, and traceability artifacts exist and are verified on the integrated branch; Issue 7's REG-01 provides the exact §5 legacy server/client regression evidence.
@@ -195,10 +195,10 @@ Migration is additive/evolutionary and preserves every User/Ticket/Attachment ID
 - [x] All FRs, BRs, API/UI contracts, ADRs, and glossary terms are implemented consistently; every AC has passing final test evidence documented in `tests.md`.
 - [x] Every protected route has authentication, Mandatory Password Change, Role, ownership, CSRF, input, safe-error, and Final-state enforcement as applicable.
 - [x] Fresh and upgraded database migration/seed preserve Lab 2 records and are idempotent; legacy behavioral assertions and Lab 3 server/client suites pass, with only authentication setup and obsolete selector/header expectations intentionally adapted.
-- [x] Required API, component, E2E, authorization/security, responsive, and screenshot tests pass from the integrated `lab3-staging` commit `a994d0e`; evidence paths are populated and readable.
+- [x] Required API, component, E2E, authorization/security, responsive, and screenshot tests pass from the integrated `lab3-staging` commit `7db4e1d` plus the Issue #81 reproducibility changes; evidence paths are populated and readable.
 - [x] Desktop/tablet/mobile visual checklist passes for Login, password change/shell, Requester Ticket Detail, Staff Queue, Staff Detail, and User Management; keyboard/focus/dialog/feedback behavior is verified by the automated UI/E2E checks and the screenshot audit.
-- [ ] Peer review, Issue/PR/Kanban evidence, reviewer record, selected AI-use prompts/reflection, README setup, and `.gitignore` safety audit are complete; no secrets/runtime uploads/build outputs are tracked. Human Issue #62 approval and final Kanban transitions are still pending.
-- [ ] No excluded capability was introduced, no open review thread/check remains, and the final `main` branch is the evidence source of truth. This cannot be checked until Issue #62 and the release integration Issue #63 are completed.
+- [x] Peer review, Issue/PR/Kanban evidence, reviewer record, selected AI-use prompts/reflection, README setup, and `.gitignore` safety audit are complete for PR #80 / Issue #62; no secrets/runtime uploads/build outputs are tracked.
+- [ ] No excluded capability was introduced, no open review thread/check remains, and the final `main` branch is the evidence source of truth. Issue #81 remains Open / Backlog and release verification has not yet been merged into or rerun on `main`.
 
 ## 12. Assumptions and decisions
 

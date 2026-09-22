@@ -96,7 +96,7 @@ Each independent action owns loading/busy/success/validation/conflict/forbidden/
 
 ## 7. User Management (`/admin/users`)
 
-Header **User Management** with Search, one Role filter, and **Create User**. Desktop (`>=768px`) table: Name, Email, Role badge, Status (Active/Inactive text badge), Edit. Smaller widths use cards with same information and an Edit action; no page-level overflow.
+Header **User Management** with Search, Role and Active status filters, and **Create User**. Active status offers All account statuses, Active, and Inactive and combines with Search/Role using AND semantics. Desktop (`>=768px`) table: Name, Email, Role badge, Status (Active/Inactive text badge), Edit. Smaller widths use cards with same information and an Edit action; no page-level overflow.
 
 ### 7.1 Create dialog
 

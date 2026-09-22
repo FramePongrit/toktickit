@@ -4,6 +4,7 @@ import type { AdminUser, Role } from "../types/index.js";
 export interface AdminUsersQuery {
   q?: string;
   role?: Role;
+  active?: boolean;
 }
 
 export interface AdminUsersResult {
@@ -35,6 +36,7 @@ export function fetchAdminUsers(query: AdminUsersQuery = {}): Promise<AdminUsers
   const params = new URLSearchParams();
   if (query.q?.trim()) params.set("q", query.q.trim());
   if (query.role) params.set("role", query.role);
+  if (query.active !== undefined) params.set("active", String(query.active));
   const suffix = params.toString();
   return request<AdminUsersResult>(`/api/admin/users${suffix ? `?${suffix}` : ""}`);
 }

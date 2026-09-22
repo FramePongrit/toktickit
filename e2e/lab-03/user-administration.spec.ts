@@ -130,8 +130,9 @@ test.describe.serial("E2E-U01 — Administrator User Management", () => {
       await activateDialog.getByLabel("Active account").check();
       await activateDialog.getByRole("button", { name: "Save changes" }).click();
       await expect(page.getByRole("status")).toContainText("updated successfully");
-      await page.locator("#admin-user-active-filter").selectOption("");
+      await page.locator("#admin-user-active-filter").selectOption("true");
       await expect(page.getByRole("row").filter({ hasText: `${createdName} Updated` })).toContainText("Active");
+      await page.locator("#admin-user-active-filter").selectOption("");
 
       const updatedRow = page.getByRole("row").filter({ hasText: `${createdName} Updated` });
       await updatedRow.getByRole("button", { name: "Edit" }).click();
