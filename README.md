@@ -38,6 +38,18 @@ The server automatically loads `server/.env` for both `npm run dev` and `npm sta
 
 The seed creates the four categories, seven related systems, active local Users, and the Lab 3 authentication fixtures used by the application and tests.
 
+### Local seeded accounts
+
+The seed uses local-only fixture credentials. These values are for a disposable development database only, never production credentials:
+
+| Role | Example email | Seed password |
+|---|---|---|
+| Requester | `jennifer.anderson@kmutt.ac.th` | `TokTickIT123!` |
+| IT Staff | `niran.support@kmutt.ac.th` | `TokTickIT123!` |
+| Administrator | `kanya.admin@kmutt.ac.th` | `TokTickIT123!` |
+
+Freshly seeded Users start in the mandatory-password-change flow. A migrated Lab 2 Requester receives the same local-only fixture input only when its legacy credential hash is missing; repeat seed/migration does not overwrite an established changed password.
+
 ### 4. Client
 
 ```bash
@@ -77,7 +89,9 @@ Notes worth knowing before changing the test setup:
 - Server test files run **sequentially** (`fileParallelism: false`). They share one development database, so parallel suites that create and mutate tickets interfere with each other.
 - A global setup runs the seed once. It deliberately does **not** reset the database: the Lab 1 categories test asserts Category ids 1–4, and a truncate would restart the identity sequence.
 - Each Lab 2 suite creates its own Requester rows with randomised emails and deletes only what it made, including any files it uploaded.
-- `npx playwright test` runs both the end-to-end project and the screenshot capture. Use `npm run e2e` for the tests alone, or `npm run screenshots` to refresh the committed evidence in `artifacts/lab-02/screenshots/`.
+- `npx playwright test` runs both the end-to-end project and the screenshot capture. Use `npm run e2e` for the tests alone, or `npm run screenshots` to refresh the committed evidence in `artifacts/lab-03/screenshots/`.
+- For the isolated Lab 3 verification used by Issue #61, run `powershell -ExecutionPolicy Bypass -File e2e/run-issue61-full.ps1 -ApiPort 3001 -ClientPort 5174`. The runner creates and drops task-owned PostgreSQL schemas and refuses to stop an unrelated process using a port.
+- Use `powershell -ExecutionPolicy Bypass -File e2e/run-issue61.ps1 -Legacy -ApiPort 3001 -ClientPort 5174` for the authenticated legacy browser regression and `... -Screenshots ...` to refresh Lab 3 screenshot evidence.
 
 ## API
 
@@ -113,6 +127,12 @@ Attachments accept JPG, JPEG, PNG, WEBP and PDF up to 5 MB, with at most five ac
 | [docs/lab-02/tests.md](docs/lab-02/tests.md) | Test plan, acceptance-criterion traceability, results |
 | [docs/lab-02/reviewer.md](docs/lab-02/reviewer.md) | Peer review record |
 | [docs/lab-02/ai-use.md](docs/lab-02/ai-use.md) | AI use and reflection |
+| [docs/lab-03/specification.md](docs/lab-03/specification.md) | Lab 3 approved engineering contract and Definition of Done |
+| [docs/lab-03/api-spec.md](docs/lab-03/api-spec.md) | Lab 3 authentication, authorization, ticket, and User Management API contract |
+| [docs/lab-03/ui-spec.md](docs/lab-03/ui-spec.md) | Lab 3 Zen Green UI, responsive, and accessibility contract |
+| [docs/lab-03/tests.md](docs/lab-03/tests.md) | Lab 3 test plan, traceability, integrated totals, and visual audit |
+| [docs/lab-03/reviewer.md](docs/lab-03/reviewer.md) | Lab 3 GitHub review, PR, and Kanban record |
+| [docs/lab-03/ai-use.md](docs/lab-03/ai-use.md) | Selected Lab 3 AI prompts, workflow, and student reflection |
 
 ## Project layout
 
