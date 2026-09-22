@@ -11,6 +11,8 @@ export type TicketStatus =
 
 export type Role = "REQUESTER" | "STAFF" | "ADMIN";
 
+export interface AdminUser extends SafeUser {}
+
 export interface SafeUser {
   id: number;
   fullName: string;
