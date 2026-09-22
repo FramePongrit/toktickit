@@ -192,13 +192,13 @@ Migration is additive/evolutionary and preserves every User/Ticket/Attachment ID
 
 ## 11. Product Definition of Done
 
-- [ ] All FRs, BRs, API/UI contracts, ADRs, and glossary terms are implemented consistently; every AC has passing planned tests documented in `tests.md`.
-- [ ] Every protected route has authentication, Mandatory Password Change, Role, ownership, CSRF, input, safe-error, and Final-state enforcement as applicable.
-- [ ] Fresh and upgraded database migration/seed preserve Lab 2 records and are idempotent; legacy behavioral assertions and Lab 3 server/client suites pass, with only authentication setup and obsolete selector/header expectations intentionally adapted.
-- [ ] Required API, component, E2E, authorization/security, responsive, and screenshot tests pass from `main`; evidence paths are populated and readable.
-- [ ] Desktop/tablet/mobile visual checklist passes for Login, password change/shell, Requester Ticket Detail, Staff Queue, Staff Detail, and User Management; keyboard/focus/dialog/feedback behavior is verified.
-- [ ] Peer review, Issue/PR/Kanban evidence, reviewer record, selected AI-use prompts/reflection, README setup, and `.gitignore` safety audit are complete; no secrets/runtime uploads/build outputs are tracked.
-- [ ] No excluded capability was introduced, no open review thread/check remains, and the final `main` branch is the evidence source of truth.
+- [x] All FRs, BRs, API/UI contracts, ADRs, and glossary terms are implemented consistently; every AC has passing final test evidence documented in `tests.md`.
+- [x] Every protected route has authentication, Mandatory Password Change, Role, ownership, CSRF, input, safe-error, and Final-state enforcement as applicable.
+- [x] Fresh and upgraded database migration/seed preserve Lab 2 records and are idempotent; legacy behavioral assertions and Lab 3 server/client suites pass, with only authentication setup and obsolete selector/header expectations intentionally adapted.
+- [x] Required API, component, E2E, authorization/security, responsive, and screenshot tests pass from the integrated `lab3-staging` commit `a994d0e`; evidence paths are populated and readable.
+- [x] Desktop/tablet/mobile visual checklist passes for Login, password change/shell, Requester Ticket Detail, Staff Queue, Staff Detail, and User Management; keyboard/focus/dialog/feedback behavior is verified by the automated UI/E2E checks and the screenshot audit.
+- [ ] Peer review, Issue/PR/Kanban evidence, reviewer record, selected AI-use prompts/reflection, README setup, and `.gitignore` safety audit are complete; no secrets/runtime uploads/build outputs are tracked. Human Issue #62 approval and final Kanban transitions are still pending.
+- [ ] No excluded capability was introduced, no open review thread/check remains, and the final `main` branch is the evidence source of truth. This cannot be checked until Issue #62 and the release integration Issue #63 are completed.
 
 ## 12. Assumptions and decisions
 

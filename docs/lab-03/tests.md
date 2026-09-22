@@ -1,7 +1,9 @@
 # Lab 3 Test-Driven Delivery Plan
 
-**Status:** Planned before implementation. `Final` is intentionally `Planned` until integrated-branch evidence is recorded.
+**Status:** Final integrated evidence recorded from `lab3-staging` commit `a994d0e`, the merge commit for PR #79. Issue #62's own reviewer/approval/Kanban fields remain pending and are tracked in [reviewer.md](./reviewer.md).
 **Related documents:** [specification](./specification.md) · [API contract](./api-spec.md) · [UI specification](./ui-spec.md)
+
+The catalog tables below preserve the approved contract assertions. The final execution status and exact observed totals are centralized in §6 so that a test-plan description is not mistaken for a command result.
 
 ## 1. Test strategy and isolation
 
@@ -174,7 +176,7 @@ Each row is a complete implementation chain. Exact file paths are repeated here 
 
 ## 5. Required paths and test commands
 
-The contract requires these future files (the listed commands do not imply they currently exist):
+The contract requires the following implementation and evidence paths. They are listed for traceability; in the current integrated worktree the required implementation files, screenshots, `reviewer.md`, and `ai-use.md` have been checked and exist.
 
 ```text
 server/tests/lab-03/auth.api.test.ts
@@ -220,7 +222,7 @@ client/tests/lab-02/RequesterTicketDetail.test.tsx
 client/tests/lab-02/AttachmentSection.test.tsx
 ```
 
-Final integration records exact output/totals only after execution on `lab3-staging` and then `main`:
+The final results recorded in §6 are the exact observed totals from the integrated `lab3-staging` state at commit `a994d0e` (the merge of PR #79). A repeat verification on the released `main` branch is intentionally pending Issue #63, so this document does not claim that `main` has been verified yet:
 
 ```bash
 # Fresh and upgraded database migration/seed regression
@@ -236,12 +238,42 @@ npx playwright test --project=screenshots
 
 ## 6. Final results and evidence checklist
 
-| Suite | Planned command | Final status |
-| --- | --- | --- |
-| Server: Lab 1, Lab 2, Lab 3 | `cd server && npm test` | Planned |
-| Fresh + upgraded migration/seed | migration fixture command documented by `MIG-01`/`MIG-02` | Planned |
-| Client: Lab 1, Lab 2, Lab 3 | `cd client && npm test` | Planned |
-| E2E/security/responsive | `npx playwright test` | Planned |
-| Screenshot capture | `npx playwright test --project=screenshots` | Planned |
+Evidence source: integrated `lab3-staging` at `a994d0e`, which contains the merged commit from PR [#79](https://github.com/FramePongrit/toktickit/pull/79). The bounded runner used isolated task-owned PostgreSQL schemas and ports `3001`/`5174` because the default API port `3000` was occupied by an unrelated existing process.
 
-Before marking final, attach passing output/totals from `main`, populate `artifacts/lab-03/screenshots/{authentication,staff-queue,staff-ticket-detail,user-management}/`, and capture Requester Ticket Detail inside `staff-ticket-detail/requester-ticket-detail-{desktop,tablet,mobile}.png`. Record any real failure as a linked Issue rather than weakening an assertion. No visual check is claimed complete by this pre-implementation plan.
+| Command | Exact observed result |
+| --- | --- |
+| `e2e/run-issue61-full.ps1 -ApiPort 3001 -ClientPort 5174` | All bounded verification steps passed; isolated server suite **16 files / 197 tests**, client suite **14 files / 150 tests**, migration regression **3/3**, Lab 3 E2E **6/6**, legacy authenticated E2E **1/1**, and screenshot suite **4/4**. Task-owned schemas were cleaned up. |
+| `e2e/run-issue61.ps1 -ApiPort 3001 -ClientPort 5174` | Lab 3 authenticated E2E **6/6 passed**. |
+| `e2e/run-issue61.ps1 -Legacy -ApiPort 3001 -ClientPort 5174` | Legacy authenticated E2E **1/1 passed**. |
+| `e2e/run-issue61.ps1 -Screenshots -ApiPort 3001 -ClientPort 5174` | Screenshot capture **4/4 passed**. |
+| `cd server && npm test` through the bounded isolated runner | **16 test files, 197 tests passed**; this includes the Lab 1, Lab 2, and Lab 3 server test paths. |
+| `cd client && npm test` through the bounded runner | **14 test files, 150 tests passed**; this includes the Lab 1, Lab 2, and Lab 3 client test paths. |
+| `cd server && npm run test:migration` through the bounded runner | Fresh/upgraded migration regression **3/3 passed**. |
+| Server/client production builds and `git diff --check` | Passed. The report noted only existing CRLF normalization warnings from the diff check. |
+
+No password, bcrypt hash, JWT, CSRF token, or server secret was emitted in the captured verification evidence. The runner used disposable `issue61_verify_*` schemas and did not reset or use the public schema for E2E fixtures.
+
+## 7. Visual, path, and safety audit
+
+### Visual audit
+
+All 15 tracked PNGs under `artifacts/lab-03/screenshots/` were inspected at normal zoom:
+
+- `authentication/`: desktop, tablet, mobile Login captures.
+- `staff-queue/`: desktop table plus tablet/mobile card representations.
+- `staff-ticket-detail/`: desktop, tablet, mobile Staff Detail and Requester Ticket Detail captures.
+- `user-management/`: desktop, tablet, and mobile Create User dialog capture.
+
+The required viewport widths are represented by 1440, 820, and 390 pixels. Full-page screenshot heights vary with content length. The inspected evidence showed readable text, distinct Zen Green/priority/status/Role badges, visible primary actions, separated Public/Internal communication cards, responsive cards at smaller widths, and no evidence-blocking clipping, overlap, unreadable grid, inaccessible dialog, or page-level horizontal overflow. No production-code fix was required for this documentation pass.
+
+### Required paths and links
+
+- [Issue #62](https://github.com/FramePongrit/toktickit/issues/62) is linked from `docs/lab-03/issue-plan.md`.
+- The required Lab 3 E2E files exist under `e2e/lab-03/`.
+- All 15 required Lab 3 screenshot files exist under the four required artifact groups.
+- `docs/lab-03/reviewer.md` and `docs/lab-03/ai-use.md` now exist and are linked from README and this test plan.
+- Cross-document links to `specification.md`, `api-spec.md`, `ui-spec.md`, and `tests.md` resolve as repository-relative Markdown paths.
+
+### Repository safety audit
+
+`.gitignore` excludes `.env` files except `.env.example`, dependency/build folders, Playwright runtime output, Prisma local database files, and the contents of `server/uploads/` while retaining only its `.gitkeep`. The tracked-file audit found no tracked real `.env`, dependency folder, runtime upload, build output, private key, or production secret. The documented `TokTickIT123!` value is explicitly a local-only seed/test fixture in the approved specification and README, not a production credential.
