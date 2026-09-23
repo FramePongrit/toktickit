@@ -1,44 +1,93 @@
-import { BrowserRouter, Navigate, Outlet, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import App from "./App.js";
 import { AppShell } from "./components/AppShell.js";
 import { StateBlock } from "./components/StateBlock.js";
-import { RequesterProvider, useRequester } from "./context/RequesterContext.js";
+import { AuthProvider, landingPath, useAuth } from "./context/AuthContext.js";
+import { ChangePasswordPage } from "./pages/ChangePasswordPage.js";
 import { CreateTicketPage } from "./pages/CreateTicketPage.js";
+import { ForbiddenPage } from "./pages/RolePlaceholderPage.js";
+import { LoginPage } from "./pages/LoginPage.js";
 import { MyTicketsPage } from "./pages/MyTicketsPage.js";
-import { RequesterTicketDetailPage } from "./pages/RequesterTicketDetailPage.js";
 import { NotFoundPage } from "./pages/NotFoundPage.js";
-import { SelectRequesterPage } from "./pages/SelectRequesterPage.js";
+import { RequesterTicketDetailPage } from "./pages/RequesterTicketDetailPage.js";
+import { StaffTicketQueuePage } from "./pages/StaffTicketQueuePage.js";
+import { StaffTicketDetailPage } from "./pages/StaffTicketDetailPage.js";
+import { UserManagementPage } from "./pages/UserManagementPage.js";
 
-/**
- * Sends the user to the selector when no requester is chosen (BR-46). It waits
- * for hydration first, otherwise a reload would bounce a user who does have a
- * stored selection back to the selector before it had been read.
- */
-function RequireRequester() {
-  const { requester, hydrating } = useRequester();
+function BootstrapFailure() {
+  const { refresh } = useAuth();
+  return (
+    <StateBlock
+      kind="error"
+      title="TokTickIT could not restore your session"
+      description="The service did not respond. Please try again without exposing account details."
+      action={<button type="button" className="btn btn-outline-primary" onClick={() => void refresh()}>Retry</button>}
+    />
+  );
+}
 
-  if (hydrating) {
-    return <StateBlock kind="loading" title="Loading…" />;
+function RequireAuth() {
+  const { status } = useAuth();
+  const location = useLocation();
+
+  if (status === "loading") return <StateBlock kind="loading" title="Loading your workspace..." />;
+  if (status === "unauthenticated") return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  if (status === "error") return <BootstrapFailure />;
+  if (status === "forbidden") {
+    return <StateBlock kind="error" title="Your account cannot access TokTickIT" description="Contact an administrator if you believe this is incorrect." />;
   }
+  if (status === "password-change-required" && location.pathname !== "/change-password") {
+    return <Navigate to="/change-password" replace />;
+  }
+  return <Outlet />;
+}
 
-  return requester ? <Outlet /> : <Navigate to="/select-requester" replace />;
+function RequireRole({ roles }: { roles: string[] }) {
+  const { user } = useAuth();
+  if (!user || !roles.includes(user.role)) return <ForbiddenPage />;
+  return <Outlet />;
+}
+
+function LoginRoute() {
+  const { status, user } = useAuth();
+  if (status === "loading") return <StateBlock kind="loading" title="Loading TokTickIT..." />;
+  if (status === "error") return <BootstrapFailure />;
+  if (user && status !== "unauthenticated") return <Navigate to={landingPath(user)} replace />;
+  return <LoginPage />;
+}
+
+function LandingRoute() {
+  const { status, user } = useAuth();
+  if (status === "loading") return <StateBlock kind="loading" title="Loading your workspace..." />;
+  if (status === "unauthenticated") return <Navigate to="/login" replace />;
+  if (user) return <Navigate to={landingPath(user)} replace />;
+  return <BootstrapFailure />;
 }
 
 export function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/tickets" replace />} />
-      <Route path="/select-requester" element={<SelectRequesterPage />} />
+      <Route path="/" element={<LandingRoute />} />
+      <Route path="/login" element={<LoginRoute />} />
 
-      <Route element={<RequireRequester />}>
+      <Route element={<RequireAuth />}>
         <Route element={<AppShell />}>
-          <Route path="/tickets" element={<MyTicketsPage />} />
-          <Route path="/tickets/new" element={<CreateTicketPage />} />
-          <Route path="/tickets/:id" element={<RequesterTicketDetailPage />} />
+          <Route path="/change-password" element={<ChangePasswordPage />} />
+          <Route element={<RequireRole roles={["REQUESTER"]} />}>
+            <Route path="/tickets" element={<MyTicketsPage />} />
+            <Route path="/tickets/new" element={<CreateTicketPage />} />
+            <Route path="/tickets/:id" element={<RequesterTicketDetailPage />} />
+          </Route>
+          <Route element={<RequireRole roles={["STAFF", "ADMIN"]} />}>
+            <Route path="/staff/tickets" element={<StaffTicketQueuePage />} />
+            <Route path="/staff/tickets/:id" element={<StaffTicketDetailPage />} />
+          </Route>
+          <Route element={<RequireRole roles={["ADMIN"]} />}>
+            <Route path="/admin/users" element={<UserManagementPage />} />
+          </Route>
         </Route>
       </Route>
 
-      {/* The Lab 1 system check, kept reachable and unchanged. */}
       <Route path="/system-check" element={<App />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
@@ -48,9 +97,9 @@ export function AppRoutes() {
 export function AppRouter() {
   return (
     <BrowserRouter>
-      <RequesterProvider>
+      <AuthProvider>
         <AppRoutes />
-      </RequesterProvider>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

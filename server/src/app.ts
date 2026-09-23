@@ -1,48 +1,59 @@
 import express, { Request, Response } from "express";
 import cors from "cors";
+import type { SecurityConfig } from "./security/config.js";
+import { createCredentialedCorsOptions } from "./security/cors.js";
+import { JwtService } from "./security/jwt.js";
+import { AuthSessionService } from "./security/session.js";
+import { LoginThrottle } from "./security/throttle.js";
 import { getPrisma } from "./prisma.js";
-import { apiRouter } from "./routes/index.js";
+import { createApiRouter } from "./routes/index.js";
 import { notFound } from "./middleware/notFound.js";
 import { errorHandler } from "./middleware/errorHandler.js";
+import { asyncHandler } from "./lib/asyncHandler.js";
 
 // The Express app is exported separately from app.listen() (see index.ts) so
 // Supertest can import `app` without opening a port. Do not merge these files.
-export const app = express();
+export function createApp(securityConfig: SecurityConfig) {
+  const application = express();
+  const jwt = new JwtService({ secret: securityConfig.jwtSecret });
+  const sessions = new AuthSessionService(getPrisma(), {
+    encryptionSecret: securityConfig.jwtSecret,
+  });
+  const throttle = new LoginThrottle();
 
-app.use(cors());          // already wired: lets the Vite dev server call this API
-app.use(express.json());
+  application.use(cors(createCredentialedCorsOptions(securityConfig)));
+  application.use(express.json());
 
 // ---------------------------------------------------------------------------
 // Issue 2 — API health check
 // Make the test in tests/lab-01/health.test.ts pass.
 // It must return HTTP 200 with JSON: { status: "ok", service: "TokTickIT API" }
 // ---------------------------------------------------------------------------
-app.get("/api/health", (_req: Request, res: Response) => {
-  res.status(200).json({ status: "ok", service: "TokTickIT API" });
-});
+  application.get("/api/health", (_req: Request, res: Response) => {
+    res.status(200).json({ status: "ok", service: "TokTickIT API" });
+  });
 
 // Lab 2 filters to active categories. The response shape is unchanged, which
 // is what tests/lab-01/categories.test.ts asserts.
-app.get("/api/categories", async (_req: Request, res: Response) => {
-  try {
-    const prisma = getPrisma();
-    const categories = await prisma.category.findMany({
-      where: { active: true },
-      select: { id: true, name: true },
-      orderBy: { id: "asc" },
-    });
-    res.status(200).json(categories);
-  } catch (error) {
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-});
+  application.get(
+    "/api/categories",
+    asyncHandler(async (_req: Request, res: Response) => {
+      const prisma = getPrisma();
+      const categories = await prisma.category.findMany({
+        where: { active: true },
+        select: { id: true, name: true },
+        orderBy: { id: "asc" },
+      });
+      res.status(200).json(categories);
+    })
+  );
 // ---------------------------------------------------------------------------
 
-app.use("/api", apiRouter);
+  application.use("/api", createApiRouter({ config: securityConfig, jwt, sessions, throttle }));
 
 // Order matters: the catch-all runs after every route, and the error handler
 // must be registered last of all.
-app.use(notFound);
-app.use(errorHandler);
-
-export default app;
+  application.use(notFound);
+  application.use(errorHandler);
+  return application;
+}

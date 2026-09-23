@@ -3,12 +3,21 @@ import { getPrisma } from "../prisma.js";
 import { HttpError, type FieldIssue } from "../lib/httpError.js";
 import { allocateTicketNumber } from "./ticketNumber.service.js";
 import type { CreateTicketInput, ListTicketsQuery } from "../lib/validation.js";
+import {
+  serializePublicComment,
+  serializeResolutionIndication,
+} from "./communications.service.js";
 
 /** The relations every ticket-detail response includes. */
 const detailInclude = {
   category: { select: { id: true, name: true } },
   relatedSystem: { select: { id: true, name: true } },
-  requester: { select: { id: true, fullName: true, email: true, department: true } },
+  requester: { select: { id: true, fullName: true, email: true } },
+  resolutionIndicatedBy: { select: { id: true, fullName: true, role: true } },
+  publicComments: {
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    include: { author: { select: { id: true, fullName: true, role: true } } },
+  },
   attachments: { orderBy: { uploadedAt: "asc" } },
 } satisfies Prisma.TicketInclude;
 
@@ -34,6 +43,7 @@ export function serializeTicketDetail(ticket: TicketWithDetail) {
     summary: ticket.summary,
     description: ticket.description,
     requestedPriority: ticket.requestedPriority,
+    itPriority: ticket.itPriority,
     currentStatus: ticket.currentStatus,
     createdAt: ticket.createdAt,
     updatedAt: ticket.updatedAt,
@@ -41,6 +51,11 @@ export function serializeTicketDetail(ticket: TicketWithDetail) {
     relatedSystem: ticket.relatedSystem,
     requester: ticket.requester,
     attachments: ticket.attachments.map(serializeAttachment),
+    resolutionIndication: serializeResolutionIndication(
+      ticket.resolutionIndicatedAt,
+      ticket.resolutionIndicatedBy
+    ),
+    publicComments: ticket.publicComments.map(serializePublicComment),
   };
 }
 
@@ -77,7 +92,10 @@ const listSelect = {
   ticketNumber: true,
   summary: true,
   requestedPriority: true,
+  itPriority: true,
   currentStatus: true,
+  resolutionIndicatedAt: true,
+  resolutionIndicatedBy: { select: { id: true, fullName: true, role: true } },
   createdAt: true,
   category: { select: { id: true, name: true } },
   relatedSystem: { select: { id: true, name: true } },
@@ -123,9 +141,13 @@ export async function listTickets(requesterId: number, query: ListTicketsQuery) 
   ]);
 
   return {
-    data: rows.map(({ _count, ...ticket }) => ({
+    data: rows.map(({ _count, resolutionIndicatedBy, ...ticket }) => ({
       ...ticket,
       attachmentCount: _count.attachments,
+      resolutionIndication: serializeResolutionIndication(
+        ticket.resolutionIndicatedAt,
+        resolutionIndicatedBy
+      ),
     })),
     page: query.page,
     pageSize: query.pageSize,
@@ -174,6 +196,7 @@ export async function createTicket(requesterId: number, input: CreateTicketInput
         categoryId: input.categoryId,
         relatedSystemId: input.relatedSystemId,
         requestedPriority: input.requestedPriority,
+        itPriority: input.requestedPriority,
         summary: input.summary,
         description: input.description,
         // currentStatus defaults to NEW in the schema (BR-02).

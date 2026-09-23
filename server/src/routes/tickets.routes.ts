@@ -1,60 +1,125 @@
-import { Router } from "express";
+import { Router, type RequestHandler } from "express";
 import { asyncHandler } from "../lib/asyncHandler.js";
 import { HttpError } from "../lib/httpError.js";
 import { createTicketSchema, idParamSchema, listTicketsQuerySchema } from "../lib/validation.js";
 import { requireRequester } from "../middleware/requireRequester.js";
-import { uploadSingleAttachment } from "../middleware/upload.js";
+import { requireRequesterRole } from "../middleware/authorization.js";
+import { parseSingleAttachment, cleanupUploadedFileOnError } from "../middleware/upload.js";
+import {
+  createPublicComment,
+  listPublicComments,
+  setResolutionIndication,
+} from "../services/communications.service.js";
 import { createTicket, getOwnedTicket, listTickets } from "../services/tickets.service.js";
 import { addAttachment, assertTicketIsOwned } from "../services/attachments.service.js";
 
-export const ticketsRouter = Router();
+export interface TicketRouteDependencies {
+  authentication: RequestHandler;
+  csrf: RequestHandler;
+}
 
-// Ownership starts here: every route below resolves the caller once, and no
-// handler reads the identity from anywhere else (BR-48).
-ticketsRouter.use(requireRequester);
+/**
+ * Preserved Requester Ticket routes. Authentication and role checks are
+ * attached to every route rather than relying on a UI decision or a client
+ * identity override. The upload route intentionally puts its multipart parser
+ * first; parser failures are transport failures and must not reveal auth,
+ * ownership, or Ticket state.
+ */
+export function createTicketsRouter(dependencies: TicketRouteDependencies): Router {
+  const router = Router();
 
-ticketsRouter.post(
-  "/",
-  asyncHandler(async (req, res) => {
-    const input = createTicketSchema.parse(req.body);
-    const ticket = await createTicket(req.requester!.id, input);
-    res.status(201).json(ticket);
-  })
-);
+  router.get(
+    "/:id/comments",
+    dependencies.authentication,
+    asyncHandler(async (req, res) => {
+      const { id } = idParamSchema.parse(req.params);
+      const comments = await listPublicComments(req.auth!.userId, req.auth!.user.role, id);
+      res.status(200).json({ data: comments });
+    })
+  );
 
-ticketsRouter.get(
-  "/",
-  asyncHandler(async (req, res) => {
-    const query = listTicketsQuerySchema.parse(req.query);
-    const page = await listTickets(req.requester!.id, query);
-    res.status(200).json(page);
-  })
-);
+  router.post(
+    "/:id/comments",
+    dependencies.authentication,
+    dependencies.csrf,
+    asyncHandler(async (req, res) => {
+      const { id } = idParamSchema.parse(req.params);
+      const comment = await createPublicComment(req.auth!.userId, req.auth!.user.role, id, req.body);
+      res.status(201).json(comment);
+    })
+  );
 
-ticketsRouter.get(
-  "/:id",
-  asyncHandler(async (req, res) => {
-    const { id } = idParamSchema.parse(req.params);
-    const ticket = await getOwnedTicket(req.requester!.id, id);
-    res.status(200).json(ticket);
-  })
-);
+  router.put(
+    "/:id/resolution-indication",
+    dependencies.authentication,
+    requireRequesterRole,
+    dependencies.csrf,
+    asyncHandler(async (req, res) => {
+      const { id } = idParamSchema.parse(req.params);
+      const resolutionIndication = await setResolutionIndication(req.auth!.userId, id);
+      res.status(200).json({ resolutionIndication });
+    })
+  );
 
-ticketsRouter.post(
-  "/:id/attachments",
-  // Ownership is checked before multer runs, so a file is never written to
-  // disk for a ticket the caller does not own — one fewer orphan case.
-  asyncHandler(async (req, _res, next) => {
-    const { id } = idParamSchema.parse(req.params);
-    await assertTicketIsOwned(req.requester!.id, id);
-    next();
-  }),
-  uploadSingleAttachment,
-  asyncHandler(async (req, res) => {
-    if (!req.file) {
-      throw HttpError.badRequest("NO_FILE", "No file was included in the request.");
-    }
-    const { id } = idParamSchema.parse(req.params);
-    res.status(201).json(await addAttachment(req.requester!.id, id, req.file));
-  })
-);
+  router.post(
+    "/",
+    dependencies.authentication,
+    requireRequester,
+    dependencies.csrf,
+    asyncHandler(async (req, res) => {
+      const input = createTicketSchema.parse(req.body);
+      const ticket = await createTicket(req.auth!.userId, input);
+      res.status(201).json(ticket);
+    })
+  );
+
+  router.get(
+    "/",
+    dependencies.authentication,
+    requireRequester,
+    asyncHandler(async (req, res) => {
+      const query = listTicketsQuerySchema.parse(req.query);
+      const page = await listTickets(req.auth!.userId, query);
+      res.status(200).json(page);
+    })
+  );
+
+  router.get(
+    "/:id",
+    dependencies.authentication,
+    requireRequester,
+    asyncHandler(async (req, res) => {
+      const { id } = idParamSchema.parse(req.params);
+      const ticket = await getOwnedTicket(req.auth!.userId, id);
+      res.status(200).json(ticket);
+    })
+  );
+
+  router.post(
+    "/:id/attachments",
+    // Multipart parsing is the transport boundary. It must run before the
+    // application guards, and every later failure cleans the staged file.
+    parseSingleAttachment,
+    dependencies.authentication,
+    requireRequester,
+    dependencies.csrf,
+    asyncHandler(async (req, _res, next) => {
+      const { id } = idParamSchema.parse(req.params);
+      await assertTicketIsOwned(req.auth!.userId, id);
+      next();
+    }),
+    asyncHandler(async (req, res) => {
+      if (!req.file) {
+        throw HttpError.badRequest("NO_FILE", "No file was included in the request.");
+      }
+      const { id } = idParamSchema.parse(req.params);
+      res.status(201).json(await addAttachment(req.auth!.userId, id, req.file));
+    })
+  );
+
+  // Multer can create a disk file before a later application guard or service
+  // fails. Express error middleware is required here because ordinary route
+  // cleanup cannot run after an error has already entered the chain.
+  router.use(cleanupUploadedFileOnError);
+  return router;
+}

@@ -218,7 +218,7 @@ describe("My Tickets — search, filters and sorting", () => {
     await waitFor(() => expect(lastQuery(spy).priority).toBe("HIGH"));
   });
 
-  it("never sends a requesterId — ownership comes from the header alone", async () => {
+  it("never sends a requesterId — ownership comes from the authenticated session", async () => {
     const spy = vi.spyOn(ticketsApi, "fetchMyTickets").mockResolvedValue(paged([ticket()]));
 
     renderPage();

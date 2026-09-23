@@ -1,8 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import request from "supertest";
-import { app } from "../../src/app.js";
+import { app } from "../testApp.js";
 import { getPrisma } from "../../src/prisma.js";
+import { hashPassword } from "../../src/security/password.js";
+import { loginAs, TEST_PASSWORD, withAuth, type AuthSessionFixture } from "../support/auth.js";
 
 const prisma = getPrisma();
 const suiteTag = randomUUID();
@@ -10,6 +12,8 @@ const suiteTag = randomUUID();
 // Two requesters, so ownership isolation is asserted rather than assumed.
 let requesterA: number;
 let requesterB: number;
+let authA: AuthSessionFixture;
+let authB: AuthSessionFixture;
 let categoryHardware: number;
 let categorySoftware: number;
 let systemOne: number;
@@ -34,6 +38,7 @@ async function seedTicket(
       categoryId: overrides.categoryId ?? categoryHardware,
       relatedSystemId: overrides.relatedSystemId ?? systemOne,
       requestedPriority: overrides.requestedPriority ?? "MEDIUM",
+      itPriority: overrides.requestedPriority ?? "MEDIUM",
       summary: overrides.summary ?? "Placeholder summary for testing",
       description: "A description long enough to satisfy the minimum length rule.",
       ...(overrides.createdAt && { createdAt: overrides.createdAt }),
@@ -42,23 +47,24 @@ async function seedTicket(
 }
 
 function list(requesterId: number, query: Record<string, string | number> = {}) {
-  return request(app)
-    .get("/api/tickets")
-    .query(query)
-    .set("X-Requester-Id", String(requesterId));
+  const auth = requesterId === requesterA ? authA : authB;
+  return withAuth(request(app).get("/api/tickets").query(query), auth, false);
 }
 
 beforeAll(async () => {
+  const passwordHash = await hashPassword(TEST_PASSWORD);
   const [a, b] = await Promise.all([
-    prisma.requesterUser.create({
-      data: { fullName: "List Suite A", email: `list-a-${suiteTag}@lab2.local` },
+    prisma.user.create({
+      data: { fullName: "List Suite A", email: `list-a-${suiteTag}@lab2.local`, passwordHash },
     }),
-    prisma.requesterUser.create({
-      data: { fullName: "List Suite B", email: `list-b-${suiteTag}@lab2.local` },
+    prisma.user.create({
+      data: { fullName: "List Suite B", email: `list-b-${suiteTag}@lab2.local`, passwordHash },
     }),
   ]);
   requesterA = a.id;
   requesterB = b.id;
+  authA = await loginAs(a.email);
+  authB = await loginAs(b.email);
 
   const categories = await prisma.category.findMany({ where: { active: true }, orderBy: { id: "asc" } });
   const systems = await prisma.relatedSystem.findMany({ where: { active: true }, orderBy: { id: "asc" } });
@@ -105,7 +111,8 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await prisma.ticket.deleteMany({ where: { requesterId: { in: [requesterA, requesterB] } } });
-  await prisma.requesterUser.deleteMany({ where: { id: { in: [requesterA, requesterB] } } });
+  await prisma.authSession.deleteMany({ where: { userId: { in: [requesterA, requesterB] } } });
+  await prisma.user.deleteMany({ where: { id: { in: [requesterA, requesterB] } } });
   await prisma.$disconnect();
 });
 
@@ -123,8 +130,8 @@ describe("GET /api/tickets — ownership", () => {
   });
 
   it("API-17: ignores a requesterId supplied as a query parameter", async () => {
-    // Ownership comes from the header alone. Supplying requesterId must not
-    // widen the result set to another requester's data (BR-16).
+    // Ownership comes from the authenticated User. Supplying requesterId must
+    // not widen the result set to another requester's data (BR-16).
     const res = await list(requesterB, { requesterId: requesterA, pageSize: 50 });
 
     expect(res.status).toBe(200);
@@ -378,10 +385,10 @@ describe("GET /api/tickets — invalid parameters", () => {
 });
 
 describe("GET /api/tickets — requester identity", () => {
-  it("rejects a request with no identity header", async () => {
+  it("rejects a request with no authenticated session", async () => {
     const res = await request(app).get("/api/tickets");
 
     expect(res.status).toBe(401);
-    expect(res.body.error.code).toBe("REQUESTER_HEADER_MISSING");
+    expect(res.body.error.code).toBe("UNAUTHENTICATED");
   });
 });

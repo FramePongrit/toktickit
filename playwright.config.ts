@@ -1,7 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const CLIENT_URL = "http://localhost:5173";
-const API_URL = "http://localhost:3000";
+const CLIENT_URL = process.env.PW_CLIENT_URL ?? "http://localhost:5173";
+const API_URL = process.env.PW_API_URL ?? "http://localhost:3000";
+const reuseExistingServer = process.env.PW_REUSE_SERVER === "true";
 
 export default defineConfig({
   testDir: "./e2e",
@@ -38,18 +39,28 @@ export default defineConfig({
   // means a dev server already running locally is used as-is.
   webServer: [
     {
-      command: "npm run dev --prefix server",
+      command: "node --import tsx/esm src/index.ts",
+      cwd: "server",
       url: `${API_URL}/api/health`,
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer,
       timeout: 60_000,
       stdout: "pipe",
+      gracefulShutdown: { signal: "SIGTERM", timeout: 5_000 },
+      env: {
+        NODE_ENV: "local",
+        JWT_SECRET: "local-e2e-only-jwt-secret-change-me-32chars",
+        CLIENT_ORIGIN: CLIENT_URL,
+        COOKIE_SECURE: "false",
+      },
     },
     {
-      command: "npm run dev --prefix client",
+      command: "node node_modules/vite/bin/vite.js --host localhost --port 5173",
+      cwd: "client",
       url: CLIENT_URL,
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer,
       timeout: 60_000,
       stdout: "pipe",
+      gracefulShutdown: { signal: "SIGTERM", timeout: 5_000 },
     },
   ],
 });

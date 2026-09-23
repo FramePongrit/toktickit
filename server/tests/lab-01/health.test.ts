@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import request from "supertest";
-import { app } from "../../src/app.js";
+import { app } from "../testApp.js";
 
 // WORKED EXAMPLE — this test is written for you. Study it, then implement the
 // /api/health route in src/app.ts until this test turns green. Use the same

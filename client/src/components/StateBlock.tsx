@@ -42,7 +42,7 @@ export function StateBlock({ kind, title, description, action }: StateBlockProps
           ICONS[kind]
         )}
       </div>
-      <p className="fw-semibold mt-3 mb-1">{title}</p>
+      <h2 className="h5 fw-semibold mt-3 mb-1">{title}</h2>
       {description && <p className="zen-muted mb-3">{description}</p>}
       {action}
     </div>

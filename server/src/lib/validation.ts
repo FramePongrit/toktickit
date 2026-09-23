@@ -52,6 +52,22 @@ export const removeAttachmentSchema = z.object({
     .max(200, "The removal reason must be at most 200 characters."),
 });
 
+/**
+ * Communication bodies are deliberately plain strings. The API stores and
+ * returns the literal value; consumers must render it as text rather than
+ * interpreting it as HTML. Trimming is part of validation so whitespace-only
+ * messages cannot become append-only records.
+ */
+export const communicationBodySchema = z.object({
+  body: z
+    .string({ error: "Message body is required." })
+    .trim()
+    .min(1, "Message body must not be blank.")
+    .max(2000, "Message body must be at most 2,000 characters."),
+});
+
+export type CommunicationBodyInput = z.infer<typeof communicationBodySchema>;
+
 export const TICKET_SORT_FIELDS = [
   "createdAt",
   "ticketNumber",
@@ -110,3 +126,213 @@ export const listTicketsQuerySchema = z.object({
 });
 
 export type ListTicketsQuery = z.infer<typeof listTicketsQuerySchema>;
+
+export const TICKET_STATUSES = [
+  "NEW",
+  "OPEN",
+  "IN_PROGRESS",
+  "WAITING_FOR_REQUESTER",
+  "REOPENED",
+  "RESOLVED",
+  "CLOSED",
+  "CANCELLED",
+] as const;
+
+export const STAFF_QUEUE_SORT_FIELDS = [
+  "itPriority",
+  "createdAt",
+  "updatedAt",
+  "ticketNumber",
+  "status",
+] as const;
+
+const trimmedOptionalParam = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess((value) => {
+    if (value === undefined || value === "") return undefined;
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      return trimmed === "" ? undefined : trimmed;
+    }
+    return value;
+  }, schema.optional());
+
+const suppliedTrimmedOptionalParam = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess(
+    (value) => (typeof value === "string" ? value.trim() : value),
+    schema.optional()
+  );
+
+const staffQueueOwner = z
+  .string()
+  .refine(
+    (value) => value === "me" || value === "unassigned" || /^[1-9]\d*$/.test(value),
+    "Owner must be me, unassigned, or a positive whole number."
+  );
+
+/** Exact query contract for the Staff Queue. Values are rejected, never clamped. */
+export const staffQueueQuerySchema = z
+  .object({
+    scope: trimmedOptionalParam(z.enum(["active", "all"], {
+      error: "Scope must be active or all.",
+    })),
+    // An omitted q means no search. Once q is supplied, trimming it to an
+    // empty string is still invalid rather than silently changing the query.
+    q: suppliedTrimmedOptionalParam(
+      z
+        .string()
+        .min(1, "Search text must not be blank.")
+        .max(100, "Search text must be at most 100 characters.")
+    ),
+    status: trimmedOptionalParam(z.enum(TICKET_STATUSES, {
+      error: `Status must be one of ${TICKET_STATUSES.join(", ")}.`,
+    })),
+    itPriority: trimmedOptionalParam(z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"], {
+      error: "IT Priority must be one of LOW, MEDIUM, HIGH or URGENT.",
+    })),
+    categoryId: trimmedOptionalParam(numericParam("Category")),
+    owner: trimmedOptionalParam(staffQueueOwner),
+    sort: trimmedOptionalParam(z.enum(STAFF_QUEUE_SORT_FIELDS, {
+      error: `Sort must be one of ${STAFF_QUEUE_SORT_FIELDS.join(", ")}.`,
+    })),
+    order: trimmedOptionalParam(z.enum(["asc", "desc"], {
+      error: "Order must be asc or desc.",
+    })),
+    page: trimmedOptionalParam(numericParam("Page")),
+    pageSize: trimmedOptionalParam(
+      z
+        .string()
+        .transform(Number)
+        .refine(
+          (value) => (TICKET_PAGE_SIZES as readonly number[]).includes(value),
+          `Page size must be one of ${TICKET_PAGE_SIZES.join(", ")}.`
+        )
+    ),
+  })
+  .strict()
+  .transform((query) => {
+    const sort = query.sort ?? "itPriority";
+    return {
+      ...query,
+      scope: query.scope ?? "active",
+      sort,
+      order: query.order ?? (sort === "itPriority" ? "desc" : "asc"),
+      page: query.page ?? 1,
+      pageSize: query.pageSize ?? 10,
+    };
+  });
+
+export type StaffQueueQuery = z.infer<typeof staffQueueQuerySchema>;
+
+const ticketStatus = z.enum(TICKET_STATUSES, {
+  error: `Status must be one of ${TICKET_STATUSES.join(", ")}.`,
+});
+
+const positiveIntegerBody = (label: string) =>
+  z.number({ error: `${label} is required.` }).int(`${label} must be a whole number.`).positive(`${label} is required.`);
+
+export const staffOwnerMutationSchema = z
+  .object({
+    ownerId: positiveIntegerBody("Owner"),
+    expectedOwnerId: positiveIntegerBody("Expected Owner"),
+  })
+  .strict()
+  .refine((value) => value.ownerId !== value.expectedOwnerId, {
+    path: ["ownerId"],
+    message: "Owner and Expected Owner must be different.",
+  });
+
+export type StaffOwnerMutationInput = z.infer<typeof staffOwnerMutationSchema>;
+
+export const staffPriorityMutationSchema = z
+  .object({
+    itPriority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"], {
+      error: "IT Priority must be one of LOW, MEDIUM, HIGH or URGENT.",
+    }),
+  })
+  .strict();
+
+export type StaffPriorityMutationInput = z.infer<typeof staffPriorityMutationSchema>;
+
+export const staffStatusMutationSchema = z
+  .object({
+    status: ticketStatus,
+    publicComment: z.string().optional(),
+  })
+  .strict();
+
+export type StaffStatusMutationInput = z.infer<typeof staffStatusMutationSchema>;
+
+const userRole = z.enum(["REQUESTER", "STAFF", "ADMIN"], {
+  error: "Role must be one of REQUESTER, STAFF or ADMIN.",
+});
+
+const userFullName = z
+  .string({ error: "Full name is required." })
+  .trim()
+  .min(1, "Full name is required.")
+  .max(120, "Full name must be at most 120 characters.");
+
+const userEmail = z
+  .string({ error: "Email is required." })
+  .trim()
+  .toLowerCase()
+  .email("Email must be valid.");
+
+const userPasswordField = z.string({ error: "Initial Password is required." });
+
+const suppliedTrimmedQuery = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess(
+    (value) => (typeof value === "string" ? value.trim() : value),
+    schema.optional()
+  );
+
+export const adminUsersQuerySchema = z
+  .object({
+    q: suppliedTrimmedQuery(
+      z
+        .string()
+        .min(1, "Search text must not be blank.")
+        .max(100, "Search text must be at most 100 characters.")
+    ),
+    role: z.preprocess((value) => (value === "" ? undefined : value), userRole.optional()),
+    active: z.preprocess(
+      (value) => (value === "" ? undefined : value),
+      z.enum(["true", "false"]).transform((value) => value === "true").optional()
+    ),
+  })
+  .strict();
+
+export const adminCreateUserSchema = z
+  .object({
+    fullName: userFullName,
+    email: userEmail,
+    role: userRole,
+    active: z.boolean({ error: "Active state is required." }),
+    initialPassword: userPasswordField,
+    confirmation: z.string({ error: "Confirmation is required." }),
+  })
+  .strict();
+
+export const adminEditUserSchema = z
+  .object({
+    fullName: userFullName.optional(),
+    email: userEmail.optional(),
+    role: userRole.optional(),
+    active: z.boolean({ error: "Active state must be true or false." }).optional(),
+  })
+  .strict()
+  .refine((value) => Object.keys(value).length > 0, {
+    message: "At least one User field is required.",
+  });
+
+export const adminResetPasswordSchema = z
+  .object({
+    initialPassword: userPasswordField,
+    confirmation: z.string({ error: "Confirmation is required." }),
+  })
+  .strict();
+
+export type AdminUsersQuery = z.infer<typeof adminUsersQuerySchema>;
+export type AdminCreateUserInput = z.infer<typeof adminCreateUserSchema>;
+export type AdminEditUserInput = z.infer<typeof adminEditUserSchema>;
+export type AdminResetPasswordInput = z.infer<typeof adminResetPasswordSchema>;

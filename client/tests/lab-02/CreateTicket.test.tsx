@@ -1,18 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { CreateTicketPage } from "../../src/pages/CreateTicketPage.js";
-import { RequesterProvider } from "../../src/context/RequesterContext.js";
 import * as referenceData from "../../src/api/referenceData.js";
 import * as ticketsApi from "../../src/api/tickets.js";
 import { ApiError } from "../../src/lib/http.js";
-import type { DevRequester, TicketDetail } from "../../src/types/index.js";
+import { renderAuthenticated } from "../support/auth.js";
+import type { TicketDetail, UserSummary } from "../../src/types/index.js";
 
-const REQUESTER: DevRequester = {
+const REQUESTER: UserSummary = {
   id: 1,
   fullName: "Jennifer Anderson",
   email: "jennifer@kmutt.ac.th",
-  department: "Engineering",
 };
 
 const CATEGORIES = [
@@ -40,16 +39,13 @@ const CREATED: TicketDetail = {
 };
 
 function renderPage() {
-  window.localStorage.setItem("toktickit.requesterId", "1");
-  return render(
+  return renderAuthenticated(
     <MemoryRouter initialEntries={["/tickets/new"]}>
-      <RequesterProvider>
-        <Routes>
-          <Route path="/tickets/new" element={<CreateTicketPage />} />
-          <Route path="/tickets" element={<h1>My Tickets</h1>} />
-          <Route path="/tickets/:id" element={<h1>Ticket detail</h1>} />
-        </Routes>
-      </RequesterProvider>
+      <Routes>
+        <Route path="/tickets/new" element={<CreateTicketPage />} />
+        <Route path="/tickets" element={<h1>My Tickets</h1>} />
+        <Route path="/tickets/:id" element={<h1>Ticket detail</h1>} />
+      </Routes>
     </MemoryRouter>
   );
 }
@@ -68,8 +64,6 @@ async function fillValidForm() {
 }
 
 beforeEach(() => {
-  window.localStorage.clear();
-  vi.spyOn(referenceData, "fetchDevRequesters").mockResolvedValue([REQUESTER]);
   vi.spyOn(referenceData, "fetchCategories").mockResolvedValue(CATEGORIES);
   vi.spyOn(referenceData, "fetchRelatedSystems").mockResolvedValue(SYSTEMS);
 });

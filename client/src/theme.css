@@ -65,6 +65,42 @@ body {
   border-bottom: 3px solid #fff;
 }
 
+.zen-header .navbar-toggler {
+  color: #fff;
+}
+
+@media (min-width: 768px) {
+  .zen-header .navbar-toggler {
+    display: none;
+  }
+
+  .zen-header .navbar-collapse {
+    display: flex !important;
+    flex-basis: auto;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .zen-header .navbar {
+    flex-wrap: wrap;
+  }
+
+  .zen-header .navbar-collapse {
+    display: none;
+    flex-basis: 100%;
+    padding-top: 0.5rem;
+  }
+
+  .zen-header .navbar-collapse.show {
+    display: block;
+  }
+
+  .zen-header .navbar-nav .nav-link {
+    padding-top: 0.65rem;
+    padding-bottom: 0.65rem;
+  }
+}
+
 /* --- Buttons ------------------------------------------------------------- */
 
 .btn-primary {
@@ -112,15 +148,11 @@ body {
   --bs-pagination-active-border-color: var(--zen-primary);
 }
 
-/* A Requester with enough tickets to reach several pages produces more
-   page-link buttons than a narrow viewport can hold once each one carries
-   the 44px touch-target minimum below. Scrolling the strip itself keeps
-   every page reachable without ever scrolling the document (FR-27 / D-07). */
+/* Pagination uses a bounded window of page links, so every page remains
+   reachable without a horizontal strip or page-level overflow on mobile. */
 .zen-pagination-nav {
   max-width: 100%;
   min-width: 0;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
 /* --- Surfaces ------------------------------------------------------------ */
@@ -267,6 +299,255 @@ body {
 
 .zen-page {
   max-width: 1140px;
+}
+
+/* Staff Queue: keep the desktop table readable without creating a page-level
+   horizontal scroll. Long backend-authored values wrap inside their cell. */
+.staff-queue-table {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.staff-queue-table table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.staff-queue-table th,
+.staff-queue-table td {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  vertical-align: top;
+}
+
+.staff-queue-table .queue-col-ticket { width: 13%; }
+.staff-queue-table .queue-col-summary { width: 18%; }
+.staff-queue-table .queue-col-category { width: 12%; }
+.staff-queue-table .queue-col-priority { width: 16%; }
+.staff-queue-table .queue-col-status { width: 12%; }
+.staff-queue-table .queue-col-owner { width: 13%; }
+.staff-queue-table .queue-col-updated { width: 16%; }
+
+.staff-queue-card {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.staff-queue-card .zen-badge {
+  white-space: normal;
+}
+
+.queue-indication {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  color: var(--zen-secondary);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.queue-scope button[aria-pressed="true"] {
+  background: var(--zen-primary);
+  border-color: var(--zen-primary);
+  color: #fff;
+}
+
+.queue-skeleton-block {
+  display: block;
+  min-height: 1rem;
+  border-radius: 0.25rem;
+  background: linear-gradient(90deg, var(--zen-readonly-bg) 25%, #e6ece8 37%, var(--zen-readonly-bg) 63%);
+  background-size: 400% 100%;
+  animation: queue-skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+.queue-skeleton-row td {
+  height: 5.5rem;
+}
+
+.queue-skeleton-card {
+  min-height: 10rem;
+}
+
+/* Staff Ticket Detail: action cards stay independent, and communication
+   surfaces use both colour and explicit labels so public/private meaning is
+   never carried by colour alone. */
+.staff-ticket-detail,
+.staff-ticket-detail section,
+.staff-ticket-detail form,
+.staff-ticket-detail .row,
+.staff-ticket-detail .col-12 {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.staff-ticket-detail {
+  overflow-x: clip;
+}
+
+.staff-detail-description {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.staff-action-card {
+  border-left: 4px solid var(--zen-secondary);
+}
+
+.staff-indication-card {
+  border-left: 4px solid var(--zen-warning);
+}
+
+.staff-communication-public {
+  border-left: 4px solid var(--zen-secondary);
+}
+
+.staff-communication-internal {
+  border-left: 4px solid var(--zen-warning);
+  background: #fffdf8;
+}
+
+.staff-communication-public .zen-comment-body,
+.staff-communication-internal .zen-comment-body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.staff-detail-dialog {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.staff-ticket-detail .form-select,
+.staff-ticket-detail .form-control {
+  max-width: 100%;
+}
+
+/* Administrator User Management: keep long names/emails inside their
+   representation and switch from a readable table to cards before the
+   viewport can force page-level overflow. */
+.admin-user-management,
+.admin-user-management section,
+.admin-user-management .row,
+.admin-user-management .col-12 {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.admin-user-table {
+  overflow: hidden;
+}
+
+.admin-user-table table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.admin-user-table th,
+.admin-user-table td {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.admin-user-table th:nth-child(1) { width: 24%; }
+.admin-user-table th:nth-child(2) { width: 30%; }
+.admin-user-table th:nth-child(3) { width: 19%; }
+.admin-user-table th:nth-child(4) { width: 15%; }
+.admin-user-table th:nth-child(5) { width: 12%; }
+
+.admin-user-card {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.admin-user-card .zen-badge {
+  white-space: normal;
+}
+
+.zen-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  overflow-y: auto;
+  background: rgba(27, 43, 35, 0.48);
+}
+
+.zen-dialog {
+  width: min(100%, 560px);
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+}
+
+.admin-user-skeleton .queue-skeleton-block {
+  min-height: 2rem;
+}
+
+@media (max-width: 767.98px) {
+  .staff-ticket-detail .btn {
+    width: 100%;
+  }
+
+  .staff-ticket-detail .d-flex > .btn,
+  .staff-ticket-detail .d-flex .btn-sm {
+    width: auto;
+  }
+
+  .staff-detail-dialog .d-flex {
+    flex-direction: column-reverse;
+  }
+
+  .staff-detail-dialog .d-flex .btn {
+    width: 100%;
+  }
+}
+
+@keyframes queue-skeleton-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: 0 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .queue-skeleton-block {
+    animation: none;
+  }
+}
+
+/* Requester Ticket Detail communication content stays readable when a user
+   pastes a long URL or backend-authored text at every supported breakpoint. */
+.zen-ticket-detail,
+.zen-communication-card,
+.zen-comment-timeline,
+.zen-comment-item {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.zen-comment-item {
+  border-top: 1px solid var(--zen-border);
+  padding: 1rem 0;
+}
+
+.zen-comment-item:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.zen-comment-body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.zen-communication-card .zen-badge {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 /* Touch targets stay comfortable on small screens. The pagination controls and

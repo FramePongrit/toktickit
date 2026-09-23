@@ -1,16 +1,61 @@
 export type Priority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
-export type TicketStatus = "NEW";
+export type TicketStatus =
+  | "NEW"
+  | "OPEN"
+  | "IN_PROGRESS"
+  | "WAITING_FOR_REQUESTER"
+  | "REOPENED"
+  | "RESOLVED"
+  | "CLOSED"
+  | "CANCELLED";
+
+export type Role = "REQUESTER" | "STAFF" | "ADMIN";
+
+export interface AdminUser extends SafeUser {}
+
+export interface SafeUser {
+  id: number;
+  fullName: string;
+  email: string;
+  active: boolean;
+  role: Role;
+  mustChangePassword: boolean;
+}
 
 export interface ReferenceItem {
   id: number;
   name: string;
 }
 
-export interface DevRequester {
+export interface UserSummary {
   id: number;
   fullName: string;
   email: string;
-  department: string | null;
+}
+
+export interface CommunicationAuthor {
+  id: number;
+  fullName: string;
+  role: Role;
+}
+
+export interface PublicComment {
+  id: number;
+  body: string;
+  createdAt: string;
+  author: CommunicationAuthor;
+}
+
+export interface InternalNote {
+  id: number;
+  body: string;
+  createdAt: string;
+  author: CommunicationAuthor;
+}
+
+export interface ResolutionIndication {
+  indicatedAt: string;
+  indicatedBy: CommunicationAuthor;
 }
 
 export interface AttachmentMeta {
@@ -36,19 +81,49 @@ export interface TicketListItem {
   attachmentCount: number;
 }
 
+export interface TicketOwnerOption {
+  id: number;
+  fullName: string;
+  role: Extract<Role, "STAFF" | "ADMIN">;
+}
+
+export interface StaffQueueItem {
+  id: number;
+  ticketNumber: string;
+  summary: string;
+  requestedPriority: Priority;
+  itPriority: Priority;
+  currentStatus: TicketStatus;
+  createdAt: string;
+  updatedAt: string;
+  category: ReferenceItem;
+  requester: UserSummary;
+  owner: TicketOwnerOption | null;
+  resolutionIndication: ResolutionIndication | null;
+}
+
 export interface TicketDetail {
   id: number;
   ticketNumber: string;
   summary: string;
   description: string;
   requestedPriority: Priority;
+  /** Optional keeps Lab 2 fixture objects source-compatible; the API always returns it. */
+  itPriority?: Priority;
   currentStatus: TicketStatus;
   createdAt: string;
   updatedAt: string;
   category: ReferenceItem;
   relatedSystem: ReferenceItem;
-  requester: DevRequester;
+  requester: UserSummary;
+  owner?: TicketOwnerOption | null;
   attachments: AttachmentMeta[];
+  /** Optional keeps Lab 2 fixture objects source-compatible; the API always returns it. */
+  publicComments?: PublicComment[];
+  internalNotes?: InternalNote[];
+  /** Optional keeps Lab 2 fixture objects source-compatible; the API always returns it. */
+  resolutionIndication?: ResolutionIndication | null;
+  allowedTransitions?: TicketStatus[];
 }
 
 export interface PagedResult<T> {

@@ -1,11 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { RequesterTicketDetailPage } from "../../src/pages/RequesterTicketDetailPage.js";
 import * as ticketsApi from "../../src/api/tickets.js";
-import * as referenceData from "../../src/api/referenceData.js";
-import { RequesterProvider } from "../../src/context/RequesterContext.js";
-import { AppRoutes } from "../../src/AppRouter.js";
 import { ApiError } from "../../src/lib/http.js";
 import type { TicketDetail } from "../../src/types/index.js";
 
@@ -20,12 +17,11 @@ const TICKET: TicketDetail = {
   updatedAt: "2026-09-01T09:14:00.000Z",
   category: { id: 2, name: "Hardware" },
   relatedSystem: { id: 8, name: "Corporate Laptop" },
-  requester: {
-    id: 1,
-    fullName: "Jennifer Anderson",
-    email: "jennifer@kmutt.ac.th",
-    department: "Engineering",
-  },
+    requester: {
+      id: 1,
+      fullName: "Jennifer Anderson",
+      email: "jennifer@kmutt.ac.th",
+    },
   attachments: [],
 };
 
@@ -56,40 +52,37 @@ describe("Ticket Detail — content", () => {
     expect(screen.getByText("Jennifer Anderson")).toBeInTheDocument();
     expect(screen.getByText("Laptop battery drains quickly")).toBeInTheDocument();
     expect(screen.getByText(/battery drains much faster/)).toBeInTheDocument();
-    expect(screen.getByTestId("priority-badge")).toHaveTextContent("High");
+    expect(screen.getByTestId("requested-priority")).toHaveTextContent("High");
+    expect(screen.getByTestId("it-priority")).toHaveTextContent("High");
     expect(screen.getByTestId("status-badge")).toHaveTextContent("New");
   });
 
-  it("UI-16: presents the ticket read-only, with no editable control", async () => {
+  it("UI-16: keeps ticket fields read-only while exposing the communication composer", async () => {
     vi.spyOn(ticketsApi, "fetchTicket").mockResolvedValue(TICKET);
 
     renderDetail();
 
     await screen.findByRole("heading", { name: "TKT-2026-000042" });
-    // Nothing on this screen edits the ticket (BR-44). The only inputs that may
-    // appear belong to the attachment flow, which is not open here.
-    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: /Add a public comment/i })).toBeInTheDocument();
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
 
     const summaryField = screen.getByText("Laptop battery drains quickly");
     expect(summaryField).toHaveClass("zen-readonly");
   });
 
-  it("UI-17: shows none of the features that belong to later sprints", async () => {
+  it("UI-17: shows requester communication without staff-only controls", async () => {
     vi.spyOn(ticketsApi, "fetchTicket").mockResolvedValue(TICKET);
 
     renderDetail();
 
     await screen.findByRole("heading", { name: "TKT-2026-000042" });
-    // Comments, internal notes, actions taken, IT priority, ticket owner and
-    // any status control are all out of scope for Lab 2 (BR-45).
-    expect(screen.queryByText(/Public Comments/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Public comments" })).toBeInTheDocument();
     expect(screen.queryByText(/Internal Notes/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Actions Taken/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/IT Priority/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/IT Priority/i)).toBeInTheDocument();
     expect(screen.queryByText(/Ticket Owner/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Resolution Summary/i)).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Resolve|Close|Reopen|Cancel ticket/i })).not
+    expect(screen.queryByRole("button", { name: /Resolve ticket|Close ticket|Reopen ticket|Cancel ticket/i })).not
       .toBeInTheDocument();
   });
 
@@ -130,25 +123,8 @@ describe("Ticket Detail — access and failure", () => {
     expect(screen.queryByText(/ECONNREFUSED/)).not.toBeInTheDocument();
 
     spy.mockResolvedValue(TICKET);
-    screen.getByRole("button", { name: /Retry/i }).click();
+    fireEvent.click(screen.getByRole("button", { name: /Retry/i }));
 
     expect(await screen.findByRole("heading", { name: "TKT-2026-000042" })).toBeInTheDocument();
-  });
-
-  it("UI-18: redirects to the selector when no requester is selected", async () => {
-    vi.spyOn(referenceData, "fetchDevRequesters").mockResolvedValue([]);
-    vi.spyOn(ticketsApi, "fetchTicket").mockResolvedValue(TICKET);
-
-    render(
-      <MemoryRouter initialEntries={["/tickets/42"]}>
-        <RequesterProvider>
-          <AppRoutes />
-        </RequesterProvider>
-      </MemoryRouter>
-    );
-
-    expect(
-      await screen.findByRole("heading", { name: /Select Development Requester/i })
-    ).toBeInTheDocument();
   });
 });

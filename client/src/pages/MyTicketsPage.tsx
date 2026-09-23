@@ -118,7 +118,7 @@ export function MyTicketsPage() {
     <>
       <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-4">
         <div>
-          <h1 className="h3 mb-1">My Tickets</h1>
+          <h1 className="h3 mb-1" data-page-heading tabIndex={-1}>My Tickets</h1>
           <p className="zen-muted mb-0">View and track all of your support requests.</p>
         </div>
         <div className="d-flex flex-wrap gap-2">

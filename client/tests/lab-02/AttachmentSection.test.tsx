@@ -152,7 +152,7 @@ describe("Attachments — download", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Download/i }));
 
-    // A plain <a href> could not carry the identity header across origins, so
+    // A plain cross-origin link could not carry the authenticated session, so
     // the action must go through the fetch-and-blob path (D-06).
     await waitFor(() => expect(spy).toHaveBeenCalledWith(active));
   });
