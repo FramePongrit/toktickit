@@ -49,7 +49,7 @@ Staff Action representation (nullable fields abbreviated, not omitted):
   "id": 21, "ticketId": 42, "workCycle": 1,
   "status": "PLANNED", "description": "Inspect the network connection",
   "result": null, "actionAt": "2026-10-23T04:00:00.000Z",
-  "assignee": {"id": 7, "fullName": "Niran Staff"},
+  "assignee": {"id": 7, "fullName": "Niran Staff"}, "assigneeEligible": true,
   "createdBy": {"id": 9, "fullName": "Kanya Admin"}, "performedBy": null,
   "followUpRequired": false, "followUpNote": null, "attachmentNotes": null,
   "version": 1, "createdAt": "2026-10-23T04:00:00.000Z",
@@ -59,7 +59,7 @@ Staff Action representation (nullable fields abbreviated, not omitted):
 }
 ~~~
 
-Examples are illustrative, not current DB facts. permissions are derived from current parent/cycle/state and user eligibility; the server still rechecks on write. Requester projection includes business fields and PersonRefs but omits version, permissions and revision payloads. A null performedBy means not completed; never substitute assignee or creator for actual performer.
+Examples are illustrative, not current DB facts. permissions are derived from current parent/cycle/state and user eligibility; the server still rechecks on write. Staff-only assigneeEligible reports current active STAFF/ADMIN eligibility so unfinished work can display a reassignment warning. Requester projection includes business fields and PersonRefs but omits assigneeEligible, version, permissions and revision payloads. A null performedBy means not completed; never substitute assignee or creator for actual performer.
 
 | Method/path | Purpose / success |
 |---|---|
@@ -124,7 +124,7 @@ Preserves route/method and Lab 3 matrix. Requires Idempotency-Key and body {expe
 - Other destinations reject publicComment/cancelReason. RESOLVED evaluates BR-18 under the same transaction; sets resolvedAt=now. REOPENED increments workCycle and clears resolvedAt/indication once. CLOSED retains resolvedAt (including null legacy unknown).
 - ResolutionGate = {canResolve,reasons,completedCount,unfinishedCount,followUpCount}. Reasons are NO_COMPLETED_ACTION, UNFINISHED_ACTIONS, FOLLOW_UP_REQUIRED, OWNER_REQUIRED as applicable; counts concern current cycle only. 409 RESOLUTION_GATE_FAILED returns authorized meta.resolutionGate and writes nothing. An unknown/absent matrix edge is not a gate failure.
 
-200 adds to preserved response fields: {currentStatus,resolutionIndication,allowedTransitions,ticketVersion,workCycle,resolvedAt,resolutionGate}. One public TRANSITION event per successful actual change; fromStatus != toStatus. Existing legacy RESOLVED may CLOSE without needing an Action because that does not enter RESOLVED anew. A Reopened legacy Ticket must meet new-cycle gate before its next resolution.
+200 adds to preserved response fields: {currentStatus,resolutionIndication,allowedTransitions,ticketVersion,workCycle,resolvedAt,resolutionGate}. One public TRANSITION event per successful actual change; fromStatus != toStatus and event.workCycle equals the resulting Ticket.workCycle, including the new cycle on REOPENED. Existing legacy RESOLVED may CLOSE without needing an Action because that does not enter RESOLVED anew. A Reopened legacy Ticket must meet new-cycle gate before its next resolution.
 
 ## 6. Idempotency and conflicts
 

@@ -6,7 +6,7 @@ Stakeholder-approved scope and schedule, authored 2026-10-23. Final deadline **2
 
 Released Lab 3 main = 1a20e3465922a2c1dacc5a9eb18e55b0840284b8, [PR 83](https://github.com/FramePongrit/toktickit/pull/83). Its content matches the approved Lab 3 staging release; older local cached main was outdated and was refreshed before authoring. Preserve other dirty Lab 3 checkouts.
 
-Local preparation: lab4-staging was created at origin/main; feature/lab4-engineering-contract was created from it. No direct development on main or lab4-staging. Contract files remain reviewable working changes until committed/reviewed through the normal course workflow. Local lab4-staging initially points to the main baseline; once the remote Lab 4 integration branch exists, set its upstream to origin/lab4-staging rather than accidentally pulling future main into it.
+Local preparation: lab4-staging was created at origin/main; feature/lab4-engineering-contract was created from it. No direct development on main or lab4-staging. Contract commits 430cda5/a6825cf were published and merged through PR #94 at 954604e. Local lab4-staging tracks origin/lab4-staging; feature/lab4-data-migration was fast-forwarded to the merged contract before completion.
 
 Required flow:
 
@@ -38,7 +38,7 @@ Dependencies: 01 -> 02 -> 03 -> 04; 03+04 -> 05; 03+04 -> 06 -> 07; 05+07 -> 08 
 
 ### L4-01 - Sprint 4 engineering contract and test plan
 
-Branch: feature/lab4-engineering-contract. Depends on: released Lab 3. Target: October 23. GitHub Issue: #84; [PR #94](https://github.com/FramePongrit/toktickit/pull/94) open into lab4-staging, human review/merge pending.
+Branch: feature/lab4-engineering-contract. Depends on: released Lab 3. Target: October 23. GitHub Issue: #84; [PR #94](https://github.com/FramePongrit/toktickit/pull/94) reviewed by Sxr1n and merged into lab4-staging on October 24 at 954604e.
 
 Tasks: maintain the six Lab 4 contract/review-plan files; resolve handout ambiguities through the recorded stakeholder interview; specify numbered FR/BR/AC, exact roles/matrices/fields/API/UI/data/recovery; map every AC to planned tests; record approval provenance before feature implementation. Prepare real Project/Issue mapping and peer-review request after the reviewable document set exists.
 
@@ -48,7 +48,7 @@ Verification: read/compare all six files and handout; audit links/IDs/traceabili
 
 ### L4-02 - Additive Action/workflow schema, seed and recovery
 
-Branch: feature/lab4-data-migration. Depends on: L4-01. Target: October 24.
+Branch: feature/lab4-data-migration. Depends on: L4-01. Target: October 24. [Issue #85](https://github.com/FramePongrit/toktickit/issues/85), [PR #95](https://github.com/FramePongrit/toktickit/pull/95) into lab4-staging; PR Review, human approval/merge pending. Implementation commit 6be4a1a; execution evidence in tests.md section 10 and reviewer.md.
 
 Tasks: implement logical schema/constraints/indexes in specification section 7; add current-cycle/version/resolvedAt defaults; create typed baseline snapshots without fabricated Actions/time; keep existing credentials/ids/relations/attachment data. Extend scoped seed for all demonstrations and zero metrics. Add backup/restore procedure and test-owned migration/recovery fixtures. Extend vitest.migration.config.ts includes deliberately; preserve older migration runs.
 
@@ -156,7 +156,7 @@ Use headings exactly Answer Part 1 through Answer Part 9 in that order. Links mu
 
 Coding agent receives specification.md, api-spec.md, ui-spec.md and tests.md together, then implements one dependency-ready Issue with its AC/test scope. It reports changed files, actual tests/results and unmet DoD. If a contradiction is discovered, stop the dependent implementation choice, present a concrete proposed contract amendment and update all companions when approved. Do not broaden scope or mark a feature Done based on appearance/agent assurance.
 
-The initial authoring task created the six contract/plan/review files and maintained the external staging log. On October 24 the stakeholder authorized orchestrated implementation, GitHub Issue/PR publication and Kanban management. Merge/closure remains subject to the stakeholder's instruction. Executor and Reviewer must apply Ponytail full for every assigned round.
+The initial authoring task created the six contract/plan/review files and maintained the external staging log. On October 24 the stakeholder authorized implementation, GitHub Issue/PR publication and Kanban management. Merge/closure remains subject to the stakeholder's instruction; operational agent instructions are retained in the external working log.
 
 ## 6. Published work mapping (October 24)
 
@@ -175,4 +175,4 @@ Project: [TokTickIT Individual Sprints](https://github.com/users/FramePongrit/pr
 | L4-09 | [#92](https://github.com/FramePongrit/toktickit/issues/92) |
 | L4-10 | [#93](https://github.com/FramePongrit/toktickit/issues/93) |
 
-Until the contract PR is merged, implementation branches may stack on `feature/lab4-engineering-contract` with that branch as their temporary PR base. After stakeholder-authorized merge of the contract, retarget implementation PRs to `lab4-staging` and recheck their diffs. This preserves separate review scopes without merging either PR automatically.
+Contract PR #94 is merged. The first implementation branch was fast-forwarded to its merge commit 954604e with partial work preserved; implementation PRs now target `lab4-staging` directly. Later branches must start from the reviewed integration head.

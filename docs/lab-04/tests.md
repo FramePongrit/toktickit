@@ -1,8 +1,10 @@
 # Lab 4 Test Plan and Results
 
-Status: planning contract, 2026-10-23. All checks below are **Planned / Not run**. Product test files listed as targets do not yet exist in this documentation-only increment. Do not infer passing implementation from this plan. Authority: [specification](specification.md), [API](api-spec.md), [UI](ui-spec.md).
+Status: planning contract authored 2026-10-23, with Issue #85 implementation results recorded on 2026-10-24 in section 10. Unimplemented test targets remain **Planned / Not run**. MIG-01/02/03 data/recovery files now exist; their passing results do not establish later workflow/API/UI behavior. Authority: [specification](specification.md), [API](api-spec.md), [UI](ui-spec.md).
 
 ## 1. Strategy, TDD and isolation
+
+Peer-review clarification assertions: API-W02 must first reject resolution with Completed follow-up=true, then permit a reasoned/audited correction to false and resolve only when all remaining gate rules pass. API-W03 asserts the REOPENED event has the resulting incremented cycle. UI-03/API-A03 cover an untouched create date omitted for server default, an ahead-of-server browser clock and edited Bangkok datetime-local values from a browser in another timezone. UI-03 checks a visible warning for unfinished ineligible assignees. API-D02 asserts URGENT > HIGH > MEDIUM > LOW ordering; API-D04 includes Requester-authored public activity. UNIT-06/API-I01 retain concurrent replay and property-order/JSON-formatting-independent digest assertions. These are planned assertions until their later implementation Issues run them.
 
 Create failing tests from the approved AC before implementing the relevant rule, then implement/refactor with the approved tests. Keep real unit/API/component/browser assertions; avoid tests that merely repeat production constants or mock away authorization/transactions. Maintain full earlier assertion coverage while updating only expressly changed Lab 4 contracts (Staff write versions, Dashboard landing, gate/history).
 
@@ -42,9 +44,9 @@ Target files are implementation obligations, not links to nonexistent current fi
 | API-D02 | API | AC-15 | Staff/Admin cards, all-eight statusCounts keys with {value,unit,href}, priority ordering, my assigned vs my performed Actions and old cycles | Correct units/counts/sum of value fields/current-user meanings and links; safe summaries only | server/tests/lab-04/staff-dashboard.api.test.ts | Planned / Not run |
 | API-D03 | API | AC-16 | Follow every href and compare card count/predicate/order with detailed list at unchanged snapshot; invalid sets/dates/queries | Exact matches including active/all scopes; valid URL and no unauthorized filter override | server/tests/lab-04/dashboard-drilldown.api.test.ts | Planned / Not run |
 | API-D04 | API | AC-17 | Ticket metadata/Actions/Public Comments/indication/attachments update updatedAt; Internal Notes/rejects/replays do not | Prospective activity rules without rewriting legacy timestamps | server/tests/lab-04/dashboard-drilldown.api.test.ts | Planned / Not run |
-| MIG-01 | Migration | AC-18 | Fresh install and Lab3 upgrade inventory ids/relations/statuses/credentials/files, baseline events and legacy zero-Action cases | All legacy values preserved; no invented Actions/resolution dates; new gate works prospectively | server/tests/lab-04/migration.regression.test.ts | Planned / Not run |
-| MIG-02 | Migration | AC-18 | Seed twice with changed credentials and existing user work, all statuses/priorities/cycles/actors/zero metrics | Idempotent fixture counts and unchanged non-fixture work/credentials | server/tests/lab-04/migration.regression.test.ts | Planned / Not run |
-| MIG-03 | Recovery | AC-19 | Backup DB plus fixture attachment bytes, restore to isolated destination, compare inventory/hashes, protect source | Matching recovered data/files, documented procedure, no shared-schema/process damage | server/tests/lab-04/recovery.integration.test.ts | Planned / Not run |
+| MIG-01 | Migration | AC-18 | Fresh install and Lab3 upgrade inventory ids/relations/statuses/credentials/files, baseline events and legacy zero-Action cases | All legacy values preserved; no invented Actions/resolution dates; new gate works prospectively | server/tests/lab-04/migration.regression.test.ts; server/tests/lab-03/migration-seed.regression.test.ts | Data checks Pass; gate/close behavior pending #87 |
+| MIG-02 | Migration | AC-18 | Seed twice with changed credentials and existing user work, all statuses/priorities/cycles/actors/zero metrics | Idempotent fixture counts and unchanged non-fixture work/credentials | server/tests/lab-04/migration.regression.test.ts | Seed preservation/fixtures Pass; dashboard metric checks pending #89 |
+| MIG-03 | Recovery | AC-19 | Backup DB plus fixture attachment bytes, restore to isolated destination, compare inventory/hashes, protect source | Matching recovered data/files, documented procedure, no shared-schema/process damage | server/tests/lab-04/recovery.integration.test.ts | Pass in isolated #85 environment; section 10 |
 | UI-01 | Component | AC-15, AC-16, AC-21 | Staff/Admin cards/units/statusCounts {value,unit,href}/My Actions inline paging/refresh, empty/forbidden/API failure | Correct status values/links, role-safe navigation and distinct feedback; failed refresh not fake zero | client/tests/lab-04/StaffDashboard.test.tsx | Planned / Not run |
 | UI-02 | Component | AC-14, AC-16, AC-21 | Requester cards/previews/date labels/links/as-of, invalid URL and cache isolation | Own-only display, preserved filters, zero vs failure distinct | client/tests/lab-04/RequesterDashboard.test.tsx | Planned / Not run |
 | UI-03 | Component | AC-01, AC-03, AC-04, AC-05, AC-06, AC-07, AC-21 | Actions view/create/edit/correction/start/complete/cancel, inactive assignee, history permission and read-only cycles | Required labels/validation and immutable fields, correct save feedback/focus | client/tests/lab-04/ActionsTaken.test.tsx | Planned / Not run |
@@ -214,3 +216,24 @@ Apply the [UI checklist](ui-spec.md#10-visual-checklist-and-artifacts). Capture 
 | Documentation consistency inspection | Record the actual authoring inspection in reviewer.md |
 
 For each execution, record command, timestamp/time zone, exact commit/branch, isolated environment, suite passed/failed/skipped counts, log/artifact path and any linked defect. Final evidence must come from main after the release merge, not a historical Lab 3 total or only a feature branch. Fix discovered defects via linked Issues/PRs, re-run affected checks and integrated required checks as warranted. Required flaky/skipped/disabled/failed tests keep DoD incomplete. Unknown legacy resolved times and pre-Lab4 child-only updated activity are documented data limitations, not deferred tests. No approved required scenario is intentionally deferred.
+
+## 10. Issue #85 first implementation verification
+
+Date: 2026-10-24, Asia/Bangkok. Branch: feature/lab4-data-migration, based on merged contract 954604e; [PR #95](https://github.com/FramePongrit/toktickit/pull/95). Results below were obtained on the final working implementation subsequently committed as 6be4a1a without product changes. Following evidence/contract commits are documentation-only. Final-main release verification remains pending.
+
+Environment: dedicated PostgreSQL 16 container `toktickit-lab4-issue85-test`, loopback port 55434, disposable database `lab4test` and task-owned schemas/databases only. `DATABASE_URL` and `LAB4_PG_CONTAINER` explicitly target that environment. Existing application databases and uploads were not migrated/reset; test attachment filenames and restored roots are task-owned.
+
+| Command / check | Result |
+|---|---|
+| npm --prefix server run test:migration | 3 files / 6 tests passed; 0 failed / skipped |
+| npm --prefix server test | 18 files / 200 tests passed; 0 failed / skipped |
+| npm --prefix server run test:security | 1 file / 21 tests passed; 0 failed / skipped |
+| Prisma validate and generate against server/prisma/schema.prisma | Passed |
+| npm --prefix server run build | Passed |
+| README backup/restore PowerShell fences | 2 blocks parsed; syntax check, not a second live restore |
+| Windows mixed-separator backup path containment | 4 assertions passed; root/child rejected and sibling/outside allowed |
+| git diff --check | Passed; LF/CRLF notices only |
+
+Recovery uses actual custom-format pg_dump/pg_restore, compares restored DB inventory and attachment SHA256, verifies backup/source preservation, then exercises real login, missing/valid CSRF, mandatory password change, stale/current sessions and authorized attachment metadata/download against the restored database and upload root. The source and backup remain intact through verification; afterward the test cleans its generated source/restored databases, fixture file and temporary artifact directory. This automated fixture cleanup is separate from the runbook, which preserves the user's actual backup/source.
+
+Code review led to corrected reopened resolution dates, work-cycle chronology, upgraded-demo preservation, inactive unfinished assignment, operation-aware version history, changed/missing legacy comment handling and fail-closed recovery instructions. Relevant checks were rerun after those changes. The AI Reviewer independently repeated migration/recovery: 3 files / 6 tests passed, zero failed/skipped, 92.51 seconds, starting 17:22:32 Bangkok. Client/browser/E2E, new Action/workflow/dashboard APIs, performance and final-main release evidence belong to later Issues and are not claimed by this increment.

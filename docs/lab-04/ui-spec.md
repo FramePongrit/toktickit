@@ -68,7 +68,7 @@ Staff/Admin New Action opens an inline form and focuses Description. Fields:
 | Field | Behavior |
 |---|---|
 | Action Description | Required textarea, max 2000 |
-| Action Date/Time | Default current server-derived time, display/input Bangkok; convert to offset ISO/UTC for API; no future or pre-Ticket dates |
+| Action Date/Time | Default current server-derived time; untouched create input omits actionAt so the server supplies now. datetime-local input represents Asia/Bangkok (UTC+07:00) regardless of browser timezone; convert edited values to offset ISO/UTC, with no future or pre-Ticket dates |
 | Assignee | Required select, defaults current user; populated from existing active staff directory |
 | Result | Optional textarea while Planned; max 2000 |
 | Follow-Up Required? | Labelled checkbox, false initially |
@@ -81,6 +81,8 @@ Save creates Planned Action, shows success, refreshes Ticket version/summary/lis
 ### Edit/correction mode
 
 Inline form reuses fields and captured expected Ticket/Action versions. Unfinished Actions allow reassignment. Completed/Cancelled allow the descriptive corrections approved in BR-13 but show immutable status/assignee/creator/performer/server timestamps as read-only and require Correction Reason. The API, not disabled fields, enforces this. Save appends revision; cancel returns focus to triggering View/Edit control.
+
+For every unfinished Action with assigneeEligible=false, show a visible reassignment warning in the list/detail view before any transition is attempted. Retain the historical person's label; explain Start/Complete require reassignment and provide the existing reassignment control to authorized Staff.
 
 ### Start/complete/cancel mode
 
