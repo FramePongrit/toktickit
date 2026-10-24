@@ -38,7 +38,7 @@ Dependencies: 01 -> 02 -> 03 -> 04; 03+04 -> 05; 03+04 -> 06 -> 07; 05+07 -> 08 
 
 ### L4-01 - Sprint 4 engineering contract and test plan
 
-Branch: feature/lab4-engineering-contract. Depends on: released Lab 3. Target: October 23. GitHub Issue: #84; PR link pending publication.
+Branch: feature/lab4-engineering-contract. Depends on: released Lab 3. Target: October 23. GitHub Issue: #84; [PR #94](https://github.com/FramePongrit/toktickit/pull/94) open into lab4-staging, human review/merge pending.
 
 Tasks: maintain the six Lab 4 contract/review-plan files; resolve handout ambiguities through the recorded stakeholder interview; specify numbered FR/BR/AC, exact roles/matrices/fields/API/UI/data/recovery; map every AC to planned tests; record approval provenance before feature implementation. Prepare real Project/Issue mapping and peer-review request after the reviewable document set exists.
 

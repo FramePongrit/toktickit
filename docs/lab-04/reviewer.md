@@ -1,6 +1,6 @@
 # Lab 4 Peer Review and Evidence Record
 
-Status: **stakeholder contract approved; peer review, product implementation and release pending**. Prepared 2026-10-23. This file is a truthful evidence template, not a substitute for actual review or passing tests.
+Status: **stakeholder contract approved; first implementation in progress; human peer review and release pending**. Prepared 2026-10-23; publication ledger updated 2026-10-24. This file distinguishes actual events from pending review and test evidence.
 
 Repository: [FramePongrit/toktickit](https://github.com/FramePongrit/toktickit). Baseline: main 1a20e3465922a2c1dacc5a9eb18e55b0840284b8, [Lab 3 release PR 83](https://github.com/FramePongrit/toktickit/pull/83). Integration branch: lab4-staging. Current contract branch: feature/lab4-engineering-contract.
 
@@ -10,38 +10,38 @@ The user requested batch-grill-me planning, answered six decision rounds and cla
 
 Working capture is the user-requested external D:/Software Engineering/lab4_ai_use_staging.md. It preserves user prompts/inter-agent task prompts and summary agent answers, including prior interview decisions. It is not yet the curated repository ai-use.md. Do not copy an unreviewed entire working log into a public PR; later course evidence uses selected prompts and actual LLM identification/student reflection.
 
-Before implementation PRs complete, record the contract commit SHA, reviewed PR and approval timestamps here. Current working files predate feature implementation, but an uncommitted local file is not yet published Git-history evidence.
+Contract commit 430cda5 was published before the first feature implementation started. [PR #94](https://github.com/FramePongrit/toktickit/pull/94) is open into lab4-staging; human approval and merge timestamps remain pending.
 
 | Item | Current verified state |
 |---|---|
 | Stakeholder interview and final authoring authorization | Received in current chat, 2026-10-23 |
-| Contract Git commit | Pending; no commit claimed |
-| Contract Issue/PR link | Pending publication |
+| Contract Git commit | 430cda5; published before #85 implementation |
+| Contract Issue/PR link | [Issue #84](https://github.com/FramePongrit/toktickit/issues/84), [PR #94](https://github.com/FramePongrit/toktickit/pull/94) |
 | Peer reviewer identity | Not assigned/verified for Lab 4 |
 | Peer approval/comments/responses | Pending; do not copy Lab 3 approvals |
-| Implementation test results | Not run; implementation pending |
+| Implementation test results | Pending; #85 implementation in progress |
 | Final main / release PR | Pending |
 
 ## 2. Per-Issue review ledger
 
-Plan IDs come from [issue-plan.md](issue-plan.md), not real GitHub issue numbers. Replace Pending cells with verified links/identities/evidence after each event.
+Plan IDs come from [issue-plan.md](issue-plan.md). Published Issues are linked below. Replace Pending cells only after verified events; human approval is separate from AI review.
 
 | Plan ID | Issue URL | Branch / PR URL | Reviewer identity | Comments / author responses | Approval / merge commit | Project state |
 |---|---|---|---|---|---|---|
-| L4-01 | Pending | feature/lab4-engineering-contract / Pending | Pending | Pending | Pending | Not published |
-| L4-02 | Pending | feature/lab4-data-migration / Pending | Pending | Pending | Pending | Not published |
-| L4-03 | Pending | feature/lab4-actions-api / Pending | Pending | Pending | Pending | Not published |
-| L4-04 | Pending | feature/lab4-ticket-workflow / Pending | Pending | Pending | Pending | Not published |
-| L4-05 | Pending | feature/lab4-actions-ui / Pending | Pending | Pending | Pending | Not published |
-| L4-06 | Pending | feature/lab4-dashboard-api / Pending | Pending | Pending | Pending | Not published |
-| L4-07 | Pending | feature/lab4-dashboard-ui / Pending | Pending | Pending | Pending | Not published |
-| L4-08 | Pending | feature/lab4-quality-evidence / Pending | Pending | Pending | Pending | Not published |
-| L4-09 | Pending | feature/lab4-final-evidence / Pending | Pending | Pending | Pending | Not published |
-| L4-10 | Pending | lab4-staging -> main / Pending | Pending | Pending | Pending | Not published |
+| L4-01 | [#84](https://github.com/FramePongrit/toktickit/issues/84) | feature/lab4-engineering-contract / [#94](https://github.com/FramePongrit/toktickit/pull/94) | Human pending | AI contract review: publication ledger corrected; no L4-02 policy inconsistency found | Pending | PR Review |
+| L4-02 | [#85](https://github.com/FramePongrit/toktickit/issues/85) | feature/lab4-data-migration / Pending | Pending | Implementation in progress | Pending | Started |
+| L4-03 | [#86](https://github.com/FramePongrit/toktickit/issues/86) | feature/lab4-actions-api / Pending | Pending | Pending | Pending | Backlog |
+| L4-04 | [#87](https://github.com/FramePongrit/toktickit/issues/87) | feature/lab4-ticket-workflow / Pending | Pending | Pending | Pending | Backlog |
+| L4-05 | [#88](https://github.com/FramePongrit/toktickit/issues/88) | feature/lab4-actions-ui / Pending | Pending | Pending | Pending | Backlog |
+| L4-06 | [#89](https://github.com/FramePongrit/toktickit/issues/89) | feature/lab4-dashboard-api / Pending | Pending | Pending | Pending | Backlog |
+| L4-07 | [#90](https://github.com/FramePongrit/toktickit/issues/90) | feature/lab4-dashboard-ui / Pending | Pending | Pending | Pending | Backlog |
+| L4-08 | [#91](https://github.com/FramePongrit/toktickit/issues/91) | feature/lab4-quality-evidence / Pending | Pending | Pending | Pending | Backlog |
+| L4-09 | [#92](https://github.com/FramePongrit/toktickit/issues/92) | feature/lab4-final-evidence / Pending | Pending | Pending | Pending | Backlog |
+| L4-10 | [#93](https://github.com/FramePongrit/toktickit/issues/93) | lab4-staging -> main / Pending | Pending | Pending | Pending | Backlog |
 
 For each PR, record review-comment permalinks, author's response/fix links, actual submitted approval identity/time and resolved threads. If an AI factual audit assists drafting, label it as such; it is not a peer approval or proof the product works.
 
-## 3. Contract-authoring inspection
+## 3. Contract-authoring inspection (historical snapshot before publication)
 
 | Check | Evidence/result |
 |---|---|
