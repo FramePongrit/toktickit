@@ -92,6 +92,90 @@ Notes worth knowing before changing the test setup:
 - `npx playwright test` runs both the end-to-end project and the screenshot capture. Use `npm run e2e` for the tests alone. Screenshot capture defaults to an ignored temporary root when invoked through `e2e/run-issue61.ps1`; use `-ScreenshotRoot artifacts/lab-03/screenshots` only when intentionally refreshing committed evidence.
 - For the isolated Lab 3 verification used by Issues #61 and #81, first set an explicit local Docker `DATABASE_URL`, then run `powershell -ExecutionPolicy Bypass -File e2e/run-issue61-full.ps1 -ApiPort 3001 -ClientPort 5174`. The runner validates a public/unspecified base schema, creates and drops only task-owned PostgreSQL schemas, writes screenshots under ignored `test-results/`, and refuses to stop an unrelated process using a port.
 - Use `powershell -ExecutionPolicy Bypass -File e2e/run-issue61.ps1 -Legacy -ApiPort 3001 -ClientPort 5174` for the authenticated legacy browser regression. Add `-Screenshots` for safe temporary screenshot verification, or explicitly add `-ScreenshotRoot artifacts/lab-03/screenshots` when a deliberate committed-artifact refresh is intended.
+- Lab 4 migration checks use `npm --prefix server run test:migration` with `DATABASE_URL` set to a dedicated loopback PostgreSQL database named `lab4test`; the harness creates and drops only random task-owned schemas. The recovery test also requires `LAB4_PG_CONTAINER` to name that dedicated test container. The default server `npm test` discovers these same suites and therefore requires both settings too. Migrate the selected disposable base schema before running the full suite; never target the configured application database.
+
+### Lab 4 backup and restore
+
+Attachment storage defaults to `server/uploads/`; an optional absolute `UPLOAD_DIR` selects the isolated recovery root, as shown in `server/.env.example`.
+
+Before applying Lab 4 to an established database, stop the API and other writers, record the deployed Git SHA and confirm the target database and attachment directory. Use PostgreSQL's `pg_dump` and `pg_restore` client tools. Supply `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER` and `PGPASSWORD` from a protected environment or secret manager; do not put passwords in commands, scripts, or this repository.
+
+Create a backup outside the checkout, then retain the database dump and matching `server/uploads/` tree together:
+
+```powershell
+$ErrorActionPreference = 'Stop'
+if ([string]::IsNullOrWhiteSpace($env:BACKUP_ROOT)) { throw 'BACKUP_ROOT is required.' }
+$backupParent = [IO.Path]::GetFullPath($env:BACKUP_ROOT)
+if (-not (Test-Path -LiteralPath $backupParent -PathType Container)) { throw 'BACKUP_ROOT must be an existing directory.' }
+$repoRoot = (git rev-parse --show-toplevel).Trim()
+if ($LASTEXITCODE -ne 0) { throw 'Could not identify the checkout.' }
+$repoRoot = [IO.Path]::GetFullPath($repoRoot).TrimEnd([IO.Path]::DirectorySeparatorChar)
+if ($backupParent.Equals($repoRoot, [StringComparison]::OrdinalIgnoreCase) -or
+    $backupParent.StartsWith($repoRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+  throw 'BACKUP_ROOT must be outside the checkout.'
+}
+$sourceUploadRoot = if ([string]::IsNullOrWhiteSpace($env:UPLOAD_DIR)) { '.\server\uploads' } else { $env:UPLOAD_DIR }
+$sourceUploadRoot = [IO.Path]::GetFullPath($sourceUploadRoot).TrimEnd([IO.Path]::DirectorySeparatorChar)
+if (-not (Test-Path -LiteralPath $sourceUploadRoot -PathType Container)) { throw 'The source upload directory does not exist.' }
+if ($backupParent.Equals($sourceUploadRoot, [StringComparison]::OrdinalIgnoreCase) -or
+    $backupParent.StartsWith($sourceUploadRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+  throw 'BACKUP_ROOT must be outside the source upload directory.'
+}
+$backupRoot = Join-Path $backupParent ("toktickit-" + (Get-Date -Format "yyyyMMdd-HHmmss"))
+if (Test-Path -LiteralPath $backupRoot) { throw 'The backup destination already exists.' }
+New-Item -ItemType Directory -Path $backupRoot | Out-Null
+$sourceSha = git rev-parse HEAD
+if ($LASTEXITCODE -ne 0) { throw 'Could not record the source Git SHA.' }
+Set-Content -LiteralPath (Join-Path $backupRoot "source-git-sha.txt") -Value $sourceSha
+pg_dump --format=custom --no-owner --no-acl --file (Join-Path $backupRoot "database.dump") $env:PGDATABASE
+if ($LASTEXITCODE -ne 0) { throw 'pg_dump failed; do not use this backup.' }
+$uploadRoot = Join-Path $backupRoot "uploads"
+New-Item -ItemType Directory -Path $uploadRoot | Out-Null
+Get-ChildItem -LiteralPath $sourceUploadRoot -Force | ForEach-Object {
+  Copy-Item -LiteralPath $_.FullName -Destination $uploadRoot -Recurse
+}
+Get-ChildItem -LiteralPath $uploadRoot -File -Force -Recurse | ForEach-Object {
+  [pscustomobject]@{
+    RelativePath = $_.FullName.Substring($uploadRoot.Length).TrimStart('\')
+    SHA256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
+  }
+} | Export-Csv -NoTypeInformation (Join-Path $backupRoot "uploads-sha256.csv")
+```
+
+Restore to a newly created, isolated PostgreSQL database and a separate application checkout. Set the `PG*` variables to that destination before running these commands; keep the original source database and backup intact:
+
+```powershell
+$ErrorActionPreference = 'Stop'
+if ($env:PGDATABASE -notmatch '^toktickit_restore_[A-Za-z0-9_]+$') { throw 'PGDATABASE must name a new isolated toktickit_restore_* database.' }
+if ([string]::IsNullOrWhiteSpace($env:UPLOAD_DIR) -or -not [IO.Path]::IsPathRooted($env:UPLOAD_DIR)) {
+  throw 'UPLOAD_DIR must name a new absolute restore directory.'
+}
+$restoreUploadRoot = [IO.Path]::GetFullPath($env:UPLOAD_DIR)
+if (-not $restoreUploadRoot.Equals($env:UPLOAD_DIR, [StringComparison]::OrdinalIgnoreCase)) {
+  throw 'UPLOAD_DIR must be a normalized absolute path.'
+}
+if (Test-Path -LiteralPath $restoreUploadRoot) { throw 'The restore upload directory already exists.' }
+createdb --template=template0 $env:PGDATABASE
+if ($LASTEXITCODE -ne 0) { throw 'createdb failed; pg_restore was not run.' }
+pg_restore --clean --if-exists --no-owner --no-acl --exit-on-error --dbname $env:PGDATABASE (Join-Path $backupRoot "database.dump")
+if ($LASTEXITCODE -ne 0) { throw 'pg_restore failed; do not direct application traffic to this database.' }
+New-Item -ItemType Directory -Path $restoreUploadRoot | Out-Null
+Get-ChildItem -LiteralPath (Join-Path $backupRoot "uploads") -Force | ForEach-Object {
+  Copy-Item -LiteralPath $_.FullName -Destination $restoreUploadRoot -Recurse
+}
+$expectedFiles = Import-Csv -LiteralPath (Join-Path $backupRoot "uploads-sha256.csv")
+$actualFiles = @(Get-ChildItem -LiteralPath $restoreUploadRoot -File -Force -Recurse | ForEach-Object {
+  [pscustomobject]@{
+    RelativePath = $_.FullName.Substring($restoreUploadRoot.Length).TrimStart('\')
+    SHA256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
+  }
+})
+if (Compare-Object ($expectedFiles | Sort-Object RelativePath) ($actualFiles | Sort-Object RelativePath) -Property RelativePath, SHA256) {
+  throw 'Restored upload inventory does not match the backup.'
+}
+```
+
+Compare the restored upload files with `uploads-sha256.csv`, apply the matching application's migrations only in the isolated destination, and smoke-test login plus attachment metadata and download bytes before directing any application traffic there. Restore the database and matching file tree as one recovery point. Writes accepted after the backup are absent from that recovery point; never run an automatic down migration to try to recover them.
 
 ## API
 
@@ -133,6 +217,10 @@ Attachments accept JPG, JPEG, PNG, WEBP and PDF up to 5 MB, with at most five ac
 | [docs/lab-03/tests.md](docs/lab-03/tests.md) | Lab 3 test plan, traceability, integrated totals, and visual audit |
 | [docs/lab-03/reviewer.md](docs/lab-03/reviewer.md) | Lab 3 GitHub review, PR, and Kanban record |
 | [docs/lab-03/ai-use.md](docs/lab-03/ai-use.md) | Selected Lab 3 AI prompts, workflow, and student reflection |
+| [docs/lab-04/specification.md](docs/lab-04/specification.md) | Lab 4 engineering contract and business rules |
+| [docs/lab-04/api-spec.md](docs/lab-04/api-spec.md) | Lab 4 API contract |
+| [docs/lab-04/ui-spec.md](docs/lab-04/ui-spec.md) | Lab 4 interface contract |
+| [docs/lab-04/tests.md](docs/lab-04/tests.md) | Lab 4 verification plan and traceability |
 
 ## Project layout
 

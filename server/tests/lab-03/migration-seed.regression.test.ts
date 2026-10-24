@@ -14,6 +14,7 @@ import { allocateTicketNumber } from "../../src/services/ticketNumber.service.js
 const LAB3_WORKFLOW_MIGRATION = "20260918120000_lab3_user_workflow";
 const LAB3_CSRF_MIGRATION = "20260918130000_auth_session_csrf_ciphertext";
 const LAB3_REVOKE_MIGRATION = "20260918140000_revoke_legacy_auth_sessions";
+const LAB4_WORKFLOW_MIGRATION = "20261024000000_lab4_actions_workflow";
 const LAB3_MIGRATIONS = [
   LAB3_WORKFLOW_MIGRATION,
   LAB3_CSRF_MIGRATION,
@@ -35,8 +36,12 @@ let freshUrl: string | undefined;
 let temporaryPrismaDirectory: string | undefined;
 let legacyUserId: number;
 let legacyTicketId: number;
+let legacyResolvedTicketId: number;
+let legacyWaitingTicketId: number;
 let legacyAttachmentId: number;
 let legacyTicketNumber: string;
+let legacyResolvedTicketNumber: string;
+const legacyWaitingTicketNumber = "TKT-2026-000104";
 let legacyStoredFilename: string;
 let legacyAuthSessionId: string;
 let expiredLegacyAuthSessionId: string;
@@ -57,6 +62,14 @@ function isolatedSchemaUrl(databaseUrl: string, schema: string): string {
   const url = new URL(databaseUrl);
   url.searchParams.set("schema", schema);
   return url.toString();
+}
+
+function validateTestDatabase(databaseUrl: string): void {
+  const url = new URL(databaseUrl);
+  const databaseName = decodeURIComponent(url.pathname.slice(1));
+  if (!["localhost", "127.0.0.1", "::1"].includes(url.hostname) || databaseName !== "lab4test") {
+    throw harnessUnavailable("use the dedicated loopback lab4test database; migration tests create and drop task-owned schemas.");
+  }
 }
 
 function safeCommandOutput(value: unknown): string {
@@ -111,9 +124,12 @@ async function insertLab2Fixture(client: PrismaClient): Promise<void> {
   const relatedSystemId = 710_002;
   legacyUserId = 710_003;
   legacyTicketId = 710_004;
+  legacyResolvedTicketId = 710_009;
+  legacyWaitingTicketId = 710_010;
   legacyAttachmentId = 710_005;
   legacyStoredFilename = `migration-upgrade-${suffix}.txt`;
   legacyTicketNumber = `TKT-2026-${String(ticketSequence).padStart(6, "0")}`;
+  legacyResolvedTicketNumber = `TKT-2026-${String(ticketSequence - 1).padStart(6, "0")}`;
 
   await fs.writeFile(storedFilePath(legacyStoredFilename), "historical attachment fixture");
 
@@ -228,6 +244,44 @@ async function populateLegacyCiphertextSession(client: PrismaClient): Promise<vo
   );
 }
 
+async function insertLegacyResolvedTicket(client: PrismaClient): Promise<void> {
+  await client.$executeRawUnsafe(
+    `INSERT INTO "Ticket" ("id", "ticketNumber", "requesterId", "categoryId", "relatedSystemId", "requestedPriority", "itPriority", "summary", "description", "currentStatus", "createdAt", "updatedAt")
+     VALUES ($1, $2, $3, $4, $5, $6::"Priority", $7::"Priority", $8, $9, $10::"TicketStatus", $11, $12)`,
+    legacyResolvedTicketId,
+    legacyResolvedTicketNumber,
+    legacyUserId,
+    710_001,
+    710_002,
+    "HIGH",
+    "URGENT",
+    "Legacy resolved Ticket retained through migration",
+    "The historical status is known but its resolution time is not.",
+    "RESOLVED",
+    new Date(LEGACY_ATTACHMENT_TIMESTAMP.getTime() + 60 * 60 * 1000),
+    new Date(LEGACY_ATTACHMENT_TIMESTAMP.getTime() + 60 * 60 * 1000)
+  );
+}
+
+async function insertLegacyWaitingTicket(client: PrismaClient): Promise<void> {
+  const createdAt = new Date(LEGACY_ATTACHMENT_TIMESTAMP.getTime() + 2 * 60 * 60 * 1000);
+  await client.$executeRawUnsafe(
+    `INSERT INTO "Ticket" ("id", "ticketNumber", "requesterId", "categoryId", "relatedSystemId", "requestedPriority", "itPriority", "summary", "description", "currentStatus", "createdAt", "updatedAt")
+     VALUES ($1, $2, $3, $4, $5, $6::"Priority", $6::"Priority", $7, $8, $9::"TicketStatus", $10, $11)`,
+    legacyWaitingTicketId,
+    legacyWaitingTicketNumber,
+    legacyUserId,
+    710_001,
+    710_002,
+    "MEDIUM",
+    "Legacy waiting ticket without an attached public comment",
+    "The historical transition does not retain its original public comment.",
+    "WAITING_FOR_REQUESTER",
+    createdAt,
+    createdAt
+  );
+}
+
 async function cleanupHarness(): Promise<void> {
   await lab3Client?.$disconnect();
   lab3Client = undefined;
@@ -256,6 +310,7 @@ beforeAll(async () => {
   if (!databaseUrl) {
     throw harnessUnavailable("DATABASE_URL is required.");
   }
+  validateTestDatabase(databaseUrl);
 
   harnessSchema = `lab3_migration_${randomUUID().replaceAll("-", "")}`;
   harnessUrl = isolatedSchemaUrl(databaseUrl, harnessSchema);
@@ -277,7 +332,7 @@ beforeAll(async () => {
     const temporaryPrisma = path.join(temporaryPrismaDirectory, "prisma");
     await fs.cp(SOURCE_PRISMA_DIRECTORY, temporaryPrisma, { recursive: true });
     const lab3Schema = await fs.readFile(path.join(temporaryPrisma, "schema.prisma"), "utf8");
-    for (const migration of LAB3_MIGRATIONS) {
+    for (const migration of [...LAB3_MIGRATIONS, LAB4_WORKFLOW_MIGRATION]) {
       await fs.rm(path.join(temporaryPrisma, "migrations", migration), {
         recursive: true,
         force: true,
@@ -341,6 +396,22 @@ beforeAll(async () => {
     await fs.writeFile(path.join(temporaryPrisma, "schema.prisma"), lab3Schema);
     runMigrateDeploy(path.join(temporaryPrisma, "schema.prisma"), harnessUrl, "Lab 3 legacy-session revoke upgrade");
 
+    const preLab4Client = new PrismaClient({ datasources: { db: { url: harnessUrl } } });
+    try {
+      await preLab4Client.$connect();
+      await insertLegacyResolvedTicket(preLab4Client);
+      await insertLegacyWaitingTicket(preLab4Client);
+    } finally {
+      await preLab4Client.$disconnect();
+    }
+
+    await fs.cp(
+      path.join(SOURCE_PRISMA_DIRECTORY, "migrations", LAB4_WORKFLOW_MIGRATION),
+      path.join(temporaryPrisma, "migrations", LAB4_WORKFLOW_MIGRATION),
+      { recursive: true }
+    );
+    runMigrateDeploy(path.join(temporaryPrisma, "schema.prisma"), harnessUrl, "Lab 4 workflow upgrade");
+
     lab3Client = new PrismaClient({ datasources: { db: { url: harnessUrl } } });
     await lab3Client.$connect();
 
@@ -364,7 +435,7 @@ afterAll(async () => {
   await cleanupHarness();
 });
 
-describe("MIG-01 — actual Lab 2 to Lab 3 upgrade", () => {
+describe("MIG-01 — actual Lab 2 through Lab 4 upgrade", () => {
   it("renames in place, preserves historical relations/files, copies IT Priority, then backfills credentials", async () => {
     const prisma = lab3Client!;
     const userBeforeSeed = await prisma.user.findUniqueOrThrow({ where: { id: legacyUserId } });
@@ -377,6 +448,38 @@ describe("MIG-01 — actual Lab 2 to Lab 3 upgrade", () => {
     expect(ticketBeforeSeed.id).toBe(legacyTicketId);
     expect(ticketBeforeSeed.requesterId).toBe(legacyUserId);
     expect(ticketBeforeSeed.itPriority === ticketBeforeSeed.requestedPriority).toBe(true);
+    expect(ticketBeforeSeed.workCycle).toBe(1);
+    expect(ticketBeforeSeed.version).toBe(1);
+    expect(ticketBeforeSeed.resolvedAt).toBeNull();
+    expect(await prisma.actionTaken.count({ where: { ticketId: legacyTicketId } })).toBe(0);
+    const baseline = await prisma.ticketWorkflowEvent.findMany({ where: { ticketId: legacyTicketId } });
+    expect(baseline).toHaveLength(1);
+    expect(baseline[0]).toMatchObject({
+      workCycle: 1,
+      kind: "BASELINE",
+      fromStatus: null,
+      toStatus: "NEW",
+      actorId: null,
+      ticketVersion: 1,
+    });
+    const resolvedLegacyTicket = await prisma.ticket.findUniqueOrThrow({ where: { id: legacyResolvedTicketId } });
+    expect(resolvedLegacyTicket.ticketNumber).toBe(legacyResolvedTicketNumber);
+    expect(resolvedLegacyTicket.currentStatus).toBe("RESOLVED");
+    expect(resolvedLegacyTicket.workCycle).toBe(1);
+    expect(resolvedLegacyTicket.version).toBe(1);
+    expect(resolvedLegacyTicket.resolvedAt).toBeNull();
+    expect(await prisma.actionTaken.count({ where: { ticketId: legacyResolvedTicketId } })).toBe(0);
+    expect(await prisma.ticketWorkflowEvent.findMany({ where: { ticketId: legacyResolvedTicketId } })).toMatchObject([
+      { kind: "BASELINE", fromStatus: null, toStatus: "RESOLVED", actorId: null, ticketVersion: 1 },
+    ]);
+    const waitingLegacyTicket = await prisma.ticket.findUniqueOrThrow({ where: { id: legacyWaitingTicketId } });
+    expect(waitingLegacyTicket.ticketNumber).toBe(legacyWaitingTicketNumber);
+    expect(waitingLegacyTicket.currentStatus).toBe("WAITING_FOR_REQUESTER");
+    expect(await prisma.ticketWorkflowEvent.findMany({ where: { ticketId: legacyWaitingTicketId } })).toMatchObject([
+      { kind: "BASELINE", toStatus: "WAITING_FOR_REQUESTER", actorId: null, ticketVersion: 1 },
+    ]);
+    expect(await prisma.publicComment.count({ where: { ticketId: legacyWaitingTicketId } })).toBe(0);
+    expect(await prisma.actionTaken.count({ where: { ticketId: legacyWaitingTicketId } })).toBe(0);
     expect(attachmentBeforeSeed.id).toBe(legacyAttachmentId);
     expect(attachmentBeforeSeed.ticketId).toBe(legacyTicketId);
     expect(attachmentBeforeSeed.originalFilename).toBe("historical.txt");
@@ -411,6 +514,25 @@ describe("MIG-01 — actual Lab 2 to Lab 3 upgrade", () => {
     ).toBe(true);
     expect(await bcrypt.compare(LEGACY_INITIAL_PASSWORD, userAfterSeed.passwordHash ?? "")).toBe(true);
     expect(userAfterSeed.mustChangePassword).toBe(true);
+
+    const reopenedDemo = await prisma.ticket.findUniqueOrThrow({ where: { ticketNumber: "TKT-2026-000110" } });
+    const resolvedDemo = await prisma.ticket.findUniqueOrThrow({ where: { ticketNumber: "TKT-2026-000111" } });
+    expect(reopenedDemo).toMatchObject({ currentStatus: "REOPENED", workCycle: 2, resolvedAt: null });
+    expect(resolvedDemo.currentStatus).toBe("RESOLVED");
+    expect(await prisma.actionTaken.count({ where: { ticketId: reopenedDemo.id } })).toBe(5);
+    expect(await prisma.actionTaken.count({ where: { ticketId: resolvedDemo.id } })).toBe(1);
+    expect(await prisma.actionTaken.count({ where: { ticketId: legacyTicketId } })).toBe(0);
+    expect(await prisma.actionTaken.count({ where: { ticketId: legacyResolvedTicketId } })).toBe(0);
+    expect(await prisma.ticketWorkflowEvent.findMany({ where: { ticketId: legacyResolvedTicketId } })).toMatchObject([
+      { kind: "BASELINE", toStatus: "RESOLVED", actorId: null, ticketVersion: 1 },
+    ]);
+    expect(await prisma.ticket.findUniqueOrThrow({ where: { id: legacyWaitingTicketId } })).toMatchObject({
+      currentStatus: "WAITING_FOR_REQUESTER",
+      workCycle: 1,
+      version: 1,
+    });
+    expect(await prisma.publicComment.count({ where: { ticketId: legacyWaitingTicketId } })).toBe(0);
+    expect(await prisma.actionTaken.count({ where: { ticketId: legacyWaitingTicketId } })).toBe(0);
   });
 
   it("preserves a directly established changed credential across a repeat seed", async () => {
@@ -453,12 +575,12 @@ describe("MIG-01 — actual Lab 2 to Lab 3 upgrade", () => {
 });
 
 describe("MIG-02 — idempotent workflow seed", () => {
-  it("seeds a separate fresh Lab 3 schema without duplicates and advances, but never lowers, the 2026 ticket counter", async () => {
+  it("seeds a separate fresh Lab 4 schema without duplicates and advances, but never lowers, the 2026 ticket counter", async () => {
     const prisma = freshLab3Client!;
     await seedDatabase(prisma);
 
     const seededUsers = await prisma.user.findMany({ select: { email: true, role: true, active: true } });
-    expect(seededUsers.filter((user) => user.role === "REQUESTER" && user.active)).toHaveLength(4);
+    expect(seededUsers.filter((user) => user.role === "REQUESTER" && user.active)).toHaveLength(5);
     expect(seededUsers.filter((user) => user.role === "REQUESTER" && !user.active)).toHaveLength(1);
     expect(seededUsers.filter((user) => user.role === "STAFF" && user.active)).toHaveLength(3);
     expect(seededUsers.filter((user) => user.role === "STAFF" && !user.active)).toHaveLength(1);
@@ -495,10 +617,10 @@ describe("MIG-02 — idempotent workflow seed", () => {
     ).toBe(beforeRepeat.tickets);
 
     const fixtureTickets = await prisma.ticket.findMany({
-      where: { ticketNumber: { in: Array.from({ length: 9 }, (_, index) => `TKT-2026-${String(101 + index).padStart(6, "0")}`) } },
+      where: { ticketNumber: { in: Array.from({ length: 11 }, (_, index) => `TKT-2026-${String(101 + index).padStart(6, "0")}`) } },
       select: { currentStatus: true, itPriority: true, requestedPriority: true, ownerId: true },
     });
-    expect(fixtureTickets).toHaveLength(9);
+    expect(fixtureTickets).toHaveLength(11);
     expect(fixtureTickets.every((ticket) => ticket.itPriority === ticket.requestedPriority)).toBe(true);
     expect(fixtureTickets.some((ticket) => ticket.ownerId === null)).toBe(true);
     expect(new Set(fixtureTickets.map((ticket) => ticket.currentStatus))).toEqual(
@@ -506,10 +628,54 @@ describe("MIG-02 — idempotent workflow seed", () => {
     );
 
     const seededCounter = await prisma.ticketCounter.findUniqueOrThrow({ where: { year: FIXTURE_YEAR } });
-    expect(seededCounter.lastValue).toBeGreaterThanOrEqual(109);
+    expect(seededCounter.lastValue).toBeGreaterThanOrEqual(111);
+
+    const actions = await prisma.actionTaken.findMany({
+      include: { assignee: { select: { email: true, active: true } }, revisions: true, ticket: { select: { ticketNumber: true } } },
+    });
+    expect(actions.filter((action) => action.ticket.ticketNumber === "TKT-2026-000101")).toHaveLength(0);
+    expect(actions.filter((action) => action.ticket.ticketNumber === "TKT-2026-000102")).toHaveLength(1);
+    expect(actions.filter((action) => action.ticket.ticketNumber === "TKT-2026-000103")).toHaveLength(3);
+    expect(new Set(actions.map((action) => action.status))).toEqual(
+      new Set(["PLANNED", "IN_PROGRESS", "COMPLETED", "CANCELLED"])
+    );
+    expect(actions.some((action) => action.followUpRequired && Boolean(action.followUpNote?.trim()))).toBe(true);
+    expect(actions.some((action) => !action.assignee.active && action.status === "COMPLETED")).toBe(true);
+    expect(actions.some((action) => action.ticket.ticketNumber === "TKT-2026-000110" && action.workCycle === 2 && !action.assignee.active && ["PLANNED", "IN_PROGRESS"].includes(action.status))).toBe(true);
+    expect(actions.some((action) => action.ticket.ticketNumber === "TKT-2026-000106" && action.workCycle === 1)).toBe(true);
+    expect(actions.some((action) => action.ticket.ticketNumber === "TKT-2026-000106" && action.workCycle === 2)).toBe(true);
+    expect(actions.filter((action) => action.ticket.ticketNumber === "TKT-2026-000110")).toHaveLength(5);
+    expect(actions.filter((action) => action.ticket.ticketNumber === "TKT-2026-000111")).toHaveLength(1);
+    expect(actions.every((action) => action.revisions.length === action.version)).toBe(true);
+    const reopenedFixture = await prisma.ticket.findUniqueOrThrow({
+      where: { ticketNumber: "TKT-2026-000110" },
+      include: { workflowEvents: true, actions: { include: { revisions: true } } },
+    });
+    expect(reopenedFixture.resolvedAt).toBeNull();
+    const resolvedEvent = reopenedFixture.workflowEvents.find((event) => event.toStatus === "RESOLVED");
+    const reopenedEvent = reopenedFixture.workflowEvents.find((event) => event.toStatus === "REOPENED");
+    const historicalAction = reopenedFixture.actions.find((action) => action.workCycle === 1);
+    const currentCycleActions = reopenedFixture.actions.filter((action) => action.workCycle === 2);
+    expect(resolvedEvent).toBeDefined();
+    expect(reopenedEvent?.workCycle).toBe(2);
+    expect(historicalAction?.completedAt?.getTime()).toBeLessThan(resolvedEvent!.occurredAt.getTime());
+    expect(currentCycleActions.every((action) => action.createdAt.getTime() > reopenedEvent!.occurredAt.getTime())).toBe(true);
+    expect(reopenedFixture.version).toBe(
+      1 + reopenedFixture.workflowEvents.filter((event) => event.kind === "TRANSITION").length +
+        reopenedFixture.actions.reduce((total, action) => total + action.version, 0)
+    );
+    const zeroMetricsRequester = await prisma.user.findUniqueOrThrow({
+      where: { email: "no.ticket.requester@kmutt.ac.th" },
+      include: { tickets: true },
+    });
+    expect(zeroMetricsRequester.tickets).toHaveLength(0);
 
     await prisma.ticketCounter.update({ where: { year: FIXTURE_YEAR }, data: { lastValue: 250 } });
+    const actionCountBeforeRepeat = await prisma.actionTaken.count();
+    const eventCountBeforeRepeat = await prisma.ticketWorkflowEvent.count();
     await seedDatabase(prisma);
+    expect(await prisma.actionTaken.count()).toBe(actionCountBeforeRepeat);
+    expect(await prisma.ticketWorkflowEvent.count()).toBe(eventCountBeforeRepeat);
     const preservedCounter = await prisma.ticketCounter.findUniqueOrThrow({ where: { year: FIXTURE_YEAR } });
     expect(preservedCounter.lastValue).toBe(250);
 
