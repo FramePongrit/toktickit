@@ -100,7 +100,7 @@ Attachment storage defaults to `server/uploads/`; an optional absolute `UPLOAD_D
 
 Before applying Lab 4 to an established database, stop the API and other writers, record the deployed Git SHA and confirm the target database and attachment directory. Use PostgreSQL's `pg_dump` and `pg_restore` client tools. Supply `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER` and `PGPASSWORD` from a protected environment or secret manager; do not put passwords in commands, scripts, or this repository.
 
-Create a backup outside the checkout, then retain the database dump and matching `server/uploads/` tree together:
+Create a backup outside the checkout, then retain the database dump and matching `server/uploads/` tree together. The manifest hashes the original files before copying and checks the copied backup against those hashes; an empty upload directory is valid.
 
 ```powershell
 $ErrorActionPreference = 'Stop'
@@ -118,8 +118,9 @@ $sourceUploadRoot = if ([string]::IsNullOrWhiteSpace($env:UPLOAD_DIR)) { '.\serv
 $sourceUploadRoot = [IO.Path]::GetFullPath($sourceUploadRoot).TrimEnd([IO.Path]::DirectorySeparatorChar)
 if (-not (Test-Path -LiteralPath $sourceUploadRoot -PathType Container)) { throw 'The source upload directory does not exist.' }
 if ($backupParent.Equals($sourceUploadRoot, [StringComparison]::OrdinalIgnoreCase) -or
-    $backupParent.StartsWith($sourceUploadRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
-  throw 'BACKUP_ROOT must be outside the source upload directory.'
+    $backupParent.StartsWith($sourceUploadRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase) -or
+    $sourceUploadRoot.StartsWith($backupParent + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+  throw 'BACKUP_ROOT and the source upload directory must not overlap.'
 }
 $backupRoot = Join-Path $backupParent ("toktickit-" + (Get-Date -Format "yyyyMMdd-HHmmss"))
 if (Test-Path -LiteralPath $backupRoot) { throw 'The backup destination already exists.' }
@@ -129,24 +130,70 @@ if ($LASTEXITCODE -ne 0) { throw 'Could not record the source Git SHA.' }
 Set-Content -LiteralPath (Join-Path $backupRoot "source-git-sha.txt") -Value $sourceSha
 pg_dump --format=custom --no-owner --no-acl --file (Join-Path $backupRoot "database.dump") $env:PGDATABASE
 if ($LASTEXITCODE -ne 0) { throw 'pg_dump failed; do not use this backup.' }
+$manifestPath = Join-Path $backupRoot "uploads-sha256.csv"
+$sourceFiles = @(Get-ChildItem -LiteralPath $sourceUploadRoot -File -Force -Recurse | ForEach-Object {
+  [pscustomobject]@{
+    RelativePath = $_.FullName.Substring($sourceUploadRoot.Length).TrimStart('\')
+    SHA256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
+  }
+})
+if ($sourceFiles.Count -eq 0) {
+  Set-Content -LiteralPath $manifestPath -Value 'RelativePath,SHA256'
+} else {
+  $sourceFiles | Export-Csv -NoTypeInformation -LiteralPath $manifestPath
+}
 $uploadRoot = Join-Path $backupRoot "uploads"
 New-Item -ItemType Directory -Path $uploadRoot | Out-Null
-Get-ChildItem -LiteralPath $sourceUploadRoot -Force | ForEach-Object {
-  Copy-Item -LiteralPath $_.FullName -Destination $uploadRoot -Recurse
+Get-ChildItem -LiteralPath $sourceUploadRoot -File -Force -Recurse | ForEach-Object {
+  $relativePath = $_.FullName.Substring($sourceUploadRoot.Length).TrimStart('\')
+  $destinationPath = Join-Path $uploadRoot $relativePath
+  $destinationDirectory = Split-Path -Parent $destinationPath
+  New-Item -ItemType Directory -Path $destinationDirectory -Force | Out-Null
+  Copy-Item -LiteralPath $_.FullName -Destination $destinationPath
 }
-Get-ChildItem -LiteralPath $uploadRoot -File -Force -Recurse | ForEach-Object {
+$copiedFiles = @(Get-ChildItem -LiteralPath $uploadRoot -File -Force -Recurse | ForEach-Object {
   [pscustomobject]@{
     RelativePath = $_.FullName.Substring($uploadRoot.Length).TrimStart('\')
     SHA256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
   }
-} | Export-Csv -NoTypeInformation (Join-Path $backupRoot "uploads-sha256.csv")
+})
+if (Compare-Object -ReferenceObject $sourceFiles -DifferenceObject $copiedFiles -Property RelativePath, SHA256) {
+  throw 'BACKUP_UPLOAD_COPY_MISMATCH: copied upload files differ from the original manifest.'
+}
+Write-Output "Backup created at $backupRoot"
 ```
 
-Restore to a newly created, isolated PostgreSQL database and a separate application checkout. Set the `PG*` variables to that destination before running these commands; keep the original source database and backup intact:
+Restore from a fresh PowerShell session into a new isolated PostgreSQL database and a separate application checkout. Set `BACKUP_ROOT` to the exact timestamped backup directory printed by the backup command, set the `PG*` variables to the restore destination, and set `UPLOAD_DIR` to a new absolute path. The script validates the dump, upload directory, and manifest (including all upload hashes) before it creates the database. Keep the original source database and backup intact:
 
 ```powershell
 $ErrorActionPreference = 'Stop'
 if ($env:PGDATABASE -notmatch '^toktickit_restore_[A-Za-z0-9_]+$') { throw 'PGDATABASE must name a new isolated toktickit_restore_* database.' }
+if ([string]::IsNullOrWhiteSpace($env:BACKUP_ROOT)) { throw 'Set BACKUP_ROOT to the exact existing backup directory.' }
+$backupRoot = [IO.Path]::GetFullPath($env:BACKUP_ROOT)
+if (-not (Test-Path -LiteralPath $backupRoot -PathType Container)) { throw 'RESTORE_BACKUP_INCOMPLETE: backup directory is missing.' }
+$databaseDump = Join-Path $backupRoot 'database.dump'
+$backupUploadRoot = Join-Path $backupRoot 'uploads'
+$manifestPath = Join-Path $backupRoot 'uploads-sha256.csv'
+if (-not (Test-Path -LiteralPath $databaseDump -PathType Leaf) -or (Get-Item -LiteralPath $databaseDump).Length -eq 0 -or
+    -not (Test-Path -LiteralPath $backupUploadRoot -PathType Container) -or
+    -not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
+  throw 'RESTORE_BACKUP_INCOMPLETE: database.dump, uploads, and uploads-sha256.csv are required.'
+}
+$manifestHeader = (Get-Content -LiteralPath $manifestPath -TotalCount 1).Trim()
+if ($manifestHeader -notmatch '^"?RelativePath"?,"?SHA256"?$') { throw 'RESTORE_BACKUP_INCOMPLETE: upload manifest header is invalid.' }
+$expectedFiles = @(Import-Csv -LiteralPath $manifestPath)
+if (@($expectedFiles | Where-Object { [string]::IsNullOrWhiteSpace($_.RelativePath) -or $_.SHA256 -notmatch '^[A-Fa-f0-9]{64}$' }).Count -gt 0) {
+  throw 'RESTORE_BACKUP_INCOMPLETE: upload manifest entry is invalid.'
+}
+$backupFiles = @(Get-ChildItem -LiteralPath $backupUploadRoot -File -Force -Recurse | ForEach-Object {
+  [pscustomobject]@{
+    RelativePath = $_.FullName.Substring($backupUploadRoot.Length).TrimStart('\')
+    SHA256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
+  }
+})
+if (Compare-Object -ReferenceObject $expectedFiles -DifferenceObject $backupFiles -Property RelativePath, SHA256) {
+  throw 'RESTORE_BACKUP_MISMATCH: backup upload files do not match the manifest.'
+}
 if ([string]::IsNullOrWhiteSpace($env:UPLOAD_DIR) -or -not [IO.Path]::IsPathRooted($env:UPLOAD_DIR)) {
   throw 'UPLOAD_DIR must name a new absolute restore directory.'
 }
@@ -155,22 +202,30 @@ if (-not $restoreUploadRoot.Equals($env:UPLOAD_DIR, [StringComparison]::OrdinalI
   throw 'UPLOAD_DIR must be a normalized absolute path.'
 }
 if (Test-Path -LiteralPath $restoreUploadRoot) { throw 'The restore upload directory already exists.' }
+if ($restoreUploadRoot.Equals($backupRoot, [StringComparison]::OrdinalIgnoreCase) -or
+    $restoreUploadRoot.StartsWith($backupRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase) -or
+    $backupRoot.StartsWith($restoreUploadRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+  throw 'The restore upload directory and backup must not overlap.'
+}
 createdb --template=template0 $env:PGDATABASE
 if ($LASTEXITCODE -ne 0) { throw 'createdb failed; pg_restore was not run.' }
-pg_restore --clean --if-exists --no-owner --no-acl --exit-on-error --dbname $env:PGDATABASE (Join-Path $backupRoot "database.dump")
+pg_restore --clean --if-exists --no-owner --no-acl --exit-on-error --dbname $env:PGDATABASE $databaseDump
 if ($LASTEXITCODE -ne 0) { throw 'pg_restore failed; do not direct application traffic to this database.' }
 New-Item -ItemType Directory -Path $restoreUploadRoot | Out-Null
-Get-ChildItem -LiteralPath (Join-Path $backupRoot "uploads") -Force | ForEach-Object {
-  Copy-Item -LiteralPath $_.FullName -Destination $restoreUploadRoot -Recurse
+Get-ChildItem -LiteralPath $backupUploadRoot -File -Force -Recurse | ForEach-Object {
+  $relativePath = $_.FullName.Substring($backupUploadRoot.Length).TrimStart('\')
+  $destinationPath = Join-Path $restoreUploadRoot $relativePath
+  $destinationDirectory = Split-Path -Parent $destinationPath
+  New-Item -ItemType Directory -Path $destinationDirectory -Force | Out-Null
+  Copy-Item -LiteralPath $_.FullName -Destination $destinationPath
 }
-$expectedFiles = Import-Csv -LiteralPath (Join-Path $backupRoot "uploads-sha256.csv")
 $actualFiles = @(Get-ChildItem -LiteralPath $restoreUploadRoot -File -Force -Recurse | ForEach-Object {
   [pscustomobject]@{
     RelativePath = $_.FullName.Substring($restoreUploadRoot.Length).TrimStart('\')
     SHA256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
   }
 })
-if (Compare-Object ($expectedFiles | Sort-Object RelativePath) ($actualFiles | Sort-Object RelativePath) -Property RelativePath, SHA256) {
+if (Compare-Object -ReferenceObject $expectedFiles -DifferenceObject $actualFiles -Property RelativePath, SHA256) {
   throw 'Restored upload inventory does not match the backup.'
 }
 ```

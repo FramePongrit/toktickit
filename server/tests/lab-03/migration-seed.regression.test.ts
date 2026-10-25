@@ -15,11 +15,13 @@ const LAB3_WORKFLOW_MIGRATION = "20260918120000_lab3_user_workflow";
 const LAB3_CSRF_MIGRATION = "20260918130000_auth_session_csrf_ciphertext";
 const LAB3_REVOKE_MIGRATION = "20260918140000_revoke_legacy_auth_sessions";
 const LAB4_WORKFLOW_MIGRATION = "20261024000000_lab4_actions_workflow";
+const LAB4_COMMENT_RESTRICT_MIGRATION = "20261025000000_lab4_restrict_workflow_comment_delete";
 const LAB3_MIGRATIONS = [
   LAB3_WORKFLOW_MIGRATION,
   LAB3_CSRF_MIGRATION,
   LAB3_REVOKE_MIGRATION,
 ] as const;
+const LAB4_MIGRATIONS = [LAB4_WORKFLOW_MIGRATION, LAB4_COMMENT_RESTRICT_MIGRATION] as const;
 const LAB2_BASE_REF = "103e4be";
 const FIXTURE_YEAR = 2026;
 const LEGACY_ATTACHMENT_TIMESTAMP = new Date("2026-08-01T09:00:00.000Z");
@@ -53,6 +55,9 @@ const LEGACY_REVOKED_AT = new Date("2026-09-18T12:00:00.000Z");
 const LEGACY_CIPHERTEXT = "existing-encrypted-csrf-value";
 let migrationProducedNullCredential = false;
 let migrationProducedNoMandatoryChange = false;
+let lab4BeforeCorrection: Awaited<ReturnType<typeof workflowInventory>> | undefined;
+let referencedWaitingCommentId: number;
+let publishedCommentDeleteAction: string | undefined;
 
 function harnessUnavailable(message: string): Error {
   return new Error(`MIGRATION_HARNESS_UNAVAILABLE: ${message}`);
@@ -79,6 +84,18 @@ function safeCommandOutput(value: unknown): string {
     .replace(/(password\s*[=:]\s*)\S+/gi, "$1[redacted]")
     .trim()
     .slice(0, 4_000);
+}
+
+async function workflowInventory(client: PrismaClient) {
+  const [tickets, comments, events, attachments, actionCount, revisionCount] = await Promise.all([
+    client.ticket.findMany({ orderBy: { id: "asc" } }),
+    client.publicComment.findMany({ orderBy: { id: "asc" } }),
+    client.ticketWorkflowEvent.findMany({ orderBy: { id: "asc" } }),
+    client.attachment.findMany({ orderBy: { id: "asc" } }),
+    client.actionTaken.count(),
+    client.actionRevision.count(),
+  ]);
+  return { tickets, comments, events, attachments, actionCount, revisionCount };
 }
 
 function runMigrateDeploy(schemaPath: string, databaseUrl: string, phase: string): void {
@@ -332,7 +349,7 @@ beforeAll(async () => {
     const temporaryPrisma = path.join(temporaryPrismaDirectory, "prisma");
     await fs.cp(SOURCE_PRISMA_DIRECTORY, temporaryPrisma, { recursive: true });
     const lab3Schema = await fs.readFile(path.join(temporaryPrisma, "schema.prisma"), "utf8");
-    for (const migration of [...LAB3_MIGRATIONS, LAB4_WORKFLOW_MIGRATION]) {
+    for (const migration of [...LAB3_MIGRATIONS, ...LAB4_MIGRATIONS]) {
       await fs.rm(path.join(temporaryPrisma, "migrations", migration), {
         recursive: true,
         force: true,
@@ -401,6 +418,9 @@ beforeAll(async () => {
       await preLab4Client.$connect();
       await insertLegacyResolvedTicket(preLab4Client);
       await insertLegacyWaitingTicket(preLab4Client);
+      const migratedUser = await preLab4Client.user.findUniqueOrThrow({ where: { id: legacyUserId } });
+      migrationProducedNullCredential = migratedUser.passwordHash === null;
+      migrationProducedNoMandatoryChange = migratedUser.mustChangePassword === false;
     } finally {
       await preLab4Client.$disconnect();
     }
@@ -410,14 +430,84 @@ beforeAll(async () => {
       path.join(temporaryPrisma, "migrations", LAB4_WORKFLOW_MIGRATION),
       { recursive: true }
     );
-    runMigrateDeploy(path.join(temporaryPrisma, "schema.prisma"), harnessUrl, "Lab 4 workflow upgrade");
+    runMigrateDeploy(path.join(temporaryPrisma, "schema.prisma"), harnessUrl, "published Lab 4 migration");
+
+    const publishedLab4Client = new PrismaClient({ datasources: { db: { url: harnessUrl } } });
+    try {
+      await publishedLab4Client.$connect();
+      await seedDatabase(publishedLab4Client);
+      const requester = await publishedLab4Client.user.findUniqueOrThrow({ where: { id: legacyUserId } });
+      const staff = await publishedLab4Client.user.findUniqueOrThrow({ where: { email: "niran.support@kmutt.ac.th" } });
+      const waitingTicket = await publishedLab4Client.ticket.create({
+        data: {
+          ticketNumber: "TKT-2026-990001",
+          requesterId: requester.id,
+          categoryId: 710_001,
+          relatedSystemId: 710_002,
+          requestedPriority: "MEDIUM",
+          itPriority: "MEDIUM",
+          summary: "Waiting history used to verify the published FK correction",
+          description: "A real public comment is referenced by an existing workflow event.",
+          currentStatus: "WAITING_FOR_REQUESTER",
+          version: 3,
+        },
+      });
+      const comment = await publishedLab4Client.publicComment.create({
+        data: { ticketId: waitingTicket.id, authorId: staff.id, body: "Please provide the missing detail." },
+      });
+      referencedWaitingCommentId = comment.id;
+      await publishedLab4Client.ticketWorkflowEvent.createMany({
+        data: [
+          {
+            ticketId: waitingTicket.id,
+            workCycle: 1,
+            kind: "CREATED",
+            toStatus: "NEW",
+            actorId: requester.id,
+            ticketVersion: 1,
+          },
+          {
+            ticketId: waitingTicket.id,
+            workCycle: 1,
+            kind: "TRANSITION",
+            fromStatus: "NEW",
+            toStatus: "OPEN",
+            actorId: staff.id,
+            ticketVersion: 2,
+          },
+          {
+            ticketId: waitingTicket.id,
+            workCycle: 1,
+            kind: "TRANSITION",
+            fromStatus: "OPEN",
+            toStatus: "WAITING_FOR_REQUESTER",
+            actorId: staff.id,
+            publicCommentId: comment.id,
+            ticketVersion: 3,
+          },
+        ],
+      });
+      const publishedForeignKey = await publishedLab4Client.$queryRaw<{ confdeltype: string }[]>`
+        SELECT confdeltype::text AS "confdeltype"
+        FROM pg_constraint
+        WHERE conrelid = '"TicketWorkflowEvent"'::regclass
+          AND conname = 'TicketWorkflowEvent_publicCommentId_fkey'
+      `;
+      publishedCommentDeleteAction = publishedForeignKey[0]?.confdeltype;
+      lab4BeforeCorrection = await workflowInventory(publishedLab4Client);
+    } finally {
+      await publishedLab4Client.$disconnect();
+    }
+
+    await fs.cp(
+      path.join(SOURCE_PRISMA_DIRECTORY, "migrations", LAB4_COMMENT_RESTRICT_MIGRATION),
+      path.join(temporaryPrisma, "migrations", LAB4_COMMENT_RESTRICT_MIGRATION),
+      { recursive: true }
+    );
+    runMigrateDeploy(path.join(temporaryPrisma, "schema.prisma"), harnessUrl, "Lab 4 comment-FK correction");
 
     lab3Client = new PrismaClient({ datasources: { db: { url: harnessUrl } } });
     await lab3Client.$connect();
-
-    const migratedUser = await lab3Client.user.findUniqueOrThrow({ where: { id: legacyUserId } });
-    migrationProducedNullCredential = migratedUser.passwordHash === null;
-    migrationProducedNoMandatoryChange = migratedUser.mustChangePassword === false;
 
     freshSchema = `lab3_fresh_${randomUUID().replaceAll("-", "")}`;
     freshUrl = isolatedSchemaUrl(databaseUrl, freshSchema);
@@ -436,6 +526,36 @@ afterAll(async () => {
 });
 
 describe("MIG-01 — actual Lab 2 through Lab 4 upgrade", () => {
+  it("applies the additive comment-FK correction over published Lab 4 without changing history", async () => {
+    const db = lab3Client!;
+    expect(publishedCommentDeleteAction).toBe("n");
+    expect(await workflowInventory(db)).toEqual(lab4BeforeCorrection);
+    const foreignKey = await db.$queryRaw<{ confdeltype: string }[]>`
+      SELECT confdeltype::text AS "confdeltype"
+      FROM pg_constraint
+      WHERE conrelid = '"TicketWorkflowEvent"'::regclass
+        AND conname = 'TicketWorkflowEvent_publicCommentId_fkey'
+    `;
+    expect(foreignKey).toEqual([{ confdeltype: "r" }]);
+
+    const waitingEvent = await db.ticketWorkflowEvent.findFirstOrThrow({
+      where: { publicCommentId: referencedWaitingCommentId, toStatus: "WAITING_FOR_REQUESTER" },
+    });
+    const deleteError = await db.$executeRaw`DELETE FROM "PublicComment" WHERE "id" = ${referencedWaitingCommentId}`
+      .then(() => null, (error: unknown) => error);
+    expect(deleteError).toMatchObject({ code: "P2010", meta: { code: "23503" } });
+    expect(deleteError).toHaveProperty(
+      "meta.message",
+      expect.stringContaining("TicketWorkflowEvent_publicCommentId_fkey")
+    );
+    expect(await db.publicComment.findUnique({ where: { id: referencedWaitingCommentId } })).not.toBeNull();
+    expect(await db.ticketWorkflowEvent.findUniqueOrThrow({ where: { id: waitingEvent.id } })).toMatchObject({
+      publicCommentId: referencedWaitingCommentId,
+      toStatus: "WAITING_FOR_REQUESTER",
+    });
+    expect(await workflowInventory(db)).toEqual(lab4BeforeCorrection);
+  });
+
   it("renames in place, preserves historical relations/files, copies IT Priority, then backfills credentials", async () => {
     const prisma = lab3Client!;
     const userBeforeSeed = await prisma.user.findUniqueOrThrow({ where: { id: legacyUserId } });

@@ -233,6 +233,9 @@ describe("MIG-01 — fresh schema constraints", () => {
     const cancelled = await db.actionTaken.findFirstOrThrow({
       where: { ticket: { ticketNumber: "TKT-2026-000103" }, status: "CANCELLED" },
     });
+    const waitingEvent = await db.ticketWorkflowEvent.findFirstOrThrow({
+      where: { ticket: { ticketNumber: "TKT-2026-000104" }, toStatus: "WAITING_FOR_REQUESTER" },
+    });
     const planned = await db.actionTaken.findFirstOrThrow({
       where: { ticket: { ticketNumber: "TKT-2026-000102" }, status: "PLANNED" },
     });
@@ -285,6 +288,25 @@ describe("MIG-01 — fresh schema constraints", () => {
         },
       })
     ).rejects.toThrow();
+    const fk = await db.$queryRaw<{ conname: string; confdeltype: string }[]>`
+      SELECT conname, confdeltype::text AS "confdeltype"
+      FROM pg_constraint
+      WHERE conrelid = '"TicketWorkflowEvent"'::regclass
+        AND conname = 'TicketWorkflowEvent_publicCommentId_fkey'
+    `;
+    expect(fk).toEqual([{ conname: "TicketWorkflowEvent_publicCommentId_fkey", confdeltype: "r" }]);
+    const deleteCommentError = await db.$executeRaw`
+      DELETE FROM "PublicComment" WHERE "id" = ${waitingEvent.publicCommentId}
+    `.then(() => null, (error: unknown) => error);
+    expect(deleteCommentError).toMatchObject({ code: "P2010", meta: { code: "23503" } });
+    expect(deleteCommentError).toHaveProperty(
+      "meta.message",
+      expect.stringContaining("TicketWorkflowEvent_publicCommentId_fkey")
+    );
+    expect(await db.publicComment.findUnique({ where: { id: waitingEvent.publicCommentId! } })).not.toBeNull();
+    expect(await db.ticketWorkflowEvent.findUniqueOrThrow({ where: { id: waitingEvent.id } })).toMatchObject({
+      publicCommentId: waitingEvent.publicCommentId,
+    });
     await expect(db.actionTaken.delete({ where: { id: completed.id } })).rejects.toThrow();
 
     const idempotency = {
