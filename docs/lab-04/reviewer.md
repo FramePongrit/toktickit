@@ -1,6 +1,6 @@
 # Lab 4 Peer Review and Evidence Record
 
-Status: **contract peer-reviewed and merged; first implementation PR #95 verified and awaiting human review; release pending**. Prepared 2026-10-23; publication ledger updated 2026-10-24. This file distinguishes actual events from pending review and test evidence.
+Status: **contract merged; PR #95 corrections verified after human review; correction-head human re-review/merge and release pending**. Prepared 2026-10-23; review ledger updated 2026-10-25. This file distinguishes actual events from pending review and test evidence.
 
 Repository: [FramePongrit/toktickit](https://github.com/FramePongrit/toktickit). Baseline: main 1a20e3465922a2c1dacc5a9eb18e55b0840284b8, [Lab 3 release PR 83](https://github.com/FramePongrit/toktickit/pull/83). Integration branch: lab4-staging. Current contract branch: feature/lab4-engineering-contract.
 
@@ -18,8 +18,8 @@ Contract commit 430cda5 was published before the first feature implementation st
 | Contract Git commit | 430cda5; published before #85 implementation |
 | Contract Issue/PR link | [Issue #84](https://github.com/FramePongrit/toktickit/issues/84), [PR #94](https://github.com/FramePongrit/toktickit/pull/94) |
 | Peer reviewer identity | Sxr1n, collaborator, contract PR #94 |
-| Peer approval/comments/responses | APPROVED 2026-10-24 16:42:50 Asia/Bangkok; seven findings recorded below; implementation approvals pending |
-| Implementation test results | #85 data/recovery scope verified at 6be4a1a; results below; later Issues pending |
+| Peer approval/comments/responses | Contract APPROVED 2026-10-24 16:42:50 Asia/Bangkok; PR #95 APPROVED on old head 0e958d5 with three required fixes, 2026-10-25 22:28:19; correction-head re-review pending |
+| Implementation test results | Initial source 6be4a1a and correction 9b29487 verified separately; results below; later Issues pending |
 | Final main / release PR | Pending |
 
 ## 2. Per-Issue review ledger
@@ -29,7 +29,7 @@ Plan IDs come from [issue-plan.md](issue-plan.md). Published Issues are linked b
 | Plan ID | Issue URL | Branch / PR URL | Reviewer identity | Comments / author responses | Approval / merge commit | Project state |
 |---|---|---|---|---|---|---|
 | L4-01 | [#84](https://github.com/FramePongrit/toktickit/issues/84) | feature/lab4-engineering-contract / [#94](https://github.com/FramePongrit/toktickit/pull/94) | Sxr1n | Seven clarification comments; response below | APPROVED; merged 954604e | Done |
-| L4-02 | [#85](https://github.com/FramePongrit/toktickit/issues/85) | feature/lab4-data-migration / [#95](https://github.com/FramePongrit/toktickit/pull/95) | AI Reviewer complete; human pending | Seed/recovery/runbook findings corrected; independent migration6 pass | Human approval/merge pending; implementation 6be4a1a | PR Review |
+| L4-02 | [#85](https://github.com/FramePongrit/toktickit/issues/85) | feature/lab4-data-migration / [#95](https://github.com/FramePongrit/toktickit/pull/95) | Sxr1n reviewed old head; correction-head re-review pending | Three human findings addressed at 9b29487; server206/migration12 pass; independent migration12 pass | APPROVED on 0e958d5; correction-head approval/merge pending | PR Review |
 | L4-03 | [#86](https://github.com/FramePongrit/toktickit/issues/86) | feature/lab4-actions-api / Pending | Pending | Pending | Pending | Backlog |
 | L4-04 | [#87](https://github.com/FramePongrit/toktickit/issues/87) | feature/lab4-ticket-workflow / Pending | Pending | Pending | Pending | Backlog |
 | L4-05 | [#88](https://github.com/FramePongrit/toktickit/issues/88) | feature/lab4-actions-ui / Pending | Pending | Pending | Pending | Backlog |
@@ -55,11 +55,23 @@ Review source: [Sxr1n approval and findings](https://github.com/FramePongrit/tok
 
 These clarifications are included with the first implementation PR for human review. Their future API/UI tests remain planned until their respective Issues implement and execute them.
 
-### PR #95 implementation review
+### PR #95 initial implementation review (October 24)
 
 Implementation commit: 6be4a1a. Executor and Reviewer used Ponytail full. Reviewer inspected schema/migration, seed chronology/versioning/preservation, harness isolation/constraints, real restored-app auth/download, upload-root configuration, runbook and companion docs. Findings fixed: reopened timestamps, cycle timing, upgrade-only demonstration coverage, unfinished inactive assignments, operation-aware versions, modified legacy comments, SQL invalid-write coverage and guarded recovery. Final Windows path-normalization correction passed four mixed-separator containment assertions. Reviewer reported no remaining actionable findings and independently passed migration/recovery6; full server/security/build checks below are Executor results. This is AI review; human implementation approval is pending.
 
-The implementation was tested before commit and committed as 6be4a1a without further product changes. Subsequent evidence/contract commits modify documentation only. PR #95 targets lab4-staging directly after contract merge 954604e; Issue #85 remains open in PR Review until real human review and merge completion.
+The initial implementation was tested before commit and committed as 6be4a1a. Initial evidence commit 0e958d5 changed documentation only. The later October 25 correction is product/test/runbook commit 9b29487, described below. PR #95 targets lab4-staging directly after contract merge 954604e; Issue #85 remains open until correction review and merge completion.
+
+### PR #95 human-review corrections (October 25)
+
+[Sxr1n's review](https://github.com/FramePongrit/toktickit/pull/95#pullrequestreview-5643863907) is recorded as APPROVED on 0e958d5 at 22:28:19 Asia/Bangkok, but its body explicitly requests three fixes before merge. It is not treated as approval of the later correction head.
+
+1. **Workflow comment FK:** the old SET NULL policy conflicts with the waiting-event CHECK. Its deletion attempt failed and rolled back, rather than silently erasing a waiting event. Matching Prisma RESTRICT and a new atomic follow-up migration now preserve the reference explicitly. The published migration remains byte-for-byte unchanged. Fresh and already-applied-Lab4 upgrade tests assert PostgreSQL FK23503/constraint identity and unchanged row/attachment/history inventory.
+2. **Independent restore and source integrity:** restore reads an explicit existing backup directory and validates dump/uploads/manifest/hash inventory before createdb. Backup hashes originals before copying and compares the copy. Executable fresh-session PowerShell regressions cover missing files, copy corruption, changed backup bytes and empty inventory. External DB tools are stubbed in those Windows script tests; PostgreSQL recovery/app smoke runs independently against the real test container.
+3. **Reviewable execution evidence:** [complete sanitized command output](../../artifacts/lab-04/verification/README.md) is committed with commands, environment labels, exit codes and test totals. No GitHub CI workflow/check was added or claimed. A human review already exists; there was no outstanding requested-reviewer assignment. The new head still needs human re-review and merge.
+
+The optional partial BASELINE unique index and unique event Ticket/version index were not required corrections. The proposed idempotency cleanup index is deferred because automatic expiry/cleanup is explicitly excluded by this contract. No new cleanup feature was introduced.
+
+Correction verification: Executor passed server 19 files/206 tests and migration/recovery/runbook 4 files/12 tests, plus Prisma validate/generate/build. Reviewer found no remaining actionable findings versus 0e958d5..9b29487 and independently repeated 12 tests in 4 files with zero failures/skips (103.31s, runner start 22:59:35 Asia/Bangkok on October 25). [Complete reviewer output](../../artifacts/lab-04/verification/reviewer-migration-recovery.txt) and the other logs identify scope, environment and exit status. Later evidence commits contain only documentation/artifacts; no product change followed this review. These local passes do not constitute GitHub CI or human approval of the corrected head.
 
 ## 3. Contract-authoring inspection (historical snapshot before publication)
 
@@ -81,6 +93,10 @@ Append an entry per real run with timestamp/time zone, code commit/branch, isola
 
 | Timestamp / commit | Command / suite | Isolated environment | Passed / failed / skipped | Evidence path | Defect / disposition |
 |---|---|---|---|---|---|
+| 2026-10-25 / working source committed unchanged as 9b29487 | npm --prefix server test | Dedicated PostgreSQL16 localhost55434/lab4test; base migrated through all 8 migrations | 206 / 0 / 0; 19 files | [Full output](../../artifacts/lab-04/verification/full-server.txt) | PR95 correction passes; includes21security/5Windowsrunbook |
+| 2026-10-25 / same source as 9b29487 | npm --prefix server run test:migration | Same dedicated environment; random owned schemas/DBs | 12 / 0 / 0; 4 files | [Complete output](../../artifacts/lab-04/verification/migration-recovery-runbook.txt) | Fresh, published-Lab4 correction, FK23503, recovery and runbook pass |
+| 2026-10-25 22:59:35 start / 9b29487 | Independent AI Reviewer: npm --prefix server run test:migration | Same dedicated environment; newly generated owned fixtures | 12 / 0 / 0; 4 files;103.31s | [Reviewer output](../../artifacts/lab-04/verification/reviewer-migration-recovery.txt) | No remaining actionable findings |
+| 2026-10-25 / same source as 9b29487 | Prisma validate/generate; server build; diff/migration-integrity checks | Current checkout; dedicated test configuration | Exit0 | [Prisma/build](../../artifacts/lab-04/verification/prisma-build.txt), [integrity](../../artifacts/lab-04/verification/diff-integrity.txt) | Original migration unchanged; correction additive/atomic |
 | 2026-10-24 Asia/Bangkok / 6be4a1a | npm --prefix server test | PostgreSQL16 loopback55434, lab4test, task-owned base schema | 200 / 0 / 0; 18 files | [tests.md section10](tests.md#10-issue-85-first-implementation-verification) | #85 scope passes |
 | 2026-10-24 Asia/Bangkok / 6be4a1a | npm --prefix server run test:migration | Same dedicated container; random schemas/databases | 6 / 0 / 0; 3 files | tests.md section10 | Fresh/upgrade/seed/constraints/real restored-app smoke pass |
 | 2026-10-24 17:22:32 Asia/Bangkok start / same product source as 6be4a1a | Independent AI Reviewer: npm --prefix server run test:migration | Same dedicated container; new task-owned schemas/databases | 6 / 0 / 0; 3 files; 92.51s | tests.md section10; working AI log | Confirmed after sandbox-only denial retried elevated |

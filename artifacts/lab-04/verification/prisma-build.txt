@@ -1,0 +1,30 @@
+Environment: dedicated PostgreSQL test configuration; application database not used.
+
+Command: node server/node_modules/prisma/build/index.js validate --schema server/prisma/schema.prisma
+Exit code: 0
+Output:
+Prisma schema loaded from server\prisma\schema.prisma
+The schema at server\prisma\schema.prisma is valid 🚀
+
+
+Command: node server/node_modules/prisma/build/index.js generate --schema server/prisma/schema.prisma
+Exit code: 0
+Output:
+Prisma schema loaded from server\prisma\schema.prisma
+
+✔ Generated Prisma Client (v5.22.0) to .\server\node_modules\@prisma\client in 131ms
+
+Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+
+Tip: Easily identify and fix slow SQL queries in your app. Optimize helps you enhance your visibility: https://pris.ly/--optimize
+
+
+
+Command: npm --prefix server run build
+Exit code: 0
+Output:
+
+> toktickit-server@1.0.0 build
+> tsc
+
+

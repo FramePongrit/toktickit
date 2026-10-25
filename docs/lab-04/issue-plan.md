@@ -48,7 +48,7 @@ Verification: read/compare all six files and handout; audit links/IDs/traceabili
 
 ### L4-02 - Additive Action/workflow schema, seed and recovery
 
-Branch: feature/lab4-data-migration. Depends on: L4-01. Target: October 24. [Issue #85](https://github.com/FramePongrit/toktickit/issues/85), [PR #95](https://github.com/FramePongrit/toktickit/pull/95) into lab4-staging; PR Review, human approval/merge pending. Implementation commit 6be4a1a; execution evidence in tests.md section 10 and reviewer.md.
+Branch: feature/lab4-data-migration. Depends on: L4-01. Target: October 24. [Issue #85](https://github.com/FramePongrit/toktickit/issues/85), [PR #95](https://github.com/FramePongrit/toktickit/pull/95) into lab4-staging; PR Review, corrected-head human re-review/merge pending. Initial implementation 6be4a1a; October 25 peer-review correction 9b29487. Current execution evidence: tests.md section 11, reviewer.md and artifacts/lab-04/verification/.
 
 Tasks: implement logical schema/constraints/indexes in specification section 7; add current-cycle/version/resolvedAt defaults; create typed baseline snapshots without fabricated Actions/time; keep existing credentials/ids/relations/attachment data. Extend scoped seed for all demonstrations and zero metrics. Add backup/restore procedure and test-owned migration/recovery fixtures. Extend vitest.migration.config.ts includes deliberately; preserve older migration runs.
 
