@@ -1,0 +1,38 @@
+Command: npm --prefix server test -- --run tests/lab-04/action-rules.unit.test.ts tests/lab-04/actions-taken.api.test.ts tests/lab-04/concurrency.api.test.ts tests/lab-04/idempotency.api.test.ts tests/lab-04/idempotency.unit.test.ts
+Date: 2026-10-26 (client date, Asia/Bangkok); runner start time preserved below.
+Base commit: 4d487a1496ad6d65bb3743e1b6093b81f2902bf0
+Code: uncommitted feature/lab4-actions-api working implementation reviewed at time of run.
+Environment: dedicated PostgreSQL16 at127.0.0.1:55434, database lab4test, schema lab4_issue86_base; LAB4_PG_CONTAINER=toktickit-lab4-issue85-test. Connection credentials omitted.
+Execution: independent Reviewer local run, approved escalation for local test DB access. Not CI or human approval.
+Result: 5 files /21 tests passed; zero failed/skipped,7.78seconds.
+Note: two 'Unhandled error' stderr entries are expected injected transaction-failure scenarios whose rollback assertions passed.
+
+
+> toktickit-server@1.0.0 test
+> vitest run --run tests/lab-04/action-rules.unit.test.ts tests/lab-04/actions-taken.api.test.ts tests/lab-04/concurrency.api.test.ts tests/lab-04/idempotency.api.test.ts tests/lab-04/idempotency.unit.test.ts
+
+
+ RUN  v2.1.9 D:/Software Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/server
+
+Environment variables loaded from .env
+Running seed command `tsx prisma/seed.ts` ...
+Seeded 4 categories, 7 related systems, 5 active requesters, 3 active IT staff, and 1 active administrator.
+
+The seed command has been executed.
+ ✓ tests/lab-04/actions-taken.api.test.ts (6 tests) 1735ms
+ ✓ tests/lab-04/concurrency.api.test.ts (5 tests) 1464ms
+   ✓ API-C01 / API-C02 — operational concurrency > keeps Admin roster edits and an Admin-caller/Staff-assignee write in ordered User locks 450ms
+stderr | tests/lab-04/idempotency.api.test.ts > API-I01 — serialized idempotent writes > rolls back an injected post-effect failure and permits the same key to succeed
+Unhandled error
+
+stderr | tests/lab-04/idempotency.api.test.ts > API-I01 — serialized idempotent writes > rolls back Action create history and version on failure, then replays a successful transition
+Unhandled error
+
+ ✓ tests/lab-04/idempotency.api.test.ts (5 tests) 836ms
+ ✓ tests/lab-04/action-rules.unit.test.ts (3 tests) 7ms
+ ✓ tests/lab-04/idempotency.unit.test.ts (2 tests) 9ms
+
+ Test Files  5 passed (5)
+      Tests  21 passed (21)
+   Start at  03:40:00
+   Duration  7.78s (transform 216ms, setup 0ms, collect 1.08s, tests 4.05s, environment 1ms, prepare 236ms)

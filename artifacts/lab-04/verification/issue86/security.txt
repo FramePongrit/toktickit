@@ -1,0 +1,17 @@
+
+> toktickit-server@1.0.0 test:security
+> vitest run --config vitest.security.config.ts
+
+
+ RUN  v2.1.9 D:/Software Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/server
+
+ ✓ tests/lab-03/auth-security.unit.test.ts (21 tests) 1336ms
+   ✓ password security > hashes with bcrypt cost 12 and compares without exposing the hash 637ms
+   ✓ password security > detects reuse of the current password but accepts a different valid password 636ms
+
+ Test Files  1 passed (1)
+      Tests  21 passed (21)
+   Start at  03:36:07
+   Duration  1.97s (transform 181ms, setup 0ms, collect 462ms, tests 1.34s, environment 0ms, prepare 55ms)
+
+Exit status: 0

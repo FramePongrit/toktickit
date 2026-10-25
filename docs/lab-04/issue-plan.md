@@ -48,7 +48,7 @@ Verification: read/compare all six files and handout; audit links/IDs/traceabili
 
 ### L4-02 - Additive Action/workflow schema, seed and recovery
 
-Branch: feature/lab4-data-migration. Depends on: L4-01. Target: October 24. [Issue #85](https://github.com/FramePongrit/toktickit/issues/85), [PR #95](https://github.com/FramePongrit/toktickit/pull/95) into lab4-staging; PR Review, corrected-head human re-review/merge pending. Initial implementation 6be4a1a; October 25 peer-review correction 9b29487. Current execution evidence: tests.md section 11, reviewer.md and artifacts/lab-04/verification/.
+Branch: feature/lab4-data-migration. Depends on: L4-01. Target: October 24. [Issue #85](https://github.com/FramePongrit/toktickit/issues/85), [PR #95](https://github.com/FramePongrit/toktickit/pull/95) approved by Sxr1n on corrected head0a75793 and merged into lab4-staging at4d487a1, October26 03:01:40 Asia/Bangkok; Issue/card Done. Initial implementation 6be4a1a; peer-review correction9b29487. Execution evidence: tests.md section11, reviewer.md and artifacts/lab-04/verification/.
 
 Tasks: implement logical schema/constraints/indexes in specification section 7; add current-cycle/version/resolvedAt defaults; create typed baseline snapshots without fabricated Actions/time; keep existing credentials/ids/relations/attachment data. Extend scoped seed for all demonstrations and zero metrics. Add backup/restore procedure and test-owned migration/recovery fixtures. Extend vitest.migration.config.ts includes deliberately; preserve older migration runs.
 
@@ -58,13 +58,15 @@ Tests: MIG-01/02/03, initial field/constraint fixtures. Outputs: SQL migration, 
 
 ### L4-03 - Collaborative Actions API, audit, versions and retry safety
 
-Branch: feature/lab4-actions-api. Depends on: L4-02. Target: October 24-25.
+Branch: feature/lab4-actions-api. Depends on: L4-02. Original target: October 24-25; started October 26 from merged integration `4d487a1`. [Issue #86](https://github.com/FramePongrit/toktickit/issues/86), [PR #96](https://github.com/FramePongrit/toktickit/pull/96): PR Review. Source `617bd9d` passed server 227, client 151 and targeted browser 2 tests, both builds and independent focused review. [Complete evidence](../../artifacts/lab-04/verification/issue86/README.md); human review/merge pending.
 
 Tasks: implement new Action read/create/edit/transition/history APIs, safe PersonRefs, current-cycle/parent-state guards, defaults/validation and actual completer attribution. Reuse eligible-owner directory for assignees. Add revision snapshots and expected versions under existing User/parent locks. Implement transactionally persisted idempotency for creates/transitions, replay auth and conflict errors. Update operational Staff write versions and all corresponding callers/fixtures coherently.
 
 Acceptance: AC-01-07,12,13; Requester can read all own-Ticket Actions but never write/read revisions; direct cross-owner/cross-Ticket calls are safe; inactive/demoted assignee handling and terminal corrections match the contract; no duplicate/audit/lost-update effects.
 
 Tests: UNIT-01/03/06, API-A01-07, API-C01/02, API-I01; no placeholder tests that merely mirror constants. Extend global finality race integration where this Issue adds writes.
+
+Increment boundary: this Issue implements Ticket-status expected versions and idempotency foundations while preserving the earlier matrix and coordinating existing client/test callers. The new resolution gate, reopen-cycle increment, atomic parent cancellation and public workflow routes remain L4-04 obligations. Do not report those later rules/response fields as complete or require their cancellation-reason UI before L4-04 integrates it.
 
 ### L4-04 - Ticket resolution gate, work cycles and atomic cancellation
 
@@ -175,4 +177,4 @@ Project: [TokTickIT Individual Sprints](https://github.com/users/FramePongrit/pr
 | L4-09 | [#92](https://github.com/FramePongrit/toktickit/issues/92) |
 | L4-10 | [#93](https://github.com/FramePongrit/toktickit/issues/93) |
 
-Contract PR #94 is merged. The first implementation branch was fast-forwarded to its merge commit 954604e with partial work preserved; implementation PRs now target `lab4-staging` directly. Later branches must start from the reviewed integration head.
+Contract PR #94 and first implementation PR #95 are merged. Issue86 branch starts at integration commit4d487a1; implementation PRs target `lab4-staging` directly. Later branches must start from the reviewed integration head. The feature branch is published with its own upstream when its reviewed increment is ready.
