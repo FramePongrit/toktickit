@@ -234,6 +234,7 @@ export const staffOwnerMutationSchema = z
   .object({
     ownerId: positiveIntegerBody("Owner"),
     expectedOwnerId: positiveIntegerBody("Expected Owner"),
+    expectedTicketVersion: positiveIntegerBody("Expected Ticket Version"),
   })
   .strict()
   .refine((value) => value.ownerId !== value.expectedOwnerId, {
@@ -248,6 +249,7 @@ export const staffPriorityMutationSchema = z
     itPriority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"], {
       error: "IT Priority must be one of LOW, MEDIUM, HIGH or URGENT.",
     }),
+    expectedTicketVersion: positiveIntegerBody("Expected Ticket Version"),
   })
   .strict();
 
@@ -255,12 +257,96 @@ export type StaffPriorityMutationInput = z.infer<typeof staffPriorityMutationSch
 
 export const staffStatusMutationSchema = z
   .object({
+    expectedTicketVersion: positiveIntegerBody("Expected Ticket Version"),
     status: ticketStatus,
     publicComment: z.string().optional(),
   })
   .strict();
 
 export type StaffStatusMutationInput = z.infer<typeof staffStatusMutationSchema>;
+
+export const staffClaimMutationSchema = z.object({
+  expectedTicketVersion: positiveIntegerBody("Expected Ticket Version"),
+}).strict();
+
+const actionDate = z.iso.datetime({ offset: true }).transform((value) => new Date(value));
+const optionalActionText = (maximum: number) => z.preprocess(
+  (value) => value === undefined ? undefined : typeof value === "string" ? (value.trim() || null) : value,
+  z.string().max(maximum).nullable().optional()
+);
+const correctionReason = z.string().trim().min(1, "Correction Reason is required.").max(1000);
+const cancelReason = z.string().trim().min(1, "Cancellation Reason is required.").max(1000);
+
+export const actionListQuerySchema = z.object({
+  page: optionalParam(numericParam("Page")).transform((value) => value ?? 1),
+  pageSize: optionalParam(
+    z.string().transform(Number).refine(
+      (value) => (TICKET_PAGE_SIZES as readonly number[]).includes(value),
+      `Page size must be one of ${TICKET_PAGE_SIZES.join(", ")}.`
+    )
+  ).transform((value) => value ?? 10),
+}).strict();
+
+export type ActionListQuery = z.infer<typeof actionListQuerySchema>;
+
+export const actionCreateSchema = z.object({
+  expectedTicketVersion: positiveIntegerBody("Expected Ticket Version"),
+  description: z.string().trim().min(1).max(2000),
+  actionAt: actionDate.optional(),
+  assigneeId: positiveIntegerBody("Assignee").optional(),
+  result: optionalActionText(2000),
+  followUpRequired: z.boolean().optional().default(false),
+  followUpNote: optionalActionText(2000),
+  attachmentNotes: optionalActionText(1000),
+}).strict();
+
+export type ActionCreateInput = z.infer<typeof actionCreateSchema>;
+
+const actionPatchFields = {
+  expectedTicketVersion: positiveIntegerBody("Expected Ticket Version"),
+  expectedActionVersion: positiveIntegerBody("Expected Action Version"),
+  description: z.string().trim().min(1).max(2000).optional(),
+  result: optionalActionText(2000),
+  actionAt: actionDate.optional(),
+  followUpRequired: z.boolean().optional(),
+  followUpNote: optionalActionText(2000),
+  attachmentNotes: optionalActionText(1000),
+  assigneeId: positiveIntegerBody("Assignee").optional(),
+  correctionReason: correctionReason.optional(),
+};
+
+export const actionPatchSchema = z.object(actionPatchFields).strict().refine(
+  (value) => Object.keys(value).some((key) =>
+    ["description", "result", "actionAt", "followUpRequired", "followUpNote", "attachmentNotes", "assigneeId"].includes(key)
+  ),
+  { message: "At least one Action field must be supplied." }
+);
+
+export type ActionPatchInput = z.infer<typeof actionPatchSchema>;
+
+const actionTransitionBase = {
+  expectedTicketVersion: positiveIntegerBody("Expected Ticket Version"),
+  expectedActionVersion: positiveIntegerBody("Expected Action Version"),
+};
+
+export const actionTransitionSchema = z.discriminatedUnion("status", [
+  z.object({ ...actionTransitionBase, status: z.literal("IN_PROGRESS") }).strict(),
+  z.object({
+    ...actionTransitionBase,
+    status: z.literal("COMPLETED"),
+    result: optionalActionText(2000),
+    actionAt: actionDate.optional(),
+    followUpRequired: z.boolean().optional(),
+    followUpNote: optionalActionText(2000),
+  }).strict(),
+  z.object({
+    ...actionTransitionBase,
+    status: z.literal("CANCELLED"),
+    cancelReason,
+  }).strict(),
+]);
+
+export type ActionTransitionInput = z.infer<typeof actionTransitionSchema>;
 
 const userRole = z.enum(["REQUESTER", "STAFF", "ADMIN"], {
   error: "Role must be one of REQUESTER, STAFF or ADMIN.",

@@ -1,15 +1,30 @@
-import type { Prisma, Role, TicketStatus } from "@prisma/client";
+import { Prisma, type Role, type TicketStatus } from "@prisma/client";
 import { getPrisma } from "../prisma.js";
 import { HttpError } from "../lib/httpError.js";
+import {
+  digestRequestBody,
+  lockAndReadIdempotencyRecord,
+  replayIdempotencyRecord,
+  requireIdempotencyKey,
+  saveIdempotencySuccess,
+  type IdempotencyScope,
+} from "../lib/idempotency.js";
 import {
   communicationBodySchema,
   staffOwnerMutationSchema,
   staffPriorityMutationSchema,
+  staffClaimMutationSchema,
   staffStatusMutationSchema,
   type StaffOwnerMutationInput,
   type StaffPriorityMutationInput,
   type StaffStatusMutationInput,
 } from "../lib/validation.js";
+import {
+  assertCurrentStaffSession,
+  lockUsersInIdOrder,
+  type LockedOperationalUser,
+  type TransactionClient,
+} from "./operationalLocks.js";
 import {
   serializeAuthor,
   serializeInternalNote,
@@ -96,6 +111,7 @@ export function serializeStaffTicketDetail(ticket: StaffTicketDetail) {
     requestedPriority: ticket.requestedPriority,
     itPriority: ticket.itPriority,
     currentStatus: ticket.currentStatus,
+    version: ticket.version,
     createdAt: ticket.createdAt,
     updatedAt: ticket.updatedAt,
     category: ticket.category,
@@ -119,9 +135,9 @@ interface LockedTicket {
   ownerId: number | null;
   resolutionIndicatedAt: Date | null;
   resolutionIndicatedById: number | null;
+  version: number;
+  itPriority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
 }
-
-type TransactionClient = Prisma.TransactionClient;
 
 /**
  * Test-only lock observability seam. Production leaves this unset. Tests use
@@ -156,7 +172,7 @@ async function notifyLockTestHook(
 
 async function lockTicket(tx: TransactionClient, ticketId: number): Promise<LockedTicket> {
   const rows = await tx.$queryRaw<LockedTicket[]>`
-    SELECT "id", "currentStatus", "ownerId", "resolutionIndicatedAt", "resolutionIndicatedById"
+    SELECT "id", "currentStatus", "ownerId", "resolutionIndicatedAt", "resolutionIndicatedById", "version", "itPriority"
     FROM "Ticket"
     WHERE "id" = ${ticketId}
     FOR UPDATE
@@ -174,12 +190,26 @@ function assertNotFinal(status: TicketStatus): void {
   }
 }
 
-async function loadCurrentOwner(tx: TransactionClient, ownerId: number | null) {
-  if (ownerId === null) return null;
-  return tx.user.findUnique({
-    where: { id: ownerId },
-    select: { id: true, fullName: true, role: true, active: true },
-  });
+function lockedOwner(users: Map<number, LockedOperationalUser>, ownerId: number | null) {
+  return ownerId === null ? null : users.get(ownerId) ?? null;
+}
+
+function assertTicketVersion(expectedVersion: number, ticket: LockedTicket): void {
+  if (expectedVersion !== ticket.version) {
+    throw HttpError.conflict("STALE_TICKET_VERSION", "This Ticket changed. Reload it before saving.", {
+      currentVersion: ticket.version,
+      reload: "ticket",
+    });
+  }
+}
+
+function statusScope(actor: { userId: number }, ticketId: number, key: string): IdempotencyScope {
+  return {
+    userId: actor.userId,
+    method: "PATCH",
+    canonicalPath: `/staff/tickets/${ticketId}/status`,
+    key,
+  };
 }
 
 function assertCurrentOwner(owner: { active: boolean; role: Role } | null): void {
@@ -213,15 +243,18 @@ export async function getStaffTicketDetail(ticketId: number) {
   return serializeStaffTicketDetail(await loadDetail(ticketId));
 }
 
-export async function claimStaffTicket(userId: number, ticketId: number) {
-  await getPrisma().$transaction(async (tx) => {
-    const caller = await tx.user.findUnique({
-      where: { id: userId },
-      select: { id: true, active: true, role: true },
-    });
+export async function claimStaffTicket(
+  actor: { userId: number; sessionId: string },
+  ticketId: number,
+  rawBody: unknown
+) {
+  const parsed = staffClaimMutationSchema.safeParse(rawBody);
+  return getPrisma().$transaction(async (tx) => {
+    const users = await lockUsersInIdOrder(tx, [actor.userId]);
+    const caller = await assertCurrentStaffSession(tx, actor.userId, actor.sessionId, users);
     const ticket = await lockTicket(tx, ticketId);
     assertNotFinal(ticket.currentStatus);
-    if (!caller || !caller.active || !ELIGIBLE_OWNER_ROLES.has(caller.role)) {
+    if (!ELIGIBLE_OWNER_ROLES.has(caller.role)) {
       throw HttpError.forbidden("FORBIDDEN", "You do not have permission to use this feature.");
     }
     if (ticket.ownerId !== null) {
@@ -229,11 +262,15 @@ export async function claimStaffTicket(userId: number, ticketId: number) {
       if (owner) throw ownerConflict("TICKET_ALREADY_ASSIGNED", owner);
       throw HttpError.conflict("TICKET_ALREADY_ASSIGNED", "This Ticket already has an owner.");
     }
-    await tx.ticket.update({ where: { id: ticketId }, data: { ownerId: userId } });
+    if (!parsed.success) throw parsed.error;
+    assertTicketVersion(parsed.data.expectedTicketVersion, ticket);
+    const updated = await tx.ticket.update({
+      where: { id: ticketId },
+      data: { ownerId: actor.userId, version: { increment: 1 } },
+      select: { version: true },
+    });
+    return { owner: serializeOwner(caller), ticketVersion: updated.version };
   });
-
-  const owner = await getPrisma().user.findUniqueOrThrow({ where: { id: userId }, select: safeOwnerSelect });
-  return { owner: serializeOwner(owner) };
 }
 
 async function preflightReassign(ticketId: number): Promise<void> {
@@ -247,6 +284,7 @@ async function preflightReassign(ticketId: number): Promise<void> {
 }
 
 export async function reassignStaffTicket(
+  actor: { userId: number; sessionId: string },
   ticketId: number,
   rawBody: unknown
 ) {
@@ -255,21 +293,12 @@ export async function reassignStaffTicket(
   await preflightReassign(ticketId);
   const input: StaffOwnerMutationInput = staffOwnerMutationSchema.parse(rawBody);
 
-  const owner = await getPrisma().$transaction(async (tx) => {
-    // BR-35 lock order: candidate User first, parent Ticket second.
+  return getPrisma().$transaction(async (tx) => {
+    // Match Action writes: all prerequisite Users are locked by id before the Ticket.
     await notifyLockTestHook(tx, ticketId, "REASSIGN_BEFORE_CANDIDATE_LOCK");
-    const candidates = await tx.$queryRaw<{
-      id: number;
-      fullName: string;
-      role: Role;
-      active: boolean;
-    }[]>`
-      SELECT "id", "fullName", "role", "active"
-      FROM "User"
-      WHERE "id" = ${input.ownerId}
-      FOR UPDATE
-    `;
-    const candidate = candidates[0];
+    const users = await lockUsersInIdOrder(tx, [actor.userId, input.expectedOwnerId, input.ownerId]);
+    await assertCurrentStaffSession(tx, actor.userId, actor.sessionId, users);
+    const candidate = users.get(input.ownerId);
     await notifyLockTestHook(tx, ticketId, "REASSIGN_AFTER_CANDIDATE_LOCK");
     const ticket = await lockTicket(tx, ticketId);
     assertNotFinal(ticket.currentStatus);
@@ -281,6 +310,7 @@ export async function reassignStaffTicket(
       if (currentOwner) throw ownerConflict("TICKET_OWNER_CHANGED", currentOwner);
       throw HttpError.conflict("TICKET_OWNER_CHANGED", "Ticket ownership changed. Refresh and try again.");
     }
+    assertTicketVersion(input.expectedTicketVersion, ticket);
     if (!candidate || !candidate.active || !ELIGIBLE_OWNER_ROLES.has(candidate.role)) {
       throw HttpError.conflict(
         "OWNER_NOT_ELIGIBLE",
@@ -290,75 +320,125 @@ export async function reassignStaffTicket(
 
     const updated = await tx.ticket.update({
       where: { id: ticketId },
-      data: { ownerId: input.ownerId },
-      select: { owner: { select: safeOwnerSelect } },
+      data: { ownerId: input.ownerId, version: { increment: 1 } },
+      select: { owner: { select: safeOwnerSelect }, version: true },
     });
-    return updated.owner;
+    return { owner: serializeOwner(updated.owner), ticketVersion: updated.version };
   });
-
-  return { owner: serializeOwner(owner) };
 }
 
-export async function updateStaffItPriority(ticketId: number, rawBody: unknown) {
+export async function updateStaffItPriority(
+  actor: { userId: number; sessionId: string },
+  ticketId: number,
+  rawBody: unknown
+) {
   const updated = await getPrisma().$transaction(async (tx) => {
     await notifyLockTestHook(tx, ticketId, "IT_PRIORITY_BEFORE_PARENT_LOCK");
+    const users = await lockUsersInIdOrder(tx, [actor.userId]);
+    await assertCurrentStaffSession(tx, actor.userId, actor.sessionId, users);
     const ticket = await lockTicket(tx, ticketId);
     assertNotFinal(ticket.currentStatus);
     const input: StaffPriorityMutationInput = staffPriorityMutationSchema.parse(rawBody);
-    return tx.ticket.update({ where: { id: ticketId }, data: { itPriority: input.itPriority }, select: { itPriority: true } });
+    assertTicketVersion(input.expectedTicketVersion, ticket);
+    if (input.itPriority === ticket.itPriority) {
+      return { itPriority: ticket.itPriority, ticketVersion: ticket.version };
+    }
+    return tx.ticket.update({
+      where: { id: ticketId },
+      data: { itPriority: input.itPriority, version: { increment: 1 } },
+      select: { itPriority: true, version: true },
+    }).then(({ itPriority, version }) => ({ itPriority, ticketVersion: version }));
   });
   return updated;
 }
 
 export async function updateStaffTicketStatus(
-  userId: number,
+  actor: { userId: number; sessionId: string },
   ticketId: number,
-  rawBody: unknown
+  rawBody: unknown,
+  rawIdempotencyKey: string | undefined
 ) {
-  const result = await getPrisma().$transaction(async (tx) => {
-    const ticket = await lockTicket(tx, ticketId);
-    assertNotFinal(ticket.currentStatus);
-    const owner = await loadCurrentOwner(tx, ticket.ownerId);
-    assertCurrentOwner(owner);
+  const key = requireIdempotencyKey(rawIdempotencyKey);
+  const parsed = staffStatusMutationSchema.safeParse(rawBody);
+  const digest = digestRequestBody(rawBody);
+  const scope = statusScope(actor, ticketId, key);
+  let lastOwnerId: number | null | undefined;
 
-    const input: StaffStatusMutationInput = staffStatusMutationSchema.parse(rawBody);
-    const allowed = STATUS_TRANSITIONS[ticket.currentStatus];
-    if (!allowed.includes(input.status)) {
-      throw HttpError.conflict("INVALID_STATUS_TRANSITION", "This status transition is not permitted.");
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      const result = await getPrisma().$transaction(async (tx) => {
+        const existing = await lockAndReadIdempotencyRecord(tx, scope);
+        if (existing) {
+          const users = await lockUsersInIdOrder(tx, [actor.userId]);
+          await assertCurrentStaffSession(tx, actor.userId, actor.sessionId, users);
+          await lockTicket(tx, ticketId);
+          return replayIdempotencyRecord(existing, digest);
+        }
+
+        const parentSnapshot = await tx.ticket.findUnique({ where: { id: ticketId }, select: { ownerId: true } });
+        if (!parentSnapshot) throw HttpError.notFound("TICKET_NOT_FOUND", "The requested ticket does not exist.");
+        lastOwnerId = parentSnapshot.ownerId;
+        const users = await lockUsersInIdOrder(tx, [actor.userId, ...(lastOwnerId === null ? [] : [lastOwnerId])]);
+        await assertCurrentStaffSession(tx, actor.userId, actor.sessionId, users);
+        await notifyLockTestHook(tx, ticketId, "STATUS_AFTER_USER_LOCKS");
+        const ticket = await lockTicket(tx, ticketId);
+        if (ticket.ownerId !== lastOwnerId) throw new OwnerSnapshotChanged();
+        assertNotFinal(ticket.currentStatus);
+        const owner = lockedOwner(users, ticket.ownerId);
+        assertCurrentOwner(owner);
+        if (!parsed.success) throw parsed.error;
+        const input: StaffStatusMutationInput = parsed.data;
+        assertTicketVersion(input.expectedTicketVersion, ticket);
+        const allowed = STATUS_TRANSITIONS[ticket.currentStatus];
+        if (!allowed.includes(input.status)) {
+          throw HttpError.conflict("INVALID_STATUS_TRANSITION", "This status transition is not permitted.");
+        }
+
+        const waiting = input.status === "WAITING_FOR_REQUESTER";
+        if (waiting) {
+          const { body } = communicationBodySchema.parse({ body: input.publicComment });
+          await tx.publicComment.create({ data: { ticketId, authorId: actor.userId, body } });
+          await notifyLockTestHook(tx, ticketId, "STATUS_AFTER_WAITING_COMMENT");
+        } else if (input.publicComment !== undefined) {
+          throw HttpError.validationFailed("The submitted data is invalid.", [
+            { field: "publicComment", message: "Public Comment is only accepted for Waiting for Requester." },
+          ]);
+        }
+
+        const updated = await tx.ticket.update({
+          where: { id: ticketId },
+          data: {
+            currentStatus: input.status,
+            version: { increment: 1 },
+            ...(input.status === "REOPENED" && {
+              resolutionIndicatedAt: null,
+              resolutionIndicatedById: null,
+            }),
+          },
+          include: {
+            resolutionIndicatedBy: { select: safeOwnerSelect },
+          },
+        });
+        const body = {
+          currentStatus: updated.currentStatus,
+          resolutionIndication: serializeResolutionIndication(
+            updated.resolutionIndicatedAt,
+            updated.resolutionIndicatedBy
+          ),
+          allowedTransitions: allowedTransitionsFor(updated.currentStatus, owner),
+          ticketVersion: updated.version,
+        };
+        await saveIdempotencySuccess(tx, scope, digest, 200, body);
+        return { status: 200, body, replayed: false as const };
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted });
+      return result;
+    } catch (error) {
+      if (!(error instanceof OwnerSnapshotChanged)) throw error;
     }
-
-    const waiting = input.status === "WAITING_FOR_REQUESTER";
-    if (waiting) {
-      const { body } = communicationBodySchema.parse({ body: input.publicComment });
-      await tx.publicComment.create({ data: { ticketId, authorId: userId, body } });
-    } else if (input.publicComment !== undefined) {
-      throw HttpError.validationFailed("The submitted data is invalid.", [
-        { field: "publicComment", message: "Public Comment is only accepted for Waiting for Requester." },
-      ]);
-    }
-
-    const updated = await tx.ticket.update({
-      where: { id: ticketId },
-      data: {
-        currentStatus: input.status,
-        ...(input.status === "REOPENED" && {
-          resolutionIndicatedAt: null,
-          resolutionIndicatedById: null,
-        }),
-      },
-      include: {
-        resolutionIndicatedBy: { select: safeOwnerSelect },
-      },
-    });
-    return {
-      currentStatus: updated.currentStatus,
-      resolutionIndication: serializeResolutionIndication(
-        updated.resolutionIndicatedAt,
-        updated.resolutionIndicatedBy
-      ),
-      allowedTransitions: allowedTransitionsFor(updated.currentStatus, owner),
-    };
+  }
+  throw HttpError.conflict("TICKET_OWNER_CHANGED", "Ticket ownership changed. Refresh and try again.", {
+    ownerId: lastOwnerId ?? null,
   });
-
-  return result;
 }
+
+class OwnerSnapshotChanged extends Error {}

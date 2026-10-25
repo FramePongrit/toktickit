@@ -96,14 +96,17 @@ export function setAdminUsersLockTestHook(hook: AdminUsersLockTestHook | undefin
   adminUsersLockTestHook = hook;
 }
 
-async function lockActiveAdministratorRoster(tx: TransactionClient): Promise<void> {
-  await tx.$queryRaw<{ id: number }[]>`
-    SELECT "id"
+async function lockAdministratorRosterAndTarget(tx: TransactionClient, targetUserId: number): Promise<LockedUser> {
+  const users = await tx.$queryRaw<LockedUser[]>`
+    SELECT "id", "fullName", "email", "active", "role", "mustChangePassword"
     FROM "User"
-    WHERE "active" = true AND "role" = 'ADMIN'::"Role"
+    WHERE ("active" = true AND "role" = 'ADMIN'::"Role") OR "id" = ${targetUserId}
     ORDER BY "id" ASC
     FOR UPDATE
   `;
+  const target = users.find((user) => user.id === targetUserId);
+  if (!target) throw HttpError.notFound("USER_NOT_FOUND", "The requested User does not exist.");
+  return target;
 }
 
 async function notifyAdminUsersLockTestHook(
@@ -202,12 +205,14 @@ export async function editAdminUser(actorId: number, userId: number, rawInput: u
   try {
     const user = await getPrisma().$transaction(async (tx) => {
       const hasRoleOrActiveChange = "role" in input || "active" in input;
+      let current: LockedUser;
       if (hasRoleOrActiveChange) {
         await notifyAdminUsersLockTestHook(tx, userId, "BEFORE_ADMIN_ROSTER_LOCK");
-        await lockActiveAdministratorRoster(tx);
+        current = await lockAdministratorRosterAndTarget(tx, userId);
         await notifyAdminUsersLockTestHook(tx, userId, "AFTER_ADMIN_ROSTER_LOCK");
+      } else {
+        current = await lockUser(tx, userId);
       }
-      const current = await lockUser(tx, userId);
 
       if (actorId === userId && ("role" in input || "active" in input)) {
         throw HttpError.conflict(

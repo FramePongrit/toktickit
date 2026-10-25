@@ -90,12 +90,13 @@ function ReadOnlyField({
   );
 }
 
-function ActionFeedback({ feedback, testId }: { feedback: ActionFeedback; testId: string }) {
+function ActionFeedback({ feedback, testId, onReload }: { feedback: ActionFeedback; testId: string; onReload?: () => void }) {
   if (!feedback.error && !feedback.success) return null;
   return (
     <div className="mt-2" data-testid={testId} aria-live="polite">
       {feedback.error && <p className="zen-field-error mb-2" role="alert">{feedback.error}</p>}
       {feedback.success && <p className="zen-success mb-2" role="status">{feedback.success}</p>}
+      {onReload && <button type="button" className="btn btn-outline-primary btn-sm" onClick={onReload}>Reload latest Ticket before retrying</button>}
     </div>
   );
 }
@@ -218,8 +219,11 @@ export function StaffTicketDetailPage() {
   const { id } = useParams();
   const ticketId = Number(id);
   const [ticket, setTicket] = useState<TicketDetail | null>(null);
+  const loadedTicketId = useRef<number | null>(null);
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [reload, setReload] = useState(0);
+  const [reviewRequired, setReviewRequired] = useState<"owner" | "priority" | "status" | null>(null);
+  const statusIntent = useRef<{ body: string; key: string } | null>(null);
 
   const [claimFeedback, setClaimFeedback] = useState<ActionFeedback>(idleFeedback());
   const [ownerFeedback, setOwnerFeedback] = useState<ActionFeedback>(idleFeedback());
@@ -251,10 +255,14 @@ export function StaffTicketDetailPage() {
     fetchStaffTicket(ticketId)
       .then((loaded) => {
         if (cancelled) return;
+        const firstLoadForTicket = loadedTicketId.current !== ticketId;
+        loadedTicketId.current = ticketId;
         setTicket(loaded);
-        setPriorityDraft(loaded.itPriority ?? loaded.requestedPriority);
-        setStatusDraft("");
-        setWaitingComment("");
+        if (firstLoadForTicket) {
+          setPriorityDraft(loaded.itPriority ?? loaded.requestedPriority);
+          setStatusDraft("");
+          setWaitingComment("");
+        }
         setLoadState("ready");
       })
       .catch((error) => {
@@ -310,12 +318,32 @@ export function StaffTicketDetailPage() {
     setReload((value) => value + 1);
   }
 
+  async function reloadForReview() {
+    const target = reviewRequired;
+    try {
+      const latest = await fetchStaffTicket(ticketId);
+      setTicket(latest);
+      if (target === "owner") setExpectedOwnerId(latest.owner?.id ?? null);
+      setReviewRequired(null);
+      const feedback = { busy: false, error: null, success: "Latest Ticket loaded. Review it before explicitly retrying." };
+      if (target === "owner") setOwnerFeedback(feedback);
+      else if (target === "priority") setPriorityFeedback(feedback);
+      else setStatusFeedback(feedback);
+    } catch {
+      const feedback = { busy: false, error: "The latest Ticket could not be loaded. Please retry the reload.", success: null };
+      if (target === "owner") setOwnerFeedback(feedback);
+      else if (target === "priority") setPriorityFeedback(feedback);
+      else setStatusFeedback(feedback);
+    }
+  }
+
   async function handleClaim() {
     if (!ticket) return;
     setClaimFeedback({ busy: true, error: null, success: null });
     try {
-      await claimStaffTicket(ticket.id);
-      setClaimFeedback({ busy: false, error: null, success: "Ticket claimed successfully. Refreshing owner details." });
+      const result = await claimStaffTicket(ticket.id, ticket.version ?? 1);
+      setTicket((current) => current ? { ...current, owner: result.owner, version: result.ticketVersion } : current);
+      setClaimFeedback({ busy: false, error: null, success: "Ticket claimed successfully. Refreshing owner and transition details." });
       setReload((value) => value + 1);
     } catch (error) {
       if (error instanceof ApiError && error.code === "TICKET_FINAL") finalError(setClaimFeedback);
@@ -369,18 +397,21 @@ export function StaffTicketDetailPage() {
     }
     setOwnerFeedback({ busy: true, error: null, success: null });
     try {
-      await reassignStaffTicket(ticket.id, ownerId, expectedOwnerId);
+      const result = await reassignStaffTicket(ticket.id, ownerId, expectedOwnerId, ticket.version ?? 1);
+      setTicket((current) => current ? { ...current, owner: result.owner, version: result.ticketVersion } : current);
       setOwnerDialog(false);
-      setOwnerFeedback({ busy: false, error: null, success: "Owner changed successfully. Refreshing Ticket detail." });
+      setOwnerFeedback({ busy: false, error: null, success: "Owner changed successfully. Refreshing owner and transition details." });
       setReload((value) => value + 1);
     } catch (error) {
       if (error instanceof ApiError && error.code === "TICKET_FINAL") {
         setOwnerDialog(false);
         finalError(setOwnerFeedback);
       } else if (error instanceof ApiError && error.code === "TICKET_OWNER_CHANGED") {
-        setOwnerDialog(false);
-        setOwnerFeedback({ busy: false, error: "Ticket ownership changed. Review the refreshed Owner and explicitly retry Reassign.", success: null });
-        setReload((value) => value + 1);
+        setReviewRequired("owner");
+        setOwnerFeedback({ busy: false, error: "Ticket ownership changed. Reload and review the current Owner before retrying.", success: null });
+      } else if (error instanceof ApiError && error.code === "STALE_TICKET_VERSION") {
+        setReviewRequired("owner");
+        setOwnerFeedback({ busy: false, error: "Ticket changed. Reload and review it before retrying Reassign.", success: null });
       } else if (error instanceof ApiError && error.code === "OWNER_NOT_ELIGIBLE") {
         setOwnerFeedback({ busy: false, error: "Select an active IT Staff member or Administrator.", success: null });
         void loadOwners();
@@ -394,24 +425,38 @@ export function StaffTicketDetailPage() {
     if (!ticket) return;
     setPriorityFeedback({ busy: true, error: null, success: null });
     try {
-      const result = await updateStaffItPriority(ticket.id, priorityDraft);
-      setTicket((current) => current ? { ...current, itPriority: result.itPriority } : current);
+      const result = await updateStaffItPriority(ticket.id, priorityDraft, ticket.version ?? 1);
+      setTicket((current) => current ? { ...current, itPriority: result.itPriority, version: result.ticketVersion } : current);
       setPriorityFeedback({ busy: false, error: null, success: "IT Priority saved." });
     } catch (error) {
       if (error instanceof ApiError && error.code === "TICKET_FINAL") finalError(setPriorityFeedback);
-      else setPriorityFeedback({ busy: false, error: safeErrorMessage(error, "IT Priority could not be saved. Please retry."), success: null });
+      else if (error instanceof ApiError && error.code === "STALE_TICKET_VERSION") {
+        setReviewRequired("priority");
+        setPriorityFeedback({ busy: false, error: "Ticket changed. Reload and review it before retrying Priority.", success: null });
+      } else setPriorityFeedback({ busy: false, error: safeErrorMessage(error, "IT Priority could not be saved. Please retry."), success: null });
     }
   }
 
   async function performStatus(status: TicketStatus) {
     if (!ticket) return;
+    const body = JSON.stringify({
+      expectedTicketVersion: ticket.version ?? 1,
+      status,
+      ...(status === "WAITING_FOR_REQUESTER" ? { publicComment: waitingComment.trim() } : {}),
+    });
+    if (!statusIntent.current || statusIntent.current.body !== body) {
+      statusIntent.current = { body, key: crypto.randomUUID() };
+    }
     setStatusFeedback({ busy: true, error: null, success: null });
     try {
       const result = await updateStaffTicketStatus(
         ticket.id,
         status,
-        status === "WAITING_FOR_REQUESTER" ? waitingComment.trim() : undefined
+        ticket.version ?? 1,
+        status === "WAITING_FOR_REQUESTER" ? waitingComment.trim() : undefined,
+        statusIntent.current.key
       );
+      statusIntent.current = null;
       setStatusDialog(null);
       setStatusDraft("");
       setWaitingComment("");
@@ -420,10 +465,12 @@ export function StaffTicketDetailPage() {
       setTicket((current) => current ? {
         ...current,
         currentStatus: result.currentStatus,
+        version: result.ticketVersion,
         resolutionIndication: result.resolutionIndication,
         allowedTransitions: result.allowedTransitions,
       } : current);
     } catch (error) {
+      if (error instanceof ApiError && error.status < 500) statusIntent.current = null;
       if (error instanceof ApiError && error.code === "TICKET_FINAL") {
         setStatusDialog(null);
         finalError(setStatusFeedback);
@@ -431,6 +478,9 @@ export function StaffTicketDetailPage() {
         setStatusFeedback({ busy: false, error: "Assign an active IT Staff member or Administrator with Claim/Reassign before updating status.", success: null });
       } else if (error instanceof ApiError && error.code === "VALIDATION_FAILED" && status === "WAITING_FOR_REQUESTER") {
         setStatusFeedback({ busy: false, error: "Enter a Public Comment when waiting for the Requester.", success: null });
+      } else if (error instanceof ApiError && (error.code === "STALE_TICKET_VERSION" || error.code === "IDEMPOTENCY_KEY_REUSED")) {
+        setReviewRequired("status");
+        setStatusFeedback({ busy: false, error: "Ticket changed. Reload and review it before explicitly retrying this status.", success: null });
       } else {
         setStatusFeedback({ busy: false, error: safeErrorMessage(error, "The status could not be updated. Please retry."), success: null });
       }
@@ -581,7 +631,7 @@ export function StaffTicketDetailPage() {
                     {owners.map((owner) => <option key={owner.id} value={owner.id}>{owner.fullName} — {roleLabel(owner.role)}</option>)}
                   </select>
                 )}
-                <ActionFeedback feedback={ownerFeedback} testId="owner-feedback" />
+                <ActionFeedback feedback={ownerFeedback} testId="owner-feedback" onReload={reviewRequired === "owner" ? () => void reloadForReview() : undefined} />
                 <div className="d-flex flex-wrap justify-content-end gap-2 mt-3">
                   <button type="button" className="btn btn-outline-primary" onClick={closeOwnerDialog} disabled={ownerFeedback.busy}>Cancel</button>
                   <button type="button" className="btn btn-primary" onClick={() => void handleReassign()} disabled={ownerFeedback.busy || ownerDirectoryState !== "ready" || !selectedOwnerId}>
@@ -608,7 +658,7 @@ export function StaffTicketDetailPage() {
           </div>
           {!isFinal && <div className="col-12 col-md-auto mt-3 mt-md-0"><button type="button" className="btn btn-primary" onClick={() => void handlePrioritySave()} disabled={priorityFeedback.busy}>{priorityFeedback.busy ? "Saving…" : "Save IT Priority"}</button></div>}
         </div>
-        <ActionFeedback feedback={priorityFeedback} testId="priority-feedback" />
+        <ActionFeedback feedback={priorityFeedback} testId="priority-feedback" onReload={reviewRequired === "priority" ? () => void reloadForReview() : undefined} />
       </section>
 
       <section className="zen-card staff-action-card p-3 p-md-4 mb-4" aria-labelledby="status-heading">
@@ -624,7 +674,7 @@ export function StaffTicketDetailPage() {
               {allowedTransitions.map((status) => <option key={status} value={status}>{titleCase(status)}</option>)}
             </select>
             {statusDraft === "WAITING_FOR_REQUESTER" && <div className="mt-3"><label className="form-label fw-semibold" htmlFor="waiting-public-comment">Public Comment for Requester<span className="zen-required" aria-hidden="true">*</span><span className="visually-hidden"> (required)</span></label><textarea id="waiting-public-comment" className="form-control" rows={4} maxLength={MESSAGE_LIMIT} value={waitingComment} onChange={(event) => setWaitingComment(event.target.value)} aria-describedby="waiting-comment-hint" /><p id="waiting-comment-hint" className="zen-muted mt-1 mb-0">{MESSAGE_LIMIT - waitingComment.length} characters remaining.</p></div>}
-            <ActionFeedback feedback={statusFeedback} testId="status-feedback" />
+            <ActionFeedback feedback={statusFeedback} testId="status-feedback" onReload={reviewRequired === "status" ? () => void reloadForReview() : undefined} />
             <button ref={statusTriggerRef} type="submit" className="btn btn-primary mt-3" disabled={statusFeedback.busy}>{statusFeedback.busy ? "Updating…" : "Update status"}</button>
             {statusDialog && <ConfirmationDialog status={statusDialog} busy={statusFeedback.busy} onCancel={() => setStatusDialog(null)} onConfirm={() => void performStatus(statusDialog)} />}
           </form>

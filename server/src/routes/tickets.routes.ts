@@ -12,6 +12,7 @@ import {
 } from "../services/communications.service.js";
 import { createTicket, getOwnedTicket, listTickets } from "../services/tickets.service.js";
 import { addAttachment, assertTicketIsOwned } from "../services/attachments.service.js";
+import { listRequesterActions } from "../services/actions.service.js";
 
 export interface TicketRouteDependencies {
   authentication: RequestHandler;
@@ -27,6 +28,16 @@ export interface TicketRouteDependencies {
  */
 export function createTicketsRouter(dependencies: TicketRouteDependencies): Router {
   const router = Router();
+
+  router.get(
+    "/:id/actions",
+    dependencies.authentication,
+    requireRequester,
+    asyncHandler(async (req, res) => {
+      const { id } = idParamSchema.parse(req.params);
+      res.status(200).json(await listRequesterActions(req.auth!.userId, id, req.query));
+    })
+  );
 
   router.get(
     "/:id/comments",
