@@ -1,6 +1,6 @@
 # Lab 4 Sprint Engineering Specification
 
-Project: TokTickIT. Stakeholder decisions approved in the Thai batch-grill-me interview on 2026-10-23; final authoring authorization: "เริ่มได้เลย". This is an implementation contract, not a statement that implementation, tests, peer review, or release has finished.
+Project: TokTickIT. Stakeholder decisions and contract authoring approved on 2026-10-23. Contract peer review and merge are recorded in [reviewer.md](reviewer.md); implementation and release evidence are recorded separately.
 
 Baseline: released Lab 3 main, commit 1a20e3465922a2c1dacc5a9eb18e55b0840284b8, released through [PR 83](https://github.com/FramePongrit/toktickit/pull/83). Deadline: **2026-10-29, Asia/Bangkok**; internal release/evidence target: October 28.
 
@@ -98,9 +98,17 @@ SLA clocks, escalation/on-call/breach services; email/SMS/LINE/push notification
 | BR-26 | Action-create and Action/Ticket status transitions require Idempotency-Key. A successful logical request and its history commit once; same actor/method/path/key/body replays its original success, even if versions are now stale. A different payload with a successful key is 409. Replays still require current authentication/authorization. See API for exact scope/precedence. |
 | BR-27 | Safe 400/401/403/404/409/500 errors use existing envelopes; no stack, SQL, credentials, session tokens or another Requester's data. Busy controls prevent accidental duplicate clicks, and recoverable failures/conflicts preserve draft form values for explicit review. |
 
+BR-26 concurrent duplicates serialize on the request-scope advisory lock and re-read committed success before evaluating mutable versions. Canonicalization uses normalized submitted JSON, independent of property ordering and JSON formatting whitespace, before dynamic defaults; see [API section 6](api-spec.md#6-idempotency-and-conflicts) and UNIT-06/API-I01.
+
+BR-13 deliberately permits an authorized, reasoned and audited correction from Completed follow-up=true to false. This removes that Action's follow-up blocker; all other BR-18 prerequisites still apply. A separate new Action is not required by this policy. API-W02 must verify that sequence.
+
+BR-20 workflow events record the resulting Ticket workCycle. The RESOLVED -> REOPENED event therefore carries the new incremented cycle and starts that cycle's timeline; API-W03 verifies this field.
+
 ### Dashboard calculations
 
 Define ACTIVE = {NEW, OPEN, IN_PROGRESS, WAITING_FOR_REQUESTER, REOPENED}. Capture one server asOf timestamp and use one database snapshot per Dashboard request. start = Bangkok midnight six calendar days before asOf's Bangkok date; matching time is start <= value <= asOf. End-of-day future data is never included. Counts are integer zero and previews empty arrays when no matches exist. Five records per preview; full lists paginate 10/20/50.
+
+The recent window is the last 7 Bangkok calendar days including today, ending at asOf. Priority severity is URGENT > HIGH > MEDIUM > LOW; PostgreSQL's existing LOW/MEDIUM/HIGH/URGENT enum declaration supports descending ordering, and API-D02 must assert the exact order. Requester-authored Public Comments and attachment changes intentionally count as recent updates under BR-37.
 
 | ID | Metric / calculation |
 |---|---|

@@ -9,7 +9,9 @@ const here = path.dirname(fileURLToPath(import.meta.url));
  * so a .gitkeep is committed and it is also created at boot — belt and braces,
  * because the first upload otherwise fails with ENOENT.
  */
-export const UPLOAD_DIR = path.resolve(here, "..", "..", "uploads");
+export const UPLOAD_DIR = process.env.UPLOAD_DIR?.trim()
+  ? path.resolve(process.env.UPLOAD_DIR.trim())
+  : path.resolve(here, "..", "..", "uploads");
 
 export function ensureUploadDir(): void {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });

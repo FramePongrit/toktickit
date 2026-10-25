@@ -1,0 +1,20 @@
+Command: git diff --check
+Exit code: 0
+Output:
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/tests/lab-04/migration.regression.test.ts', LF will be replaced by CRLF the next time Git touches it
+
+
+Command: git diff --quiet HEAD -- server/prisma/migrations/20261024000000_lab4_actions_workflow/migration.sql
+Exit code: 0
+Result: original Lab 4 migration is byte-for-byte unchanged relative to HEAD.
+
+Working tree summary:
+ M README.md
+ M server/prisma/schema.prisma
+ M server/tests/lab-03/migration-seed.regression.test.ts
+ M server/tests/lab-04/migration.regression.test.ts
+ M server/vitest.migration.config.ts
+?? artifacts/lab-04/
+?? server/prisma/migrations/20261025000000_lab4_restrict_workflow_comment_delete/
+?? server/tests/lab-04/backup-runbook.test.ts
