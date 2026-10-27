@@ -58,6 +58,20 @@ export interface ResolutionIndication {
   indicatedBy: CommunicationAuthor;
 }
 
+export type ResolutionGateReason =
+  | "NO_COMPLETED_ACTION"
+  | "UNFINISHED_ACTIONS"
+  | "FOLLOW_UP_REQUIRED"
+  | "OWNER_REQUIRED";
+
+export interface ResolutionGate {
+  canResolve: boolean;
+  reasons: ResolutionGateReason[];
+  completedCount: number;
+  unfinishedCount: number;
+  followUpCount: number;
+}
+
 export interface AttachmentMeta {
   id: number;
   originalFilename: string;
@@ -111,6 +125,9 @@ export interface TicketDetail {
   /** Optional keeps Lab 2 fixture objects source-compatible; the API always returns it. */
   itPriority?: Priority;
   currentStatus: TicketStatus;
+  workCycle?: number;
+  resolvedAt?: string | null;
+  serverTime?: string;
   /** Staff Ticket Detail always supplies the operational version. */
   version?: number;
   createdAt: string;
@@ -126,6 +143,7 @@ export interface TicketDetail {
   /** Optional keeps Lab 2 fixture objects source-compatible; the API always returns it. */
   resolutionIndication?: ResolutionIndication | null;
   allowedTransitions?: TicketStatus[];
+  resolutionGate?: ResolutionGate;
 }
 
 export interface PagedResult<T> {

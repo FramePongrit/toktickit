@@ -245,6 +245,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   const ticketIds = [activeTicketId, resolvedTicketId, closedTicketId, cancelledTicketId, ...raceTicketIds];
+  await prisma.ticketWorkflowEvent.deleteMany({ where: { ticketId: { in: ticketIds } } });
   await prisma.publicComment.deleteMany({ where: { ticketId: { in: ticketIds } } });
   await prisma.internalNote.deleteMany({ where: { ticketId: { in: ticketIds } } });
   await prisma.authSession.deleteMany({ where: { userId: { in: [requesterAId, requesterBId, staffId, adminId] } } });

@@ -218,6 +218,9 @@ export async function cleanupE2EUsers(userIds: number[]) {
     await tx.authSession.deleteMany({ where: { userId: { in: userIds } } });
     await tx.idempotencyRecord.deleteMany({ where: { userId: { in: userIds } } });
     if (ticketIds.length > 0) {
+      await tx.ticketWorkflowEvent.deleteMany({ where: { ticketId: { in: ticketIds } } });
+      await tx.actionRevision.deleteMany({ where: { action: { ticketId: { in: ticketIds } } } });
+      await tx.actionTaken.deleteMany({ where: { ticketId: { in: ticketIds } } });
       await tx.publicComment.deleteMany({ where: { ticketId: { in: ticketIds } } });
       await tx.internalNote.deleteMany({ where: { ticketId: { in: ticketIds } } });
       await tx.attachment.deleteMany({ where: { ticketId: { in: ticketIds } } });

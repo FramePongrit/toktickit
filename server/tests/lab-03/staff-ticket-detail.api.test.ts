@@ -116,6 +116,24 @@ async function makeTicket(overrides: {
   return ticket;
 }
 
+async function addCompletedEvidence(ticketId: number): Promise<void> {
+  const ticket = await prisma.ticket.findUniqueOrThrow({ where: { id: ticketId }, select: { workCycle: true, createdAt: true } });
+  await prisma.actionTaken.create({
+    data: {
+      ticketId,
+      workCycle: ticket.workCycle,
+      status: "COMPLETED",
+      description: "Completed evidence for the status-matrix fixture",
+      result: "Verified resolved",
+      actionAt: ticket.createdAt,
+      assigneeId: staffAId,
+      createdById: staffAId,
+      performedById: staffAId,
+      completedAt: new Date(),
+    },
+  });
+}
+
 beforeAll(async () => {
   const [category, relatedSystem] = await Promise.all([
     prisma.category.findFirstOrThrow({ where: { active: true }, orderBy: { id: "asc" } }),
@@ -149,6 +167,9 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await prisma.idempotencyRecord.deleteMany({ where: { userId: { in: userIds } } });
+  await prisma.ticketWorkflowEvent.deleteMany({ where: { ticketId: { in: ticketIds } } });
+  await prisma.actionRevision.deleteMany({ where: { action: { ticketId: { in: ticketIds } } } });
+  await prisma.actionTaken.deleteMany({ where: { ticketId: { in: ticketIds } } });
   await prisma.publicComment.deleteMany({ where: { ticketId: { in: ticketIds } } });
   await prisma.internalNote.deleteMany({ where: { ticketId: { in: ticketIds } } });
   await prisma.attachment.deleteMany({ where: { ticketId: { in: ticketIds } } });
@@ -689,9 +710,11 @@ describe("Issue #57 — Status API-S04", () => {
   it("allows every documented status edge with the Waiting comment rule", async () => {
     for (const [from, to] of allowedEdges) {
       const ticket = await makeTicket({ status: from, label: `EDGE-${from}-${to}` });
+      if (to === "RESOLVED") await addCompletedEvidence(ticket.id);
       const response = await mutate(staffAAuth, "patch", `/api/staff/tickets/${ticket.id}/status`).send({
         status: to,
         ...(to === "WAITING_FOR_REQUESTER" ? { publicComment: "  Please provide the requested information.  " } : {}),
+        ...(to === "CANCELLED" ? { cancelReason: "The Requester withdrew the request." } : {}),
       });
       expect(response.status, `${from} -> ${to}`).toBe(200);
       expect(response.body.currentStatus).toBe(to);

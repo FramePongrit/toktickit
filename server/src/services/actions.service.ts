@@ -352,7 +352,7 @@ async function withStableAssignee<T>(
   throw HttpError.conflict("ACTION_CHANGED_RETRY", "The Action changed while locking its assignee. Reload and try again.");
 }
 
-function actionSnapshot(action: StaffAction) {
+export function actionSnapshot(action: Prisma.ActionTakenGetPayload<{}>) {
   return {
     id: action.id,
     ticketId: action.ticketId,
@@ -377,13 +377,14 @@ function actionSnapshot(action: StaffAction) {
   };
 }
 
-async function appendActionRevision(
+export async function appendActionRevision(
   tx: TransactionClient,
-  action: StaffAction,
-  operation: "CREATE" | "EDIT" | "TRANSITION",
+  action: Prisma.ActionTakenGetPayload<{}>,
+  operation: "CREATE" | "EDIT" | "TRANSITION" | "TICKET_CANCEL",
   actorId: number,
   before: ReturnType<typeof actionSnapshot> | null,
-  reason: string | null
+  reason: string | null,
+  occurredAt?: Date
 ): Promise<void> {
   await tx.actionRevision.create({
     data: {
@@ -391,6 +392,7 @@ async function appendActionRevision(
       sequence: action.version,
       operation,
       actorId,
+      ...(occurredAt && { occurredAt }),
       reason,
       before: before === null ? Prisma.DbNull : (before as Prisma.InputJsonValue),
       after: actionSnapshot(action),
@@ -447,6 +449,7 @@ export async function createStaffAction(
     await assertCurrentStaffSession(tx, actor.userId, actor.sessionId, users);
     await notifyActionLockTestHook(tx, ticketId, "ACTION_AFTER_USER_LOCKS", [...users.keys()]);
     const parent = await lockTicket(tx, ticketId);
+    await notifyActionLockTestHook(tx, ticketId, "ACTION_AFTER_PARENT_LOCK", [...users.keys()]);
     assertParentWritable(parent);
     if (!parsed.success) throw parsed.error;
     const input: ActionCreateInput = parsed.data;

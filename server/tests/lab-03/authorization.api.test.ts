@@ -188,6 +188,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await prisma.authSession.deleteMany({ where: { userId: { in: fixtureUserIds } } });
+  await prisma.ticketWorkflowEvent.deleteMany({ where: { ticketId: { in: [ticketAId, ticketBId] } } });
   await prisma.attachment.deleteMany({ where: { ticketId: { in: [ticketAId, ticketBId] } } });
   await prisma.ticket.deleteMany({ where: { id: { in: [ticketAId, ticketBId] } } });
   await prisma.user.deleteMany({ where: { id: { in: fixtureUserIds } } });
@@ -330,6 +331,7 @@ describe("API-Z02 — Requester ownership and identity authority", () => {
     );
     expect(response.status).toBe(201);
     expect(response.body.requester.id).toBe(requesterAId);
+    await prisma.ticketWorkflowEvent.deleteMany({ where: { ticketId: response.body.id } });
     await prisma.ticket.delete({ where: { id: response.body.id } });
   });
 

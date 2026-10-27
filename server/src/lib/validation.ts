@@ -255,13 +255,27 @@ export const staffPriorityMutationSchema = z
 
 export type StaffPriorityMutationInput = z.infer<typeof staffPriorityMutationSchema>;
 
+const cancelReason = z.string().trim().min(1, "Cancellation Reason is required.").max(1000);
+
 export const staffStatusMutationSchema = z
   .object({
     expectedTicketVersion: positiveIntegerBody("Expected Ticket Version"),
     status: ticketStatus,
     publicComment: z.string().optional(),
+    cancelReason: cancelReason.optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((value, context) => {
+    if (value.status === "CANCELLED" && value.cancelReason === undefined) {
+      context.addIssue({ code: "custom", path: ["cancelReason"], message: "Cancellation Reason is required." });
+    }
+    if (value.status !== "CANCELLED" && value.cancelReason !== undefined) {
+      context.addIssue({ code: "custom", path: ["cancelReason"], message: "Cancellation Reason is only accepted for Cancelled." });
+    }
+    if (value.status !== "WAITING_FOR_REQUESTER" && value.publicComment !== undefined) {
+      context.addIssue({ code: "custom", path: ["publicComment"], message: "Public Comment is only accepted for Waiting for Requester." });
+    }
+  });
 
 export type StaffStatusMutationInput = z.infer<typeof staffStatusMutationSchema>;
 
@@ -275,7 +289,6 @@ const optionalActionText = (maximum: number) => z.preprocess(
   z.string().max(maximum).nullable().optional()
 );
 const correctionReason = z.string().trim().min(1, "Correction Reason is required.").max(1000);
-const cancelReason = z.string().trim().min(1, "Cancellation Reason is required.").max(1000);
 
 export const actionListQuerySchema = z.object({
   page: optionalParam(numericParam("Page")).transform((value) => value ?? 1),

@@ -140,7 +140,10 @@ afterAll(async () => {
       data: { role: user.role, active: user.active },
     })));
   }
-  if (ticketIds.length > 0) await prisma.ticket.deleteMany({ where: { id: { in: ticketIds } } });
+  if (ticketIds.length > 0) {
+    await prisma.ticketWorkflowEvent.deleteMany({ where: { ticketId: { in: ticketIds } } });
+    await prisma.ticket.deleteMany({ where: { id: { in: ticketIds } } });
+  }
   const sessionUserIds = [...new Set([...userIds, ...createdSessionUserIds])];
   if (sessionUserIds.length > 0) await prisma.authSession.deleteMany({ where: { userId: { in: sessionUserIds } } });
   if (userIds.length > 0) await prisma.user.deleteMany({ where: { id: { in: userIds } } });

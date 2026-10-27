@@ -106,6 +106,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  await prisma.ticketWorkflowEvent.deleteMany({ where: { ticketId: { in: [ownedTicketId, strangerTicketId] } } });
   await prisma.attachment.deleteMany({
     where: { ticketId: { in: [ownedTicketId, strangerTicketId] } },
   });

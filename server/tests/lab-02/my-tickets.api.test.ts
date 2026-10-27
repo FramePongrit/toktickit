@@ -110,6 +110,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  await prisma.ticketWorkflowEvent.deleteMany({ where: { ticket: { requesterId: { in: [requesterA, requesterB] } } } });
   await prisma.ticket.deleteMany({ where: { requesterId: { in: [requesterA, requesterB] } } });
   await prisma.authSession.deleteMany({ where: { userId: { in: [requesterA, requesterB] } } });
   await prisma.user.deleteMany({ where: { id: { in: [requesterA, requesterB] } } });
@@ -335,6 +336,7 @@ describe("GET /api/tickets — attachment count", () => {
     expect(res.body.data[0].attachmentCount).toBe(1);
 
     await prisma.attachment.deleteMany({ where: { ticketId: ticket.id } });
+    await prisma.ticketWorkflowEvent.deleteMany({ where: { ticketId: ticket.id } });
     await prisma.ticket.delete({ where: { id: ticket.id } });
   });
 });

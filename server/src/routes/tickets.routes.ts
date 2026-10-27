@@ -13,6 +13,7 @@ import {
 import { createTicket, getOwnedTicket, listTickets } from "../services/tickets.service.js";
 import { addAttachment, assertTicketIsOwned } from "../services/attachments.service.js";
 import { listRequesterActions } from "../services/actions.service.js";
+import { listRequesterTicketWorkflow } from "../services/workflow.service.js";
 
 export interface TicketRouteDependencies {
   authentication: RequestHandler;
@@ -36,6 +37,16 @@ export function createTicketsRouter(dependencies: TicketRouteDependencies): Rout
     asyncHandler(async (req, res) => {
       const { id } = idParamSchema.parse(req.params);
       res.status(200).json(await listRequesterActions(req.auth!.userId, id, req.query));
+    })
+  );
+
+  router.get(
+    "/:id/workflow",
+    dependencies.authentication,
+    requireRequester,
+    asyncHandler(async (req, res) => {
+      const { id } = idParamSchema.parse(req.params);
+      res.status(200).json(await listRequesterTicketWorkflow(req.auth!.userId, id, req.query));
     })
   );
 

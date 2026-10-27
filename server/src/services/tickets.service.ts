@@ -45,6 +45,8 @@ export function serializeTicketDetail(ticket: TicketWithDetail) {
     requestedPriority: ticket.requestedPriority,
     itPriority: ticket.itPriority,
     currentStatus: ticket.currentStatus,
+    workCycle: ticket.workCycle,
+    resolvedAt: ticket.resolvedAt,
     createdAt: ticket.createdAt,
     updatedAt: ticket.updatedAt,
     category: ticket.category,
@@ -189,7 +191,7 @@ export async function createTicket(requesterId: number, input: CreateTicketInput
   const created = await prisma.$transaction(async (tx) => {
     const ticketNumber = await allocateTicketNumber(tx, new Date().getFullYear());
 
-    return tx.ticket.create({
+    const ticket = await tx.ticket.create({
       data: {
         ticketNumber,
         requesterId,
@@ -203,6 +205,19 @@ export async function createTicket(requesterId: number, input: CreateTicketInput
       },
       include: detailInclude,
     });
+    await tx.ticketWorkflowEvent.create({
+      data: {
+        ticketId: ticket.id,
+        workCycle: ticket.workCycle,
+        kind: "CREATED",
+        fromStatus: null,
+        toStatus: ticket.currentStatus,
+        actorId: requesterId,
+        occurredAt: ticket.createdAt,
+        ticketVersion: ticket.version,
+      },
+    });
+    return ticket;
   });
 
   return serializeTicketDetail(created);

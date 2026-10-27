@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { Link, MemoryRouter, Route, Routes } from "react-router-dom";
 import { StaffTicketDetailPage } from "../../src/pages/StaffTicketDetailPage.js";
 import * as ticketsApi from "../../src/api/tickets.js";
 import * as attachmentApi from "../../src/api/attachments.js";
 import { ApiError } from "../../src/lib/http.js";
-import type { TicketDetail } from "../../src/types/index.js";
+import type { ResolutionGate, TicketDetail } from "../../src/types/index.js";
 
 const OWNER = { id: 10, fullName: "Alex Staff", role: "STAFF" as const };
 const ADMIN = { id: 11, fullName: "Ada Admin", role: "ADMIN" as const };
@@ -21,6 +21,13 @@ const NOTE = {
   body: "Staff-only triage note.",
   createdAt: "2026-09-02T11:00:00.000Z",
   author: { id: 10, fullName: "Alex Staff", role: "STAFF" as const },
+};
+const EMPTY_GATE: ResolutionGate = {
+  canResolve: false,
+  reasons: ["NO_COMPLETED_ACTION"],
+  completedCount: 0,
+  unfinishedCount: 0,
+  followUpCount: 0,
 };
 
 const DETAIL: TicketDetail = {
@@ -66,13 +73,13 @@ const DETAIL: TicketDetail = {
   allowedTransitions: ["IN_PROGRESS", "WAITING_FOR_REQUESTER", "CANCELLED"],
 };
 
-function renderDetail(responses: TicketDetail[] = [DETAIL]) {
+function renderDetail(responses: TicketDetail[] = [DETAIL], withTicketSwitcher = false) {
   const fetch = vi.spyOn(ticketsApi, "fetchStaffTicket");
   responses.forEach((response) => fetch.mockResolvedValueOnce(response));
   const rendered = render(
     <MemoryRouter initialEntries={[`/staff/tickets/${DETAIL.id}`]}>
       <Routes>
-        <Route path="/staff/tickets/:id" element={<StaffTicketDetailPage />} />
+        <Route path="/staff/tickets/:id" element={withTicketSwitcher ? <><Link to="/staff/tickets/43">Open next Ticket</Link><StaffTicketDetailPage /></> : <StaffTicketDetailPage />} />
         <Route path="/staff/tickets" element={<h1>Staff Queue</h1>} />
       </Routes>
     </MemoryRouter>
@@ -184,7 +191,7 @@ describe("Issue #58 Staff Ticket Detail", () => {
 
   it("requires confirmation for significant transitions and explains Closed finality", async () => {
     const user = userEvent.setup();
-    const update = vi.spyOn(ticketsApi, "updateStaffTicketStatus").mockResolvedValue({ currentStatus: "CLOSED", resolutionIndication: null, allowedTransitions: [], ticketVersion: 2 });
+    const update = vi.spyOn(ticketsApi, "updateStaffTicketStatus").mockResolvedValue({ currentStatus: "CLOSED", resolutionIndication: null, allowedTransitions: [], ticketVersion: 2, workCycle: 1, resolvedAt: null, resolutionGate: EMPTY_GATE });
     renderDetail([{ ...DETAIL, allowedTransitions: ["CLOSED"] }, { ...DETAIL, currentStatus: "CLOSED", allowedTransitions: [] }]);
     await user.selectOptions(await screen.findByLabelText("Next status"), "CLOSED");
     await user.click(screen.getByRole("button", { name: "Update status" }));
@@ -198,7 +205,7 @@ describe("Issue #58 Staff Ticket Detail", () => {
     const user = userEvent.setup();
     const update = vi.spyOn(ticketsApi, "updateStaffTicketStatus")
       .mockRejectedValueOnce(new ApiError(500, "INTERNAL_ERROR", "unknown commit outcome"))
-      .mockResolvedValueOnce({ currentStatus: "IN_PROGRESS", resolutionIndication: null, allowedTransitions: [], ticketVersion: 2 });
+      .mockResolvedValueOnce({ currentStatus: "IN_PROGRESS", resolutionIndication: null, allowedTransitions: [], ticketVersion: 2, workCycle: 1, resolvedAt: null, resolutionGate: EMPTY_GATE });
     renderDetail([{ ...DETAIL, allowedTransitions: ["IN_PROGRESS"] }]);
     await user.selectOptions(await screen.findByLabelText("Next status"), "IN_PROGRESS");
     await user.click(screen.getByRole("button", { name: "Update status" }));
@@ -213,7 +220,7 @@ describe("Issue #58 Staff Ticket Detail", () => {
     const user = userEvent.setup();
     const update = vi.spyOn(ticketsApi, "updateStaffTicketStatus")
       .mockRejectedValueOnce(new ApiError(400, "VALIDATION_FAILED", "invalid"))
-      .mockResolvedValueOnce({ currentStatus: "WAITING_FOR_REQUESTER", resolutionIndication: null, allowedTransitions: ["OPEN"], ticketVersion: 2 });
+      .mockResolvedValueOnce({ currentStatus: "WAITING_FOR_REQUESTER", resolutionIndication: null, allowedTransitions: ["OPEN"], ticketVersion: 2, workCycle: 1, resolvedAt: null, resolutionGate: EMPTY_GATE });
     renderDetail([{ ...DETAIL, allowedTransitions: ["WAITING_FOR_REQUESTER"] }]);
     await user.selectOptions(await screen.findByLabelText("Next status"), "WAITING_FOR_REQUESTER");
     await user.click(screen.getByRole("button", { name: "Update status" }));
@@ -223,9 +230,85 @@ describe("Issue #58 Staff Ticket Detail", () => {
     expect(update).toHaveBeenLastCalledWith(DETAIL.id, "WAITING_FOR_REQUESTER", 1, "Please test again.", expect.any(String));
   });
 
+  it("shows current-cycle gate blockers and explains legacy resolution dates honestly", async () => {
+    const blockedGate: ResolutionGate = {
+      canResolve: false,
+      reasons: ["UNFINISHED_ACTIONS", "FOLLOW_UP_REQUIRED"],
+      completedCount: 1,
+      unfinishedCount: 2,
+      followUpCount: 1,
+    };
+    const first = renderDetail([{
+      ...DETAIL,
+      currentStatus: "IN_PROGRESS",
+      workCycle: 2,
+      resolutionGate: blockedGate,
+      allowedTransitions: ["WAITING_FOR_REQUESTER", "CANCELLED"],
+    }]);
+    await screen.findByRole("heading", { name: DETAIL.ticketNumber });
+    expect(screen.getByLabelText("Resolution requirements")).toHaveTextContent("Cycle 2: 1 completed, 2 unfinished, 1 requiring follow-up.");
+    expect(screen.getByLabelText("Resolution requirements")).toHaveTextContent("Finish or cancel the unfinished Actions in this work cycle.");
+    expect(screen.queryByRole("option", { name: "Resolved" })).not.toBeInTheDocument();
+
+    first.unmount();
+    renderDetail([{ ...DETAIL, currentStatus: "RESOLVED", resolvedAt: null, workCycle: 1, allowedTransitions: ["CLOSED", "REOPENED"] }]);
+    expect(await screen.findByTestId("ticket-work-cycle")).toHaveTextContent("Legacy resolution time unknown.");
+    expect(screen.getByTestId("ticket-work-cycle")).not.toHaveTextContent("Not resolved in this cycle.");
+  });
+
+  it("requires a reason before cancellation and explains the unfinished Action effect", async () => {
+    const user = userEvent.setup();
+    const cancelled = { ...DETAIL, currentStatus: "CANCELLED" as const, allowedTransitions: [] };
+    const update = vi.spyOn(ticketsApi, "updateStaffTicketStatus").mockResolvedValue({
+      currentStatus: "CANCELLED",
+      resolutionIndication: null,
+      allowedTransitions: [],
+      ticketVersion: 2,
+      workCycle: 1,
+      resolvedAt: null,
+      resolutionGate: EMPTY_GATE,
+    });
+    renderDetail([{ ...DETAIL, allowedTransitions: ["CANCELLED"] }, cancelled]);
+    await user.selectOptions(await screen.findByLabelText("Next status"), "CANCELLED");
+    await user.click(screen.getByRole("button", { name: "Update status" }));
+    expect(await screen.findByText("Enter a reason before cancelling this Ticket.")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(update).not.toHaveBeenCalled();
+
+    await user.type(screen.getByLabelText(/Cancellation reason/), "Requester withdrew the work");
+    await user.click(screen.getByRole("button", { name: "Update status" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog).toHaveTextContent("All unfinished Actions in the current work cycle will be cancelled");
+    await user.click(within(dialog).getByRole("button", { name: "Confirm Cancelled" }));
+    expect(update).toHaveBeenCalledWith(DETAIL.id, "CANCELLED", 1, undefined, expect.any(String), "Requester withdrew the work");
+  });
+
+  it("clears a cancellation reason when navigating to another Ticket", async () => {
+    const user = userEvent.setup();
+    const nextTicket = {
+      ...DETAIL,
+      id: 43,
+      ticketNumber: "TKT-2026-000043",
+      allowedTransitions: ["CANCELLED" as const],
+    };
+    const update = vi.spyOn(ticketsApi, "updateStaffTicketStatus");
+    renderDetail([{ ...DETAIL, allowedTransitions: ["CANCELLED"] }, nextTicket], true);
+
+    await user.selectOptions(await screen.findByLabelText("Next status"), "CANCELLED");
+    await user.type(await screen.findByLabelText(/Cancellation reason/), "Ticket 42 reason");
+    await user.click(screen.getByRole("link", { name: "Open next Ticket" }));
+    expect(await screen.findByRole("heading", { name: nextTicket.ticketNumber })).toBeInTheDocument();
+
+    await user.selectOptions(await screen.findByLabelText("Next status"), "CANCELLED");
+    expect(screen.getByLabelText(/Cancellation reason/)).toHaveValue("");
+    await user.click(screen.getByRole("button", { name: "Update status" }));
+    expect(await screen.findByText("Enter a reason before cancelling this Ticket.")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(update).not.toHaveBeenCalled();
+  });
+
   it.each([
     ["RESOLVED", "Confirm Resolved"],
-    ["CANCELLED", "Confirm Cancelled"],
     ["REOPENED", "Confirm Reopened"],
   ] as const)("requires explicit confirmation before %s", async (status, confirmationLabel) => {
     const user = userEvent.setup();
@@ -234,6 +317,9 @@ describe("Issue #58 Staff Ticket Detail", () => {
       resolutionIndication: null,
       allowedTransitions: [],
       ticketVersion: 2,
+      workCycle: status === "REOPENED" ? 2 : 1,
+      resolvedAt: null,
+      resolutionGate: EMPTY_GATE,
     });
     renderDetail([{ ...DETAIL, allowedTransitions: [status] }, { ...DETAIL, currentStatus: status, allowedTransitions: [] }]);
     await user.selectOptions(await screen.findByRole("combobox", { name: "Next status" }), status);
