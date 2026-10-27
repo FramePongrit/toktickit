@@ -142,6 +142,7 @@ Persist the success record, effect and history in the same transaction. If the w
 | 409 ACTION_CYCLE_READ_ONLY | Action belongs to an earlier work cycle. |
 | 409 STALE_TICKET_VERSION | meta.currentVersion and reload target; no private snapshot. |
 | 409 STALE_ACTION_VERSION | meta.currentVersion and reload target. |
+| 409 ACTION_CHANGED_RETRY | Assignee identity kept changing during ordered lock acquisition; reload and retry. No mutation or private User details. |
 | 409 ASSIGNEE_NOT_ELIGIBLE | Absent/inactive/non-operational target indistinguishable; no User details. |
 | 409 INVALID_ACTION_TRANSITION | Destination not allowed from present Action state. |
 | 409 RESOLUTION_GATE_FAILED | Current-cycle gate unmet; authorized meta.resolutionGate only. |

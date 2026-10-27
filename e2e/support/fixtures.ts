@@ -216,6 +216,7 @@ export async function cleanupE2EUsers(userIds: number[]) {
 
   await prisma.$transaction(async (tx) => {
     await tx.authSession.deleteMany({ where: { userId: { in: userIds } } });
+    await tx.idempotencyRecord.deleteMany({ where: { userId: { in: userIds } } });
     if (ticketIds.length > 0) {
       await tx.publicComment.deleteMany({ where: { ticketId: { in: ticketIds } } });
       await tx.internalNote.deleteMany({ where: { ticketId: { in: ticketIds } } });

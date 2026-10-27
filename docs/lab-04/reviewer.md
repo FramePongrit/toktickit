@@ -1,6 +1,6 @@
 # Lab 4 Peer Review and Evidence Record
 
-Status: **contract merged; PR #95 corrections verified after human review; correction-head human re-review/merge and release pending**. Prepared 2026-10-23; review ledger updated 2026-10-25. This file distinguishes actual events from pending review and test evidence.
+Status: **contract and PR #95 peer-reviewed and merged; PR #96 awaiting human review; release pending**. Prepared 2026-10-23; review ledger updated 2026-10-26. This file distinguishes actual events from pending review and test evidence.
 
 Repository: [FramePongrit/toktickit](https://github.com/FramePongrit/toktickit). Baseline: main 1a20e3465922a2c1dacc5a9eb18e55b0840284b8, [Lab 3 release PR 83](https://github.com/FramePongrit/toktickit/pull/83). Integration branch: lab4-staging. Current contract branch: feature/lab4-engineering-contract.
 
@@ -18,7 +18,7 @@ Contract commit 430cda5 was published before the first feature implementation st
 | Contract Git commit | 430cda5; published before #85 implementation |
 | Contract Issue/PR link | [Issue #84](https://github.com/FramePongrit/toktickit/issues/84), [PR #94](https://github.com/FramePongrit/toktickit/pull/94) |
 | Peer reviewer identity | Sxr1n, collaborator, contract PR #94 |
-| Peer approval/comments/responses | Contract APPROVED 2026-10-24 16:42:50 Asia/Bangkok; PR #95 APPROVED on old head 0e958d5 with three required fixes, 2026-10-25 22:28:19; correction-head re-review pending |
+| Peer approval/comments/responses | Contract APPROVED 2026-10-24 16:42:50 Asia/Bangkok; PR95 initial findings then corrected head0a75793 APPROVED by Sxr1n October26 03:01:15; merged4d487a1 at03:01:40 |
 | Implementation test results | Initial source 6be4a1a and correction 9b29487 verified separately; results below; later Issues pending |
 | Final main / release PR | Pending |
 
@@ -29,8 +29,8 @@ Plan IDs come from [issue-plan.md](issue-plan.md). Published Issues are linked b
 | Plan ID | Issue URL | Branch / PR URL | Reviewer identity | Comments / author responses | Approval / merge commit | Project state |
 |---|---|---|---|---|---|---|
 | L4-01 | [#84](https://github.com/FramePongrit/toktickit/issues/84) | feature/lab4-engineering-contract / [#94](https://github.com/FramePongrit/toktickit/pull/94) | Sxr1n | Seven clarification comments; response below | APPROVED; merged 954604e | Done |
-| L4-02 | [#85](https://github.com/FramePongrit/toktickit/issues/85) | feature/lab4-data-migration / [#95](https://github.com/FramePongrit/toktickit/pull/95) | Sxr1n reviewed old head; correction-head re-review pending | Three human findings addressed at 9b29487; server206/migration12 pass; independent migration12 pass | APPROVED on 0e958d5; correction-head approval/merge pending | PR Review |
-| L4-03 | [#86](https://github.com/FramePongrit/toktickit/issues/86) | feature/lab4-actions-api / Pending | Pending | Pending | Pending | Backlog |
+| L4-02 | [#85](https://github.com/FramePongrit/toktickit/issues/85) | feature/lab4-data-migration / [#95](https://github.com/FramePongrit/toktickit/pull/95) | Sxr1n | Three human findings fixed; corrected head0a75793 re-approved | APPROVED October26 03:01:15; merged4d487a1 at03:01:40 Asia/Bangkok | Done |
+| L4-03 | [#86](https://github.com/FramePongrit/toktickit/issues/86) | feature/lab4-actions-api / [#96](https://github.com/FramePongrit/toktickit/pull/96) | Human pending; AI Reviewer checked617bd9d | Pagination, session precedence, ownership refresh, ambiguous retry and fixture cleanup fixed; server227/client151/browser2 passed | Human approval/merge pending | PR Review |
 | L4-04 | [#87](https://github.com/FramePongrit/toktickit/issues/87) | feature/lab4-ticket-workflow / Pending | Pending | Pending | Pending | Backlog |
 | L4-05 | [#88](https://github.com/FramePongrit/toktickit/issues/88) | feature/lab4-actions-ui / Pending | Pending | Pending | Pending | Backlog |
 | L4-06 | [#89](https://github.com/FramePongrit/toktickit/issues/89) | feature/lab4-dashboard-api / Pending | Pending | Pending | Pending | Backlog |
@@ -71,7 +71,17 @@ The initial implementation was tested before commit and committed as 6be4a1a. In
 
 The optional partial BASELINE unique index and unique event Ticket/version index were not required corrections. The proposed idempotency cleanup index is deferred because automatic expiry/cleanup is explicitly excluded by this contract. No new cleanup feature was introduced.
 
+### PR #95 corrected-head approval and integration
+
+[Sxr1n's corrected-head approval](https://github.com/FramePongrit/toktickit/pull/95#pullrequestreview-5644980389) was submitted on `0a75793` at 2026-10-26 03:01:15 Asia/Bangkok. PR #95 merged into lab4-staging at 03:01:40, commit `4d487a1496ad6d65bb3743e1b6093b81f2902bf0`. Issue #85 is closed and its card Done. Historical references above to pending re-review describe the earlier October 25 handoff. Issue #86 begins from this exact reviewed merge; its tests/approval are not inherited from Issue #85.
+
 Correction verification: Executor passed server 19 files/206 tests and migration/recovery/runbook 4 files/12 tests, plus Prisma validate/generate/build. Reviewer found no remaining actionable findings versus 0e958d5..9b29487 and independently repeated 12 tests in 4 files with zero failures/skips (103.31s, runner start 22:59:35 Asia/Bangkok on October 25). [Complete reviewer output](../../artifacts/lab-04/verification/reviewer-migration-recovery.txt) and the other logs identify scope, environment and exit status. Later evidence commits contain only documentation/artifacts; no product change followed this review. These local passes do not constitute GitHub CI or human approval of the corrected head.
+
+### Issue #86 AI review and verification
+
+AI Reviewer found and Executor corrected double pagination parsing, revoked-session error precedence, stale status controls after Claim/Reassign and loss of the request key on HTTP500 retry. The review also added real lock-wait/session revocation, same-Action/finality races, Requester/CSRF/cross-Ticket/terminal-edge cases and corrected the Reassign test to exercise empty-to-enabled controls. Browser testing found an IdempotencyRecord fixture-teardown FK; cleanup is scoped to fixture User IDs and the full targeted file passed afterward. Reviewer independently passed21tests and confirmed no actionable findings on source `617bd9d65bf11dbc221a8f7ad839d0bb871c171b`, including the fixture delta. This is AI verification, not human peer approval.
+
+Final local results: server227, client151, migration12, security21, targeted browser2, both builds and diff integrity passed. [Complete Issue86 evidence](../../artifacts/lab-04/verification/issue86/README.md) preserves commands, outputs and environment. The earlier application DB was not migrated. #87 workflow scope and human review/merge remain pending.
 
 ## 3. Contract-authoring inspection (historical snapshot before publication)
 

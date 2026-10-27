@@ -1,0 +1,49 @@
+
+> toktickit-client@1.0.0 test
+> vitest run
+
+
+ RUN  v2.1.9 D:/Software Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/client
+
+ ✓ tests/lab-03/RequesterRegression.test.ts (2 tests) 9ms
+ ✓ tests/lab-01/App.test.tsx (3 tests) 127ms
+ ✓ tests/lab-02/AppShell.test.tsx (2 tests) 133ms
+ ✓ tests/lab-02/RequesterTicketDetail.test.tsx (6 tests) 277ms
+ ✓ tests/lab-02/AttachmentSection.test.tsx (17 tests) 431ms
+ ✓ tests/lab-03/RequesterTicketDetail.test.tsx (16 tests) 674ms
+ ✓ tests/lab-02/CreateTicket.test.tsx (16 tests) 725ms
+ ✓ tests/lab-03/AppShell.test.tsx (11 tests) 539ms
+ ✓ tests/lab-02/MyTickets.test.tsx (20 tests) 1021ms
+   ✓ My Tickets — search, filters and sorting > UI-13: sends the search term after debouncing 341ms
+ ✓ tests/lab-03/StaffTicketQueue.test.tsx (10 tests) 1080ms
+ ✓ tests/lab-03/ChangePassword.test.tsx (5 tests) 4138ms
+   ✓ Issue 50 Change Password > UI-L02: validates rules, confirmation, and reuse before making a mutation 978ms
+   ✓ Issue 50 Change Password > UI-L02: supports self-service mode and clears password fields during save 955ms
+   ✓ Issue 50 Change Password > UI-L02: sends the current CSRF token, prevents duplicate password changes, and replaces it after success 1180ms
+   ✓ Issue 50 Change Password > UI-L02: gives safe current-password failure feedback and does not expose server details 875ms
+ ✓ tests/lab-03/StaffTicketDetail.test.tsx (22 tests) 5033ms
+   ✓ Issue #58 Staff Ticket Detail > requires a Public Comment for Waiting for Requester and submits it with the status mutation 521ms
+   ✓ Issue #58 Staff Ticket Detail > keeps Public Comments and Internal Notes available while a Ticket is Resolved 850ms
+   ✓ Issue #58 Staff Ticket Detail > posts Public Comments and Internal Notes through separate forms and clears each draft 683ms
+ ✓ tests/lab-03/Login.test.tsx (8 tests) 5109ms
+   ✓ Issue 50 Login > UI-L01: prevents duplicate submissions and disables the form while signing in 774ms
+   ✓ Issue 50 Login > UI-L01: renders safe INVALID_CREDENTIALS feedback without account details 685ms
+   ✓ Issue 50 Login > UI-L01: renders safe USER_INACTIVE feedback without account details 615ms
+   ✓ Issue 50 Login > UI-L01: renders safe LOGIN_THROTTLED feedback without account details 709ms
+   ✓ Issue 50 Login > UI-L01/UI-H01: normalizes email, sends credentials, and lands by the authenticated role 689ms
+   ✓ Issue 50 Login > UI-L01: sends a must-change-password user directly to Change Password 748ms
+   ✓ Issue 50 Login > UI-L01: gives a generic retryable message for network/server failures 727ms
+ ✓ tests/lab-03/UserManagement.test.tsx (13 tests) 7218ms
+   ✓ Issue #60 Administrator User Management > UI-U01/UI-U02: renders deterministic table/cards, badges, search, Role, and active-status filters 726ms
+   ✓ Issue #60 Administrator User Management > UI-U01: creates a User, validates fields, clears sensitive values, refreshes, and announces success 1356ms
+   ✓ Issue #60 Administrator User Management > UI-U01: keeps the Create dialog open for duplicate email and shows a safe field conflict 1124ms
+   ✓ Issue #60 Administrator User Management > UI-U01: edits another User and resets their Initial Password as a distinct confirmed action 1172ms
+   ✓ Issue #60 Administrator User Management > UI-U01: allows own name/email edits while disabling self Role, active, and reset controls 389ms
+   ✓ Issue #60 Administrator User Management > UI-U02: focuses the dialog fallback and blocks Tab while a mutation disables every control 1186ms
+
+ Test Files  14 passed (14)
+      Tests  151 passed (151)
+   Start at  03:39:47
+   Duration  9.90s (transform 880ms, setup 3.92s, collect 6.11s, tests 26.52s, environment 16.14s, prepare 2.81s)
+
+Exit status: 0

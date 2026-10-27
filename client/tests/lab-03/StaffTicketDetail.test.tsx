@@ -31,6 +31,7 @@ const DETAIL: TicketDetail = {
   requestedPriority: "HIGH",
   itPriority: "MEDIUM",
   currentStatus: "OPEN",
+  version: 1,
   createdAt: "2026-09-01T09:14:00.000Z",
   updatedAt: "2026-09-02T10:00:00.000Z",
   category: { id: 2, name: "Network" },
@@ -107,28 +108,36 @@ describe("Issue #58 Staff Ticket Detail", () => {
 
   it("claims an unassigned ticket with independent busy/success feedback", async () => {
     const user = userEvent.setup();
-    const detail = { ...DETAIL, owner: null };
-    renderDetail([detail, { ...detail, owner: OWNER }]);
-    const claim = vi.spyOn(ticketsApi, "claimStaffTicket").mockResolvedValue({ owner: OWNER });
+    const detail = { ...DETAIL, owner: null, allowedTransitions: [] };
+    renderDetail([detail, { ...detail, owner: OWNER, allowedTransitions: ["IN_PROGRESS"] }]);
+    const claim = vi.spyOn(ticketsApi, "claimStaffTicket").mockResolvedValue({ owner: OWNER, ticketVersion: 2 });
 
     await user.click(await screen.findByRole("button", { name: "Claim Ticket" }));
-    expect(claim).toHaveBeenCalledWith(DETAIL.id);
-    expect(await screen.findByText("Ticket claimed successfully. Refreshing owner details.")).toBeInTheDocument();
+    expect(claim).toHaveBeenCalledWith(DETAIL.id, 1);
+    expect(await screen.findByText("Ticket claimed successfully. Refreshing owner and transition details.")).toBeInTheDocument();
+    expect(await screen.findByRole("option", { name: "In Progress" })).toBeInTheDocument();
   });
 
   it("loads the safe owner directory and captures the displayed expectedOwnerId for Reassign", async () => {
     const user = userEvent.setup();
+    const inactiveOwner = { ...OWNER, id: 12, fullName: "Inactive Staff" };
     const owners = vi.spyOn(ticketsApi, "fetchTicketOwners").mockResolvedValue([OWNER, ADMIN]);
-    const reassign = vi.spyOn(ticketsApi, "reassignStaffTicket").mockResolvedValue({ owner: ADMIN });
-    renderDetail([DETAIL, { ...DETAIL, owner: ADMIN }]);
+    const reassign = vi.spyOn(ticketsApi, "reassignStaffTicket").mockResolvedValue({ owner: ADMIN, ticketVersion: 2 });
+    renderDetail([
+      { ...DETAIL, owner: inactiveOwner, allowedTransitions: [] },
+      { ...DETAIL, owner: ADMIN, allowedTransitions: ["IN_PROGRESS"] },
+    ]);
 
+    expect(await screen.findByRole("heading", { name: DETAIL.ticketNumber })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "In Progress" })).not.toBeInTheDocument();
     await user.click(await screen.findByRole("button", { name: "Reassign Ticket" }));
     expect(await screen.findByRole("option", { name: "Ada Admin — Administrator" })).toBeInTheDocument();
     expect(owners).toHaveBeenCalledTimes(1);
     await user.selectOptions(screen.getByLabelText("New eligible Owner"), String(ADMIN.id));
     await user.click(screen.getByRole("button", { name: "Confirm Reassign" }));
-    expect(reassign).toHaveBeenCalledWith(DETAIL.id, ADMIN.id, OWNER.id);
-    expect(await screen.findByText("Owner changed successfully. Refreshing Ticket detail.")).toBeInTheDocument();
+    expect(reassign).toHaveBeenCalledWith(DETAIL.id, ADMIN.id, inactiveOwner.id, 1);
+    expect(await screen.findByText("Owner changed successfully. Refreshing owner and transition details.")).toBeInTheDocument();
+    expect(await screen.findByRole("option", { name: "In Progress" })).toBeInTheDocument();
   });
 
   it("handles stale Reassign by refreshing and requiring an explicit retry", async () => {
@@ -140,9 +149,12 @@ describe("Issue #58 Staff Ticket Detail", () => {
     await user.click(await screen.findByRole("button", { name: "Reassign Ticket" }));
     await user.selectOptions(await screen.findByLabelText("New eligible Owner"), String(ADMIN.id));
     await user.click(screen.getByRole("button", { name: "Confirm Reassign" }));
-    expect(await screen.findByText(/ownership changed.*explicitly retry/i)).toBeInTheDocument();
+    expect((await screen.findAllByText(/ownership changed.*reload and review/i)).length).toBeGreaterThan(0);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByLabelText("New eligible Owner")).toHaveValue(String(ADMIN.id));
+    await user.click(screen.getByRole("button", { name: "Reload latest Ticket before retrying" }));
     expect((await screen.findAllByText("Ada Admin")).length).toBeGreaterThan(0);
-    expect(screen.getByRole("button", { name: "Reassign Ticket" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
   it("keeps owner-directory forbidden and retry feedback separate from the detail", async () => {
@@ -161,39 +173,54 @@ describe("Issue #58 Staff Ticket Detail", () => {
 
   it("saves IT Priority independently and keeps Requested Priority read-only", async () => {
     const user = userEvent.setup();
-    const save = vi.spyOn(ticketsApi, "updateStaffItPriority").mockResolvedValue({ itPriority: "URGENT" });
+    const save = vi.spyOn(ticketsApi, "updateStaffItPriority").mockResolvedValue({ itPriority: "URGENT", ticketVersion: 2 });
     renderDetail();
     await user.selectOptions(await screen.findByRole("combobox", { name: "IT Priority" }), "URGENT");
     await user.click(screen.getByRole("button", { name: "Save IT Priority" }));
-    expect(save).toHaveBeenCalledWith(DETAIL.id, "URGENT");
+    expect(save).toHaveBeenCalledWith(DETAIL.id, "URGENT", 1);
     expect(await screen.findByText("IT Priority saved.")).toBeInTheDocument();
     expect(screen.getByTestId("requested-priority")).toHaveTextContent("High");
   });
 
   it("requires confirmation for significant transitions and explains Closed finality", async () => {
     const user = userEvent.setup();
-    const update = vi.spyOn(ticketsApi, "updateStaffTicketStatus").mockResolvedValue({ currentStatus: "CLOSED", resolutionIndication: null, allowedTransitions: [] });
+    const update = vi.spyOn(ticketsApi, "updateStaffTicketStatus").mockResolvedValue({ currentStatus: "CLOSED", resolutionIndication: null, allowedTransitions: [], ticketVersion: 2 });
     renderDetail([{ ...DETAIL, allowedTransitions: ["CLOSED"] }, { ...DETAIL, currentStatus: "CLOSED", allowedTransitions: [] }]);
     await user.selectOptions(await screen.findByLabelText("Next status"), "CLOSED");
     await user.click(screen.getByRole("button", { name: "Update status" }));
     expect(screen.getByRole("dialog")).toHaveTextContent("Closing this Ticket is final");
     expect(update).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "Confirm Closed" }));
-    expect(update).toHaveBeenCalledWith(DETAIL.id, "CLOSED", undefined);
+    expect(update).toHaveBeenCalledWith(DETAIL.id, "CLOSED", 1, undefined, expect.any(String));
+  });
+
+  it("reuses the exact status idempotency key after an ambiguous server error", async () => {
+    const user = userEvent.setup();
+    const update = vi.spyOn(ticketsApi, "updateStaffTicketStatus")
+      .mockRejectedValueOnce(new ApiError(500, "INTERNAL_ERROR", "unknown commit outcome"))
+      .mockResolvedValueOnce({ currentStatus: "IN_PROGRESS", resolutionIndication: null, allowedTransitions: [], ticketVersion: 2 });
+    renderDetail([{ ...DETAIL, allowedTransitions: ["IN_PROGRESS"] }]);
+    await user.selectOptions(await screen.findByLabelText("Next status"), "IN_PROGRESS");
+    await user.click(screen.getByRole("button", { name: "Update status" }));
+    expect(await screen.findByText(/status could not be updated/i)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Update status" }));
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(2));
+    expect(update.mock.calls[0]).toEqual([DETAIL.id, "IN_PROGRESS", 1, undefined, expect.any(String)]);
+    expect(update.mock.calls[1][4]).toBe(update.mock.calls[0][4]);
   });
 
   it("requires a Public Comment for Waiting for Requester and submits it with the status mutation", async () => {
     const user = userEvent.setup();
     const update = vi.spyOn(ticketsApi, "updateStaffTicketStatus")
       .mockRejectedValueOnce(new ApiError(400, "VALIDATION_FAILED", "invalid"))
-      .mockResolvedValueOnce({ currentStatus: "WAITING_FOR_REQUESTER", resolutionIndication: null, allowedTransitions: ["OPEN"] });
+      .mockResolvedValueOnce({ currentStatus: "WAITING_FOR_REQUESTER", resolutionIndication: null, allowedTransitions: ["OPEN"], ticketVersion: 2 });
     renderDetail([{ ...DETAIL, allowedTransitions: ["WAITING_FOR_REQUESTER"] }]);
     await user.selectOptions(await screen.findByLabelText("Next status"), "WAITING_FOR_REQUESTER");
     await user.click(screen.getByRole("button", { name: "Update status" }));
     expect(await screen.findByText(/Enter a Public Comment when waiting/i)).toBeInTheDocument();
     await user.type(screen.getByLabelText(/Public Comment for Requester/), "Please test again.");
     await user.click(screen.getByRole("button", { name: "Update status" }));
-    expect(update).toHaveBeenCalledWith(DETAIL.id, "WAITING_FOR_REQUESTER", "Please test again.");
+    expect(update).toHaveBeenLastCalledWith(DETAIL.id, "WAITING_FOR_REQUESTER", 1, "Please test again.", expect.any(String));
   });
 
   it.each([
@@ -206,6 +233,7 @@ describe("Issue #58 Staff Ticket Detail", () => {
       currentStatus: status,
       resolutionIndication: null,
       allowedTransitions: [],
+      ticketVersion: 2,
     });
     renderDetail([{ ...DETAIL, allowedTransitions: [status] }, { ...DETAIL, currentStatus: status, allowedTransitions: [] }]);
     await user.selectOptions(await screen.findByRole("combobox", { name: "Next status" }), status);
@@ -213,7 +241,7 @@ describe("Issue #58 Staff Ticket Detail", () => {
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(update).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: confirmationLabel }));
-    expect(update).toHaveBeenCalledWith(DETAIL.id, status, undefined);
+    expect(update).toHaveBeenCalledWith(DETAIL.id, status, 1, undefined, expect.any(String));
   });
 
   it("keeps Public Comments and Internal Notes available while a Ticket is Resolved", async () => {

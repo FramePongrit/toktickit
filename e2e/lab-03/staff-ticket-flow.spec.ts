@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { test, expect, request as playwrightRequest } from "@playwright/test";
 import {
   API_URL,
@@ -45,7 +46,7 @@ test.describe.serial("E2E-S01 — real Staff Queue and Ticket workflow", () => {
       }
       const highPriorityUpdate = await staffApi.patch(`${API_URL}/api/staff/tickets/${queueTickets[0].id}/it-priority`, {
         headers: { "X-CSRF-Token": staffSession.csrfToken },
-        data: { itPriority: "HIGH" },
+        data: { itPriority: "HIGH", expectedTicketVersion: 1 },
       });
       expect(highPriorityUpdate.status()).toBe(200);
 
@@ -181,18 +182,21 @@ test.describe.serial("E2E-S01 — real Staff Queue and Ticket workflow", () => {
       const finalTicket = await createTicketApi(requesterApi, requesterSession, `Issue 61 final guard ${E2E_TAG}`);
       const finalOwner = await staffApi.patch(`${API_URL}/api/staff/tickets/${finalTicket.id}/claim`, {
         headers: { "X-CSRF-Token": staffSession.csrfToken },
+        data: { expectedTicketVersion: 1 },
       });
       expect(finalOwner.status()).toBe(200);
+      let ticketVersion = (await finalOwner.json()).ticketVersion as number;
       for (const status of ["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"] as const) {
         const finalStatus = await staffApi.patch(`${API_URL}/api/staff/tickets/${finalTicket.id}/status`, {
-          headers: { "X-CSRF-Token": staffSession.csrfToken },
-          data: { status },
+          headers: { "X-CSRF-Token": staffSession.csrfToken, "Idempotency-Key": randomUUID() },
+          data: { expectedTicketVersion: ticketVersion, status },
         });
         expect(finalStatus.status()).toBe(200);
+        ticketVersion = (await finalStatus.json()).ticketVersion as number;
       }
       const finalInvalidPriority = await staffApi.patch(`${API_URL}/api/staff/tickets/${finalTicket.id}/it-priority`, {
         headers: { "X-CSRF-Token": staffSession.csrfToken },
-        data: { itPriority: "NOT_A_PRIORITY" },
+        data: { itPriority: "NOT_A_PRIORITY", expectedTicketVersion: ticketVersion },
       });
       expect(finalInvalidPriority.status()).toBe(409);
       expect((await finalInvalidPriority.json()).error.code).toBe("TICKET_FINAL");

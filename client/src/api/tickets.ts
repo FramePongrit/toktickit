@@ -39,39 +39,50 @@ export function fetchStaffTicket(id: number): Promise<TicketDetail> {
   return request<TicketDetail>(`/api/staff/tickets/${id}`);
 }
 
-export function claimStaffTicket(id: number): Promise<{ owner: TicketOwnerOption }> {
-  return request<{ owner: TicketOwnerOption }>(`/api/staff/tickets/${id}/claim`, { method: "PATCH" });
+export function claimStaffTicket(id: number, expectedTicketVersion: number): Promise<{ owner: TicketOwnerOption; ticketVersion: number }> {
+  return request<{ owner: TicketOwnerOption; ticketVersion: number }>(`/api/staff/tickets/${id}/claim`, {
+    method: "PATCH",
+    body: JSON.stringify({ expectedTicketVersion }),
+  });
 }
 
 export function reassignStaffTicket(
   id: number,
   ownerId: number,
-  expectedOwnerId: number
-): Promise<{ owner: TicketOwnerOption }> {
-  return request<{ owner: TicketOwnerOption }>(`/api/staff/tickets/${id}/owner`, {
+  expectedOwnerId: number,
+  expectedTicketVersion: number
+): Promise<{ owner: TicketOwnerOption; ticketVersion: number }> {
+  return request<{ owner: TicketOwnerOption; ticketVersion: number }>(`/api/staff/tickets/${id}/owner`, {
     method: "PATCH",
-    body: JSON.stringify({ ownerId, expectedOwnerId }),
+    body: JSON.stringify({ ownerId, expectedOwnerId, expectedTicketVersion }),
   });
 }
 
 export function updateStaffItPriority(
   id: number,
-  itPriority: Priority
-): Promise<{ itPriority: Priority }> {
-  return request<{ itPriority: Priority }>(`/api/staff/tickets/${id}/it-priority`, {
+  itPriority: Priority,
+  expectedTicketVersion: number
+): Promise<{ itPriority: Priority; ticketVersion: number }> {
+  return request<{ itPriority: Priority; ticketVersion: number }>(`/api/staff/tickets/${id}/it-priority`, {
     method: "PATCH",
-    body: JSON.stringify({ itPriority }),
+    body: JSON.stringify({ itPriority, expectedTicketVersion }),
   });
 }
 
 export function updateStaffTicketStatus(
   id: number,
   status: TicketStatus,
-  publicComment?: string
-): Promise<Pick<TicketDetail, "currentStatus" | "resolutionIndication" | "allowedTransitions">> {
-  return request<Pick<TicketDetail, "currentStatus" | "resolutionIndication" | "allowedTransitions">>(
+  expectedTicketVersion: number,
+  publicComment: string | undefined,
+  idempotencyKey: string
+): Promise<Pick<TicketDetail, "currentStatus" | "resolutionIndication" | "allowedTransitions"> & { ticketVersion: number }> {
+  return request<Pick<TicketDetail, "currentStatus" | "resolutionIndication" | "allowedTransitions"> & { ticketVersion: number }>(
     `/api/staff/tickets/${id}/status`,
-    { method: "PATCH", body: JSON.stringify({ status, ...(publicComment === undefined ? {} : { publicComment }) }) }
+    {
+      method: "PATCH",
+      headers: { "Idempotency-Key": idempotencyKey },
+      body: JSON.stringify({ expectedTicketVersion, status, ...(publicComment === undefined ? {} : { publicComment }) }),
+    }
   );
 }
 

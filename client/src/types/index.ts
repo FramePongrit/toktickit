@@ -111,6 +111,8 @@ export interface TicketDetail {
   /** Optional keeps Lab 2 fixture objects source-compatible; the API always returns it. */
   itPriority?: Priority;
   currentStatus: TicketStatus;
+  /** Staff Ticket Detail always supplies the operational version. */
+  version?: number;
   createdAt: string;
   updatedAt: string;
   category: ReferenceItem;

@@ -240,7 +240,7 @@ describe("credentialed exact-origin CORS", () => {
       .options("/api/tickets/1/attachments")
       .set("Origin", origin)
       .set("Access-Control-Request-Method", "POST")
-      .set("Access-Control-Request-Headers", "Content-Type, X-CSRF-Token, Accept");
+      .set("Access-Control-Request-Headers", "Content-Type, X-CSRF-Token, Idempotency-Key, Accept");
 
     expect(res.status).toBe(204);
     expect(res.headers["access-control-allow-origin"]).toBe(origin);
@@ -248,6 +248,8 @@ describe("credentialed exact-origin CORS", () => {
     expect(res.headers["access-control-allow-methods"]).toContain("PATCH");
     expect(res.headers["access-control-allow-methods"]).toContain("OPTIONS");
     expect(res.headers["access-control-allow-headers"]).toContain("X-CSRF-Token");
+    expect(res.headers["access-control-allow-headers"]).toContain("Idempotency-Key");
+    expect(res.headers["access-control-expose-headers"]).toContain("Idempotency-Replayed");
     expect(res.headers["access-control-allow-headers"]).not.toContain("boundary");
   });
 

@@ -1,0 +1,3 @@
+issue61_verify schemas remaining: 0
+Environment: disposable PostgreSQL16 lab4test container; read-only check for issue61_verify_* task-owned schemas; credentials omitted.
+Exit status: 0
