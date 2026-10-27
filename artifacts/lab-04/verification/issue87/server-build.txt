@@ -1,0 +1,8 @@
+Issue #87 server production TypeScript build
+Command: npm --prefix server run build.
+
+> toktickit-server@1.0.0 build
+> tsc
+
+
+Exit code: 0

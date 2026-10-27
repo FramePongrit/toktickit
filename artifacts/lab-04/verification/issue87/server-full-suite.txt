@@ -1,0 +1,131 @@
+Issue #87 server regression
+Environment: PostgreSQL 16 dedicated container; test database lab4test; isolated schema lab4_issue87_base.
+Command: npm --prefix server test (escalated host loopback access; explicit isolated DATABASE_URL and LAB4_PG_CONTAINER; URL/credentials omitted).
+Sandbox-only attempt was blocked before tests by host loopback isolation; this run verifies through the approved isolated target.
+
+> toktickit-server@1.0.0 test
+> vitest run
+
+
+ RUN  v2.1.9 D:/Software Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/server
+
+Environment variables loaded from .env
+Running seed command `tsx prisma/seed.ts` ...
+Seeded 4 categories, 7 related systems, 5 active requesters, 3 active IT staff, and 1 active administrator.
+
+The seed command has been executed.
+stderr | tests/lab-04/ticket-workflow.api.test.ts > Issue #87 — Ticket workflow gate and history > rolls back cancellation and Waiting comment when revision/event writes fail after effects
+Unhandled error
+
+stderr | tests/lab-04/ticket-workflow.api.test.ts > Issue #87 — Ticket workflow gate and history > rolls back cancellation and Waiting comment when revision/event writes fail after effects
+Unhandled error
+
+stderr | tests/lab-04/ticket-workflow.api.test.ts > Issue #87 — Ticket workflow gate and history > rolls back cancellation and Waiting comment when revision/event writes fail after effects
+Unhandled error
+
+ ✓ tests/lab-04/ticket-workflow.api.test.ts (6 tests) 2829ms
+   ✓ Issue #87 — Ticket workflow gate and history > gates resolution on current-cycle work, retains the legacy close exception, and reopens once 724ms
+stdout | tests/lab-03/migration-seed.regression.test.ts
+Seeded 4 categories, 7 related systems, 5 active requesters, 3 active IT staff, and 1 active administrator.
+
+stdout | tests/lab-03/migration-seed.regression.test.ts > MIG-01 — actual Lab 2 through Lab 4 upgrade > renames in place, preserves historical relations/files, copies IT Priority, then backfills credentials
+Seeded 4 categories, 7 related systems, 5 active requesters, 3 active IT staff, and 1 active administrator.
+
+stdout | tests/lab-03/migration-seed.regression.test.ts > MIG-01 — actual Lab 2 through Lab 4 upgrade > preserves a directly established changed credential across a repeat seed
+Seeded 4 categories, 7 related systems, 5 active requesters, 3 active IT staff, and 1 active administrator.
+
+stdout | tests/lab-03/migration-seed.regression.test.ts > MIG-02 — idempotent workflow seed > seeds a separate fresh Lab 4 schema without duplicates and advances, but never lowers, the 2026 ticket counter
+Seeded 4 categories, 7 related systems, 5 active requesters, 3 active IT staff, and 1 active administrator.
+
+stdout | tests/lab-03/migration-seed.regression.test.ts > MIG-02 — idempotent workflow seed > seeds a separate fresh Lab 4 schema without duplicates and advances, but never lowers, the 2026 ticket counter
+Seeded 4 categories, 7 related systems, 5 active requesters, 3 active IT staff, and 1 active administrator.
+
+stdout | tests/lab-03/migration-seed.regression.test.ts > MIG-02 — idempotent workflow seed > seeds a separate fresh Lab 4 schema without duplicates and advances, but never lowers, the 2026 ticket counter
+Seeded 4 categories, 7 related systems, 5 active requesters, 3 active IT staff, and 1 active administrator.
+
+ ✓ tests/lab-03/migration-seed.regression.test.ts (4 tests) 7343ms
+   ✓ MIG-01 — actual Lab 2 through Lab 4 upgrade > renames in place, preserves historical relations/files, copies IT Priority, then backfills credentials 603ms
+   ✓ MIG-01 — actual Lab 2 through Lab 4 upgrade > preserves a directly established changed credential across a repeat seed 575ms
+   ✓ MIG-02 — idempotent workflow seed > seeds a separate fresh Lab 4 schema without duplicates and advances, but never lowers, the 2026 ticket counter 1381ms
+ ✓ tests/lab-03/staff-ticket-detail.api.test.ts (17 tests) 2594ms
+   ✓ Issue #57 — Status API-S04 > allows every documented status edge with the Waiting comment rule 422ms
+ ✓ tests/lab-03/users-admin.api.test.ts (11 tests) 10300ms
+   ✓ Issue #59 — Administrator User Management API > API-U01: searches normalized name/email, applies Role and active-status filters, and rejects unknown query input 471ms
+   ✓ Issue #59 — Administrator User Management API > API-U02: creates every Role/active combination with a mandatory next-login change 1387ms
+   ✓ Issue #59 — Administrator User Management API > API-U02: rejects normalized duplicate email, invalid Role/password, and unsupported fields safely 486ms
+   ✓ Issue #59 — Administrator User Management API > API-U03: rejects mixed-case whitespace email collisions and empty/invalid edit payloads 467ms
+   ✓ Issue #59 — Administrator User Management API > API-U03: preserves eligible ownership for Admin-to-Staff and reports safe non-final ownership conflicts 529ms
+   ✓ Issue #59 — Administrator User Management API > API-U03: allows activation, permits historical Final ownership, and revokes sessions on deactivation/Role change 1390ms
+   ✓ Issue #59 — Administrator User Management API > API-U03: serializes two active-Administrator demotions so one loses with LAST_ACTIVE_ADMINISTRATOR 912ms
+   ✓ Issue #59 — Administrator User Management API > API-U03: deterministically serializes concurrent two-Administrator deactivation with a roster-lock barrier 919ms
+   ✓ Issue #59 — Administrator User Management API > API-U04: resets another User's password, forces next-login change, and revokes all sessions 1842ms
+ ✓ tests/lab-03/comments-notes.api.test.ts (16 tests) 1743ms
+ ✓ tests/lab-04/actions-taken.api.test.ts (6 tests) 1912ms
+stderr | tests/lab-03/authorization.api.test.ts > API-Z04 — scrubbed unexpected failures > maps an unexpected Ticket service failure to exactly 500 INTERNAL_ERROR
+Unhandled error
+
+ ✓ tests/lab-03/authorization.api.test.ts (14 tests) 4549ms
+   ✓ API-Z01 — authentication, current state, and guard precedence > rejects missing, forged, orphaned, revoked, and expired sessions as 401 496ms
+   ✓ API-Z01 — authentication, current state, and guard precedence > re-reads mandatory-password, active, and current Role state on every request 488ms
+   ✓ API-Z01 — authentication, current state, and guard precedence > checks Role before CSRF and CSRF before requester domain work 455ms
+   ✓ API-Z02 — Requester ownership and identity authority > allows Staff and Administrator to read Attachment data without Requester ownership 497ms
+   ✓ API-Z03 — direct Role boundaries and restricted representations > denies Staff and Administrator on Requester Ticket/Attachment mutations 509ms
+   ✓ API-Z03 — direct Role boundaries and restricted representations > lets Administrator pass the Staff boundary while preserving feature scope 472ms
+ ✓ tests/lab-04/concurrency.api.test.ts (5 tests) 1605ms
+   ✓ API-C01 / API-C02 — operational concurrency > keeps Admin roster edits and an Admin-caller/Staff-assignee write in ordered User locks 482ms
+ ✓ tests/lab-03/staff-queue.api.test.ts (11 tests) 1554ms
+ ✓ tests/lab-03/auth-security.unit.test.ts (21 tests) 1329ms
+   ✓ password security > hashes with bcrypt cost 12 and compares without exposing the hash 641ms
+   ✓ password security > detects reuse of the current password but accepts a different valid password 632ms
+ ✓ tests/lab-02/attachments.api.test.ts (23 tests) 1469ms
+stdout | tests/lab-04/migration.regression.test.ts > MIG-02 — Lab 4 seed is additive and repeatable > seeds workflow coverage, then preserves changed credentials and user work
+Seeded 4 categories, 7 related systems, 5 active requesters, 3 active IT staff, and 1 active administrator.
+
+stdout | tests/lab-04/migration.regression.test.ts > MIG-02 — Lab 4 seed is additive and repeatable > seeds workflow coverage, then preserves changed credentials and user work
+Seeded 4 categories, 7 related systems, 5 active requesters, 3 active IT staff, and 1 active administrator.
+
+stdout | tests/lab-04/migration.regression.test.ts > MIG-02 — Lab 4 seed is additive and repeatable > seeds workflow coverage, then preserves changed credentials and user work
+Seeded 4 categories, 7 related systems, 5 active requesters, 3 active IT staff, and 1 active administrator.
+
+ ✓ tests/lab-04/migration.regression.test.ts (2 tests) 2447ms
+   ✓ MIG-02 — Lab 4 seed is additive and repeatable > seeds workflow coverage, then preserves changed credentials and user work 1553ms
+ ✓ tests/lab-02/my-tickets.api.test.ts (23 tests) 1082ms
+ ✓ tests/lab-03/auth.api.test.ts (11 tests) 5532ms
+   ✓ API-A03 — migrated legacy Requester password lifecycle > gates normal APIs, changes the Initial Password, revokes old sessions, and supports reload/logout 1143ms
+   ✓ API-A03 — migrated legacy Requester password lifecycle > rejects reuse, mismatched confirmation, and invalid password boundaries without replacing the session 1366ms
+   ✓ API-A03 — migrated legacy Requester password lifecycle > revokes every other session and creates a fresh current-device session 1140ms
+stdout | tests/lab-04/recovery.integration.test.ts
+Seeded 4 categories, 7 related systems, 5 active requesters, 3 active IT staff, and 1 active administrator.
+
+ ✓ tests/lab-04/recovery.integration.test.ts (1 test) 4956ms
+   ✓ MIG-03 — isolated database and attachment recovery > restores a custom-format database backup and matching file bytes without changing the source 2305ms
+stderr | tests/lab-04/idempotency.api.test.ts > API-I01 — serialized idempotent writes > rolls back an injected post-effect failure and permits the same key to succeed
+Unhandled error
+
+stderr | tests/lab-04/idempotency.api.test.ts > API-I01 — serialized idempotent writes > rolls back Action create history and version on failure, then replays a successful transition
+Unhandled error
+
+ ✓ tests/lab-04/idempotency.api.test.ts (5 tests) 1025ms
+ ✓ tests/lab-03/attachments.api.test.ts (9 tests) 1151ms
+ ✓ tests/lab-02/create-ticket.api.test.ts (19 tests) 1361ms
+ ✓ tests/lab-03/requester-regression.api.test.ts (7 tests) 928ms
+ ✓ tests/lab-04/backup-runbook.test.ts (5 tests) 3323ms
+   ✓ Lab 4 backup and restore runbook > hashes source uploads before copying and rejects a corrupted backup copy 1157ms
+   ✓ Lab 4 backup and restore runbook > fails before createdb when the backup is missing database.dump in a fresh PowerShell process 424ms
+   ✓ Lab 4 backup and restore runbook > fails before createdb when the backup is missing uploads in a fresh PowerShell process 383ms
+   ✓ Lab 4 backup and restore runbook > fails before createdb when the backup is missing uploads-sha256.csv in a fresh PowerShell process 388ms
+   ✓ Lab 4 backup and restore runbook > rejects altered backup bytes before createdb and accepts an empty upload inventory 964ms
+ ✓ tests/lab-02/ticket-detail.api.test.ts (10 tests) 829ms
+ ✓ tests/lab-04/action-rules.unit.test.ts (3 tests) 7ms
+ ✓ tests/lab-04/ticket-rules.unit.test.ts (3 tests) 4ms
+ ✓ tests/lab-04/idempotency.unit.test.ts (2 tests) 9ms
+ ✓ tests/lab-01/categories.test.ts (1 test) 25ms
+ ✓ tests/lab-01/health.test.ts (1 test) 14ms
+
+ Test Files  26 passed (26)
+      Tests  236 passed (236)
+   Start at  02:29:19
+   Duration  71.85s (transform 455ms, setup 0ms, collect 5.60s, tests 59.92s, environment 3ms, prepare 1.25s)
+
+
+Exit code: 0
