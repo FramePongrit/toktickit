@@ -5,8 +5,16 @@ import { Link, MemoryRouter, Route, Routes } from "react-router-dom";
 import { StaffTicketDetailPage } from "../../src/pages/StaffTicketDetailPage.js";
 import * as ticketsApi from "../../src/api/tickets.js";
 import * as attachmentApi from "../../src/api/attachments.js";
+import * as actionsApi from "../../src/api/actions.js";
 import { ApiError } from "../../src/lib/http.js";
 import type { ResolutionGate, TicketDetail } from "../../src/types/index.js";
+import type { ActionPage, TicketAction } from "../../src/api/actions.js";
+
+const auth = vi.hoisted(() => ({ user: { id: 10, fullName: "Alex Staff", email: "alex@example.test", role: "STAFF", active: true, mustChangePassword: false } }));
+vi.mock("../../src/context/AuthContext.js", () => ({
+  useAuth: () => ({ user: auth.user }),
+  roleLabel: (role: string) => role === "ADMIN" ? "Administrator" : role === "STAFF" ? "IT Staff" : "Requester",
+}));
 
 const OWNER = { id: 10, fullName: "Alex Staff", role: "STAFF" as const };
 const ADMIN = { id: 11, fullName: "Ada Admin", role: "ADMIN" as const };
@@ -73,13 +81,20 @@ const DETAIL: TicketDetail = {
   allowedTransitions: ["IN_PROGRESS", "WAITING_FOR_REQUESTER", "CANCELLED"],
 };
 
-function renderDetail(responses: TicketDetail[] = [DETAIL], withTicketSwitcher = false) {
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((accept) => { resolve = accept; });
+  return { promise, resolve };
+}
+
+function renderDetail(responses: TicketDetail[] = [DETAIL], withTicketSwitcher = false, loader?: (ticketId: number) => Promise<TicketDetail>) {
   const fetch = vi.spyOn(ticketsApi, "fetchStaffTicket");
-  responses.forEach((response) => fetch.mockResolvedValueOnce(response));
+  if (loader) fetch.mockImplementation(loader);
+  else responses.forEach((response) => fetch.mockResolvedValueOnce(response));
   const rendered = render(
     <MemoryRouter initialEntries={[`/staff/tickets/${DETAIL.id}`]}>
       <Routes>
-        <Route path="/staff/tickets/:id" element={withTicketSwitcher ? <><Link to="/staff/tickets/43">Open next Ticket</Link><StaffTicketDetailPage /></> : <StaffTicketDetailPage />} />
+        <Route path="/staff/tickets/:id" element={withTicketSwitcher ? <><Link to="/staff/tickets/43">Open next Ticket</Link><Link to="/staff/tickets/42">Return to first Ticket</Link><StaffTicketDetailPage /></> : <StaffTicketDetailPage />} />
         <Route path="/staff/tickets" element={<h1>Staff Queue</h1>} />
       </Routes>
     </MemoryRouter>
@@ -305,6 +320,52 @@ describe("Issue #58 Staff Ticket Detail", () => {
     expect(await screen.findByText("Enter a reason before cancelling this Ticket.")).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(update).not.toHaveBeenCalled();
+  });
+
+  it("ignores a stale Action-parent refresh after navigating away and back to the same Ticket", async () => {
+    const user = userEvent.setup();
+    const pendingRefresh = deferred<TicketDetail>();
+    const currentTicket = { ...DETAIL, summary: "Current route version of Ticket 42" };
+    const nextTicket = { ...DETAIL, id: 43, ticketNumber: "TKT-2026-000043", summary: "Ticket 43" };
+    let ticket42Reads = 0;
+    const { fetch } = renderDetail([], true, async (ticketId) => {
+      if (ticketId === 43) return nextTicket;
+      ticket42Reads += 1;
+      if (ticket42Reads === 1) return DETAIL;
+      if (ticket42Reads === 2) return pendingRefresh.promise;
+      return currentTicket;
+    });
+
+    const action: TicketAction = {
+      id: 80, ticketId: 42, workCycle: 1, status: "PLANNED", description: "Add a browser-created Action",
+      result: null, actionAt: "2026-09-02T10:00:00.000Z", assignee: OWNER, assigneeEligible: true,
+      createdBy: OWNER, performedBy: null, followUpRequired: false, followUpNote: null, attachmentNotes: null,
+      version: 1, createdAt: "2026-09-02T10:01:00.000Z", updatedAt: "2026-09-02T10:01:00.000Z",
+      completedAt: null, cancelledAt: null, cancelledBy: null, cancelReason: null,
+      permissions: { canEdit: true, allowedTransitions: ["COMPLETED"] },
+    };
+    vi.spyOn(actionsApi, "fetchEligibleActionOwners").mockResolvedValue([OWNER, ADMIN]);
+    vi.spyOn(actionsApi, "fetchStaffActions").mockResolvedValue({ data: [], page: 1, pageSize: 10, total: 0, totalPages: 0, ticketVersion: 1, workCycle: 1 } satisfies ActionPage);
+    vi.spyOn(actionsApi, "fetchStaffWorkflow").mockResolvedValue({ data: [], page: 1, pageSize: 10, total: 0, totalPages: 0 });
+    vi.spyOn(actionsApi, "createStaffAction").mockResolvedValue({ action, ticketVersion: 2 });
+
+    await screen.findByRole("heading", { name: DETAIL.ticketNumber });
+    await user.click(screen.getByRole("tab", { name: "Actions Taken" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "New Action" })).toBeEnabled());
+    await user.click(screen.getByRole("button", { name: "New Action" }));
+    await user.type(screen.getByLabelText(/^Action Description/), "Add a browser-created Action");
+    await user.click(screen.getByRole("button", { name: "Save Planned Action" }));
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+
+    await user.click(screen.getByRole("link", { name: "Open next Ticket" }));
+    await screen.findByRole("heading", { name: nextTicket.ticketNumber });
+    await user.click(screen.getByRole("link", { name: "Return to first Ticket" }));
+    await screen.findByRole("heading", { name: DETAIL.ticketNumber });
+    expect(await screen.findByText(currentTicket.summary)).toBeInTheDocument();
+
+    pendingRefresh.resolve({ ...DETAIL, summary: "Stale pre-navigation parent response" });
+    await waitFor(() => expect(screen.getByText(currentTicket.summary)).toBeInTheDocument());
+    expect(screen.queryByText("Stale pre-navigation parent response")).not.toBeInTheDocument();
   });
 
   it.each([

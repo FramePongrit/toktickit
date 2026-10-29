@@ -78,7 +78,7 @@ describe("Ticket Detail — content", () => {
     await screen.findByRole("heading", { name: "TKT-2026-000042" });
     expect(screen.getByRole("heading", { name: "Public comments" })).toBeInTheDocument();
     expect(screen.queryByText(/Internal Notes/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Actions Taken/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Actions Taken" })).toBeInTheDocument();
     expect(screen.getByText(/IT Priority/i)).toBeInTheDocument();
     expect(screen.queryByText(/Ticket Owner/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Resolution Summary/i)).not.toBeInTheDocument();

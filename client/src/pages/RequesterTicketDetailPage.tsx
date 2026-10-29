@@ -2,8 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { fetchTicket, indicateResolution, postPublicComment } from "../api/tickets.js";
 import { AttachmentSection } from "../components/AttachmentSection.js";
+import { ActionsTakenPanel } from "../components/ActionsTakenPanel.js";
 import { PriorityBadge, StatusBadge } from "../components/Badges.js";
 import { StateBlock } from "../components/StateBlock.js";
+import { TicketDetailTabs } from "../components/TicketDetailTabs.js";
 import { ApiError } from "../lib/http.js";
 import type {
   AttachmentMeta,
@@ -327,6 +329,7 @@ export function RequesterTicketDetailPage() {
         </div>
       )}
 
+      <TicketDetailTabs details={<>
       <section className="zen-card p-3 p-md-4 mb-4" aria-label="Ticket information">
         <div className="row">
           <ReadOnlyField label="Ticket No.">{ticket.ticketNumber}</ReadOnlyField>
@@ -456,6 +459,7 @@ export function RequesterTicketDetailPage() {
         onChanged={updateAttachments}
         readOnly={isFinal}
       />
+      </>} actions={<ActionsTakenPanel ticket={ticket} viewerRole="REQUESTER" />} />
     </div>
   );
 }

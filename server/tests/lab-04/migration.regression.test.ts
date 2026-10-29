@@ -8,6 +8,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { seedDatabase } from "../../prisma/seed.js";
+import { expectTicketVersionTimeline } from "../support/ticketVersionTimeline.js";
 
 const SERVER_ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const PRISMA_DIRECTORY = path.join(SERVER_ROOT, "prisma");
@@ -64,34 +65,6 @@ async function cleanup(): Promise<void> {
   await admin?.$disconnect();
   admin = undefined;
   if (temporaryDirectory) await fs.rm(temporaryDirectory, { recursive: true, force: true });
-}
-
-async function expectTicketVersionTimeline(db: PrismaClient, ticketNumber: string): Promise<void> {
-  const ticket = await db.ticket.findUniqueOrThrow({ where: { ticketNumber } });
-  const [events, actions] = await Promise.all([
-    db.ticketWorkflowEvent.findMany({ where: { ticketId: ticket.id } }),
-    db.actionTaken.findMany({ where: { ticketId: ticket.id }, include: { revisions: true } }),
-  ]);
-  const created = events.find((event) => event.kind === "CREATED");
-  expect(created?.ticketVersion).toBe(1);
-
-  const operations = [
-    ...events.filter((event) => event.kind === "TRANSITION").map((event) => ({
-      occurredAt: event.occurredAt,
-      ticketEvent: event,
-    })),
-    ...actions.flatMap((action) => action.revisions.map((revision) => ({
-      occurredAt: revision.occurredAt,
-      ticketEvent: null,
-    }))),
-  ].sort((left, right) => left.occurredAt.getTime() - right.occurredAt.getTime());
-
-  let version = 1;
-  for (const operation of operations) {
-    version += 1;
-    if (operation.ticketEvent) expect(operation.ticketEvent.ticketVersion).toBe(version);
-  }
-  expect(ticket.version).toBe(version);
 }
 
 beforeAll(async () => {
@@ -166,8 +139,9 @@ describe("MIG-02 — Lab 4 seed is additive and repeatable", () => {
     expect(firstCycleAction.completedAt?.getTime()).toBeLessThan(resolvedEvent.occurredAt.getTime());
     expect(reopenedEvent.workCycle).toBe(2);
     expect(await db.actionTaken.findFirstOrThrow({ where: { ticketId: reopened.id, workCycle: 2 } }).then((action) => action.createdAt.getTime())).toBeGreaterThan(reopenedEvent.occurredAt.getTime());
-    await expectTicketVersionTimeline(db, "TKT-2026-000110");
-    await expectTicketVersionTimeline(db, "TKT-2026-000111");
+    const resolvedDemo = await db.ticket.findUniqueOrThrow({ where: { ticketNumber: "TKT-2026-000111" } });
+    await expectTicketVersionTimeline(db, reopened.id);
+    await expectTicketVersionTimeline(db, resolvedDemo.id);
 
     const requester = await db.user.findUniqueOrThrow({ where: { email: "jennifer.anderson@kmutt.ac.th" } });
     const changedHash = await bcrypt.hash("ChangedForLab4Fixture123!", 12);

@@ -434,10 +434,6 @@ export async function updateStaffTicketStatus(
           });
           publicCommentId = comment.id;
           await notifyLockTestHook(tx, ticketId, "STATUS_AFTER_WAITING_COMMENT");
-        } else if (input.publicComment !== undefined) {
-          throw HttpError.validationFailed("The submitted data is invalid.", [
-            { field: "publicComment", message: "Public Comment is only accepted for Waiting for Requester." },
-          ]);
         }
 
         if (input.status === "CANCELLED") {

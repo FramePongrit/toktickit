@@ -1,0 +1,25 @@
+COMMAND: npm run e2e -- --project=e2e e2e/lab-03/staff-ticket-flow.spec.ts (isolated test schema; DB URL redacted)
+
+> toktickit-e2e@1.0.0 e2e
+> playwright test --project=e2e e2e/lab-03/staff-ticket-flow.spec.ts
+
+[WebServer] (node:42680) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] TokTickIT API listening on http://localhost:3000
+[WebServer] (node:42800) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer]
+[WebServer]   VITE v6.4.3  ready in 639 ms
+[WebServer]
+[WebServer]   ➜  Local:   http://localhost:5173/
+
+Running 2 tests using 1 worker
+
+(node:40432) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 1 [e2e] › e2e\lab-03\staff-ticket-flow.spec.ts:61:3 › E2E-S01 — real Staff Queue and Ticket workflow › queue filters, ownership actions, communications, resolution lifecycle, attachments, and direct guards (12.2s)
+  ok 2 [e2e] › e2e\lab-03\staff-ticket-flow.spec.ts:253:3 › E2E-S01 — real Staff Queue and Ticket workflow › Requester can upload, download, and remove an attachment through the browser (2.1s)
+
+  2 passed (20.9s)
+EXIT_CODE=0
+ENVIRONMENT: PostgreSQL 16 dedicated test container; schema=lab4_issue88_base; app ports=3000/5173; no main database access.

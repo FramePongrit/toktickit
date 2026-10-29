@@ -145,3 +145,9 @@ Use screenshots under artifacts/lab-04/screenshots/staff-dashboard/, requester-d
 | Earlier Requester/Staff/Admin screens retain consistency | Representative Lab 3 regression captures | Planned |
 
 Compare rendered screens to this document and approved handout illustrations, not memory. Record actual screenshot paths and reviewer initials only after inspection. Do not mark a checklist row complete because a component test merely passed.
+
+## 11. Actions UI increment inspection (October 29)
+
+[PR #98](https://github.com/FramePongrit/toktickit/pull/98), source `60e9d9d`: Actions Taken UI implemented; [actual screenshots and inspection scope](../../artifacts/lab-04/screenshots/actions-taken/README.md), [complete verification](../../artifacts/lab-04/verification/issue88/README.md). Root and AI Reviewer inspected the rendered Actions table/cards, long text, field hierarchy, readonly/terminal states, public timeline/readable private audit, real409 draft and exact-retry states. Desktop1440x900/tablet820x1024/mobile390x844 geometry checks passed; the mobile menu-expanded variant records identity. Computed disabled outline color/border matches primary green. Screenshot framing corrections retained both the Ticket context and readable conflict banner/draft.
+
+Automated component/browser checks cover keyboard tabs/field focus, precise Bangkok date behavior, busy/read-only draft guards and privacy. These are actual scoped Actions checks, not human peer visual approval or a whole-application manual accessibility test. The original checklist above remains the overall Lab4 plan: Dashboard captures, increased-text/screen-reader/manual review and final-main evidence remain pending. One initial independent browser parent-refresh timeout is retained beside its unchanged passing repeat; see the verification limitation rather than treating all attempts as successful.

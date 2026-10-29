@@ -11,8 +11,10 @@ import {
   updateStaffTicketStatus,
 } from "../api/tickets.js";
 import { AttachmentSection } from "../components/AttachmentSection.js";
+import { ActionsTakenPanel } from "../components/ActionsTakenPanel.js";
 import { PriorityBadge, StatusBadge } from "../components/Badges.js";
 import { StateBlock } from "../components/StateBlock.js";
+import { TicketDetailTabs } from "../components/TicketDetailTabs.js";
 import { roleLabel } from "../context/AuthContext.js";
 import { ApiError } from "../lib/http.js";
 import type {
@@ -240,6 +242,10 @@ const GATE_REASON_TEXT: Record<ResolutionGateReason, string> = {
 export function StaffTicketDetailPage() {
   const { id } = useParams();
   const ticketId = Number(id);
+  const routeScope = useRef({ ticketId, generation: 0 });
+  if (routeScope.current.ticketId !== ticketId) {
+    routeScope.current = { ticketId, generation: routeScope.current.generation + 1 };
+  }
   const [ticket, setTicket] = useState<TicketDetail | null>(null);
   const loadedTicketId = useRef<number | null>(null);
   const [loadState, setLoadState] = useState<LoadState>("loading");
@@ -271,6 +277,13 @@ export function StaffTicketDetailPage() {
   const [expectedOwnerId, setExpectedOwnerId] = useState<number | null>(null);
   const ownerTriggerRef = useRef<HTMLButtonElement>(null);
   const ownerDialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const scope = routeScope.current;
+    return () => {
+      if (routeScope.current === scope) routeScope.current = { ticketId: scope.ticketId, generation: scope.generation + 1 };
+    };
+  }, [ticketId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -362,6 +375,17 @@ export function StaffTicketDetailPage() {
       else if (target === "priority") setPriorityFeedback(feedback);
       else setStatusFeedback(feedback);
     }
+  }
+
+  async function refreshActionParent(): Promise<TicketDetail> {
+    const scope = routeScope.current;
+    const requestedId = scope.ticketId;
+    const latest = await fetchStaffTicket(requestedId);
+    if (routeScope.current === scope) {
+      setTicket(latest);
+      setLoadState("ready");
+    }
+    return latest;
   }
 
   async function handleClaim() {
@@ -649,6 +673,8 @@ export function StaffTicketDetailPage() {
         </div>
       )}
 
+      <TicketDetailTabs
+        details={<>
       <section className="zen-card p-3 p-md-4 mb-4" aria-label="Ticket and Requester information">
         <div className="row">
           <ReadOnlyField label="Ticket No.">{ticket.ticketNumber}</ReadOnlyField>
@@ -769,6 +795,9 @@ export function StaffTicketDetailPage() {
       </section>
 
       <AttachmentSection ticketId={ticket.id} attachments={ticket.attachments} onChanged={() => undefined} readOnly />
+        </>}
+        actions={<ActionsTakenPanel ticket={ticket} viewerRole="STAFF" refreshParent={refreshActionParent} />}
+      />
     </div>
   );
 }

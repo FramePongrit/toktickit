@@ -121,6 +121,8 @@ body {
   --bs-btn-hover-border-color: var(--zen-primary);
   --bs-btn-active-bg: var(--zen-primary);
   --bs-btn-active-border-color: var(--zen-primary);
+  --bs-btn-disabled-color: var(--zen-primary);
+  --bs-btn-disabled-border-color: var(--zen-primary);
 }
 
 .btn-outline-danger {
@@ -526,6 +528,162 @@ body {
 .zen-comment-item {
   min-width: 0;
   max-width: 100%;
+}
+
+.zen-ticket-tabs {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 2px solid var(--zen-border);
+}
+
+.zen-ticket-tab {
+  border: 0;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  padding: 0.7rem 1rem;
+  background: transparent;
+  color: var(--zen-text);
+  font-weight: 650;
+}
+
+.zen-ticket-tab.is-active {
+  border-bottom-color: var(--zen-primary);
+  color: var(--zen-primary);
+}
+
+.zen-ticket-tab:focus-visible,
+.action-taken-panel :focus-visible {
+  outline: 3px solid var(--zen-secondary);
+  outline-offset: 2px;
+}
+
+.action-taken-panel,
+.action-taken-panel section,
+.action-editor,
+.action-table-wrap,
+.action-card {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.action-table-wrap {
+  overflow: hidden;
+}
+
+.action-table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.action-table th,
+.action-table td,
+.action-long-text,
+.action-detail-grid dd,
+.action-card-fields dd,
+.action-workflow-list,
+.action-revision-list {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.action-table th:nth-child(1) { width: 10%; }
+.action-table th:nth-child(2) { width: 13%; }
+.action-table th:nth-child(3) { width: 22%; }
+.action-table th:nth-child(4) { width: 10%; }
+.action-table th:nth-child(5) { width: 14%; }
+.action-table th:nth-child(6) { width: 13%; }
+.action-table th:nth-child(7) { width: 8%; }
+.action-table th:nth-child(8) { width: 10%; }
+
+.zen-action-status {
+  white-space: normal;
+}
+
+.zen-action-planned { background: #e9f0eb; color: #263b30; }
+.zen-action-in_progress { background: #d9ebf6; color: #153e56; }
+.zen-action-completed { background: #d9f0e1; color: #155b34; }
+.zen-action-cancelled { background: #f4e2e2; color: #7a2424; }
+
+.action-card,
+.zen-action-expanded,
+.action-editor,
+.action-history {
+  border: 1px solid var(--zen-border);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  background: #fff;
+}
+
+.action-card + .action-card {
+  margin-top: 0.75rem;
+}
+
+.action-card.is-historical,
+.action-table tr.is-historical {
+  background: #f4f6f5;
+}
+
+.action-card-fields,
+.action-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(8rem, 0.35fr) minmax(0, 1fr);
+  gap: 0.4rem 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.action-card-fields dt,
+.action-detail-grid dt {
+  font-weight: 650;
+}
+
+.action-card-fields dd,
+.action-detail-grid dd {
+  min-width: 0;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.action-workflow-list,
+.action-revision-list {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+.action-workflow-list li,
+.action-revision-list li {
+  border-top: 1px solid var(--zen-border);
+  padding: 0.85rem 0;
+}
+
+.action-diff-list {
+  margin-bottom: 0;
+  padding-left: 1.25rem;
+}
+
+@media (max-width: 767.98px) {
+  .zen-ticket-tabs {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--zen-page, #f5f7f6);
+  }
+
+  .zen-ticket-tab {
+    flex: 1;
+    padding-inline: 0.5rem;
+  }
+
+  .action-card-fields,
+  .action-detail-grid {
+    grid-template-columns: 1fr;
+    gap: 0.1rem;
+  }
+
+  .action-card-fields dd,
+  .action-detail-grid dd {
+    margin-bottom: 0.65rem;
+  }
 }
 
 .zen-comment-item {

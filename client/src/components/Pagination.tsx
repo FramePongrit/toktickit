@@ -4,6 +4,7 @@ interface PaginationProps {
   total: number;
   totalPages: number;
   onPageChange: (page: number) => void;
+  itemLabel?: string;
 }
 
 type PageItem = number | "ellipsis-start" | "ellipsis-end";
@@ -18,17 +19,17 @@ function pageItems(page: number, totalPages: number): PageItem[] {
   return [1, "ellipsis-start", page - 1, page, page + 1, "ellipsis-end", totalPages];
 }
 
-export function Pagination({ page, pageSize, total, totalPages, onPageChange }: PaginationProps) {
+export function Pagination({ page, pageSize, total, totalPages, onPageChange, itemLabel = "tickets" }: PaginationProps) {
   const first = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const last = Math.min(page * pageSize, total);
 
   return (
     <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mt-3">
       <p className="zen-muted mb-0" data-testid="pagination-summary">
-        Showing {first} to {last} of {total} tickets
+        Showing {first} to {last} of {total} {itemLabel}
       </p>
 
-      <nav aria-label="Ticket list pages" className="zen-pagination-nav" data-pagination-windowed="true">
+      <nav aria-label={itemLabel === "tickets" ? "Ticket list pages" : `${itemLabel} pages`} className="zen-pagination-nav" data-pagination-windowed="true">
         <ul className="pagination mb-0 flex-wrap gap-1">
           <li className={`page-item ${page <= 1 ? "disabled" : ""}`}>
             <button

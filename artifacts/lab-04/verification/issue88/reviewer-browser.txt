@@ -1,0 +1,140 @@
+Issue 88 independent Reviewer browser verification
+Date: 2026-10-29 Asia/Bangkok; start timestamp is in output.
+Source: feature/lab4-actions-ui working source based on 030f5da261b45d88332ea518a7a5c8ae6b5ffe9a
+Exact-source confirmation after execution: orchestrator committed the reviewed executable source/tests unchanged as 60e9d9d0715af270eeb3b2422c9d54b7e02f017a; HEAD matches and git diff -- client server e2e is empty. No extra rerun was needed for the commit operation.
+Command: npm run e2e -- --project=e2e e2e/lab-04/actions-taken-flow.spec.ts --reporter=line --output=test-results/issue88-reviewer-20261029-1759-results
+Environment: explicit DATABASE_URL (credential omitted) for synthetic lab4test user/database on 127.0.0.1:55434, schema lab4_issue88_base; LAB4_PG_CONTAINER=toktickit-lab4-issue85-test; PW_REUSE_SERVER=false; API localhost:3000; client localhost:5173; PW_SCREENSHOT_ROOT=test-results/issue88-reviewer-20261029-1759-screens; UPLOAD_DIR=task-owned test-results/issue88-reviewer-20261029-1759-uploads absolute path.
+Exclusive DB/browser slot yielded by Executor before execution. No application .env changed.
+Attempt 1 exit code: 1; 1 failed. Edit control remained disabled after 5 seconds because the parent refresh GET stayed pending in the trace; no product defect asserted yet. No curated image replaced.
+Complete output follows; no CI/human approval claim.
+
+2026-10-29 17:58:14 +07:00
+
+> toktickit-e2e@1.0.0 e2e
+> playwright test --project=e2e e2e/lab-04/actions-taken-flow.spec.ts --reporter=line --output=test-results/issue88-reviewer-20261029-1759-results
+
+[WebServer] (node:36340) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] TokTickIT API listening on http://localhost:3000
+
+[WebServer] (node:31892) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer]
+[WebServer]   VITE v6.4.3  ready in 1455 ms
+[WebServer]
+
+[WebServer]   ➜  Local:   http://localhost:5173/
+
+
+Running 1 test using 1 worker
+
+(node:15076) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/1] [e2e] › e2e\lab-04\actions-taken-flow.spec.ts:43:3 › E2E-88 — Actions Taken Staff and Requester journey › creates, edits, completes, corrects and cancels Actions; resolves/reopens; keeps Requester reads safe
+[e2e] › e2e\lab-04\actions-taken-flow.spec.ts:43:3 › E2E-88 — Actions Taken Staff and Requester journey › creates, edits, completes, corrects and cancels Actions; resolves/reopens; keeps Requester reads safe
+E2E-88 disabled outline color rgb(0, 107, 60); border rgb(0, 107, 60): matches Zen green.
+
+  1) [e2e] › e2e\lab-04\actions-taken-flow.spec.ts:43:3 › E2E-88 — Actions Taken Staff and Requester journey › creates, edits, completes, corrects and cancels Actions; resolves/reopens; keeps Requester reads safe
+
+    Error: expect(locator).toBeEnabled() failed
+
+    Locator:  getByRole('button', { name: 'Edit Action' })
+    Expected: enabled
+    Received: disabled
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toBeEnabled" with timeout 5000ms
+      - waiting for getByRole('button', { name: 'Edit Action' })
+        14 × locator resolved to <button disabled type="button" class="btn btn-outline-primary btn-sm">Edit Action</button>
+           - unexpected value "disabled"
+
+
+      121 |       await page.unroute(editUrl);
+      122 |       await expect(page.getByText(/revision was recorded/i)).toBeVisible();
+    > 123 |       await expect(page.getByRole("button", { name: "Edit Action" })).toBeEnabled();
+          |                                                                       ^
+      124 |       await expect(page.getByText("Inspect the VPN account configuration").first()).toBeVisible();
+      125 |       await expect(page.getByRole("button", { name: "Hide history" })).toBeVisible();
+      126 |       await expect(page.getByText("Description:")).toBeVisible();
+        at D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\e2e\lab-04\actions-taken-flow.spec.ts:123:71
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\issue88-reviewer-20261029-1759-results\lab-04-actions-taken-flow--46981--keeps-Requester-reads-safe-e2e\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\issue88-reviewer-20261029-1759-results\lab-04-actions-taken-flow--46981--keeps-Requester-reads-safe-e2e\error-context.md
+
+    Error Context: test-results\issue88-reviewer-20261029-1759-results\lab-04-actions-taken-flow--46981--keeps-Requester-reads-safe-e2e\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\issue88-reviewer-20261029-1759-results\lab-04-actions-taken-flow--46981--keeps-Requester-reads-safe-e2e\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\issue88-reviewer-20261029-1759-results\lab-04-actions-taken-flow--46981--keeps-Requester-reads-safe-e2e\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+  1 failed
+    [e2e] › e2e\lab-04\actions-taken-flow.spec.ts:43:3 › E2E-88 — Actions Taken Staff and Requester journey › creates, edits, completes, corrects and cancels Actions; resolves/reopens; keeps Requester reads safe
+
+Attempt 2: unchanged source and test, diagnostic repeat after the first parent-refresh delay
+Start: 2026-10-29 18:00:42 +07:00
+Same explicit dedicated DB/container/schema and no .env changes.
+Command: npm run e2e -- --project=e2e e2e/lab-04/actions-taken-flow.spec.ts --reporter=line --output=test-results/issue88-reviewer-20261029-retry-results
+PW_SCREENSHOT_ROOT=test-results/issue88-reviewer-20261029-retry-screens
+UPLOAD_DIR=absolute task-owned test-results/issue88-reviewer-20261029-retry-uploads
+Exit code: 0; 1 passed, zero failures/skips, 11.6 seconds. No timeout or product modification between attempts.
+Complete output:
+
+2026-10-29 18:00:42 +07:00
+
+> toktickit-e2e@1.0.0 e2e
+> playwright test --project=e2e e2e/lab-04/actions-taken-flow.spec.ts --reporter=line --output=test-results/issue88-reviewer-20261029-retry-results
+
+[WebServer] (node:31324) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] TokTickIT API listening on http://localhost:3000
+
+[WebServer] (node:29968) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer]
+[WebServer]   VITE v6.4.3  ready in 350 ms
+[WebServer]
+
+[WebServer]   ➜  Local:   http://localhost:5173/
+
+
+Running 1 test using 1 worker
+
+(node:30536) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/1] [e2e] › e2e\lab-04\actions-taken-flow.spec.ts:43:3 › E2E-88 — Actions Taken Staff and Requester journey › creates, edits, completes, corrects and cancels Actions; resolves/reopens; keeps Requester reads safe
+[e2e] › e2e\lab-04\actions-taken-flow.spec.ts:43:3 › E2E-88 — Actions Taken Staff and Requester journey › creates, edits, completes, corrects and cancels Actions; resolves/reopens; keeps Requester reads safe
+E2E-88 disabled outline color rgb(0, 107, 60); border rgb(0, 107, 60): matches Zen green.
+
+E2E-88 responsive geometry 1440x900: no horizontal overflow, clipped content, unreadable controls, or overlapping controls.
+
+E2E-88 responsive geometry 820x1024: no horizontal overflow, clipped content, unreadable controls, or overlapping controls.
+
+E2E-88 responsive geometry 390x844: no horizontal overflow, clipped content, unreadable controls, or overlapping controls.
+
+  1 passed (11.6s)
+
+Cleanup and artifact verification:
+- Both Playwright executions completed their scoped afterAll cleanup. Additional read-only Prisma counts for exact run tags e2e-1793271517694-15076-b45ff2d7 and e2e-1793271645995-30536-e92db156 returned users=0 and tickets=0, exit 0.
+- Get-NetTCPConnection found no listeners remaining on owned API/client ports 3000/5173 after the repeat.
+- Task-owned ignored screenshots/results remain for diagnosis; no shared upload root or application DB was changed.
+- Inspected the full-page conflict frame; role/Ticket, 409 explanation, submitted versions, Load latest for comparison, preserved correction draft and disabled Save are all visible.
+- Copied ONLY test-results/issue88-reviewer-20261029-retry-screens/action-edit-conflict-review.png to artifacts/lab-04/screenshots/actions-taken/action-edit-conflict-review.png under orchestrator authorization.
+- Both SHA256 values: F27BF1D86D29EDC1BD648463F765A34AD4DBF7540F9162F2427A49164DB97113.
+- Initial failed attempt is retained above. One unchanged repeat passing does not establish that the earlier refresh delay cannot recur; source review found no reproducible busy-state defect. This is local evidence, not CI/human approval/final-main release verification.

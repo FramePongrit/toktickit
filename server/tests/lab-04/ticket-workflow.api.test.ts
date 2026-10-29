@@ -7,6 +7,7 @@ import { hashPassword } from "../../src/security/password.js";
 import { loginAs, TEST_PASSWORD, withAuth, type AuthSessionFixture } from "../support/auth.js";
 import { setActionLockTestHook } from "../../src/services/actions.service.js";
 import { setStaffTicketOperationsLockTestHook } from "../../src/services/staffTicketOperations.service.js";
+import { expectTicketVersionTimeline } from "../support/ticketVersionTimeline.js";
 
 const prisma = getPrisma();
 const suiteTag = randomUUID().slice(0, 8);
@@ -472,6 +473,8 @@ describe("Issue #87 — Ticket workflow gate and history", () => {
     const event = await prisma.ticketWorkflowEvent.findFirstOrThrow({ where: { ticketId: ticket.id } });
     expect(event).toMatchObject({ fromStatus: "OPEN", toStatus: "CANCELLED", workCycle: 2, actorId: staffId, reason: "Requester withdrew the work", ticketVersion: ticketVersion + 1 });
     expect(event.occurredAt.getTime()).toBe(newlyCancelled[0].cancelledAt?.getTime());
+    expect(await prisma.ticket.findUniqueOrThrow({ where: { id: ticket.id }, select: { version: true } })).toEqual({ version: ticketVersion + 1 });
+    await expectTicketVersionTimeline(prisma, ticket.id, false);
     const replay = await ticketStatus(ticket.id, { expectedTicketVersion: ticketVersion, status: "CANCELLED", cancelReason: "Requester withdrew the work" }, key);
     expect(replay.headers["idempotency-replayed"]).toBe("true");
     expect(replay.body).toEqual(cancelled.body);

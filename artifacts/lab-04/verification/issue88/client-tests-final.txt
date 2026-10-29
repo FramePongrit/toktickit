@@ -1,0 +1,98 @@
+COMMAND: npm --prefix client test -- --reporter=dot
+
+> toktickit-client@1.0.0 test
+> vitest run --reporter=dot
+
+
+ RUN  v2.1.9 D:/Software Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/client
+
+ ✓ tests/lab-03/RequesterRegression.test.ts (2 tests) 39ms
+ ✓ tests/lab-04/TicketDetailTabs.test.tsx (1 test) 301ms
+ ✓ tests/lab-02/AppShell.test.tsx (2 tests) 275ms
+ ✓ tests/lab-02/AttachmentSection.test.tsx (17 tests) 1479ms
+   ✓ Attachments — listing > shows the filename, size, type and upload time 384ms
+ ✓ tests/lab-02/RequesterTicketDetail.test.tsx (6 tests) 709ms
+   ✓ Ticket Detail — content > UI-16: shows every specified ticket field 506ms
+ ✓ tests/lab-03/RequesterTicketDetail.test.tsx (16 tests) 1993ms
+   ✓ Issue #54 requester ticket detail > renders distinct priorities and chronological public comments as literal text 434ms
+ ✓ tests/lab-02/MyTickets.test.tsx (20 tests) 2142ms
+   ✓ My Tickets — list > renders the tickets the server returned 452ms
+   ✓ My Tickets — search, filters and sorting > UI-13: sends the search term after debouncing 409ms
+ ✓ tests/lab-02/CreateTicket.test.tsx (16 tests) 2542ms
+   ✓ Create Ticket — initial state > loads reference data from the server into the selects 735ms
+ ✓ tests/lab-03/AppShell.test.tsx (11 tests) 1670ms
+   ✓ Issue 50 authenticated application shell > UI-H01: closes the mobile navigation and focuses the destination heading 455ms
+ ✓ tests/lab-04/bangkokDateTime.test.ts (2 tests) 5ms
+ ✓ tests/lab-03/StaffTicketQueue.test.tsx (10 tests) 3315ms
+   ✓ Issue 56 Staff Ticket Queue > UI-Q01: wires approved query controls, restores URL state, and resets page on changes 1296ms
+   ✓ Issue 56 Staff Ticket Queue > UI-Q01: sends owner ids from the safe directory and keeps the built-in owner modes available 455ms
+   ✓ Issue 56 Staff Ticket Queue > UI-Q02: uses bounded pagination at the first, middle, and last page without an overflow strip 531ms
+ ✓ tests/lab-01/App.test.tsx (3 tests) 192ms
+ ✓ tests/lab-03/ChangePassword.test.tsx (5 tests) 5836ms
+   ✓ Issue 50 Change Password > UI-L02/UI-H01: gates direct navigation and exposes only the mandatory change actions 446ms
+   ✓ Issue 50 Change Password > UI-L02: validates rules, confirmation, and reuse before making a mutation 1861ms
+   ✓ Issue 50 Change Password > UI-L02: supports self-service mode and clears password fields during save 1405ms
+   ✓ Issue 50 Change Password > UI-L02: sends the current CSRF token, prevents duplicate password changes, and replaces it after success 1276ms
+   ✓ Issue 50 Change Password > UI-L02: gives safe current-password failure feedback and does not expose server details 845ms
+ ✓ tests/lab-03/Login.test.tsx (8 tests) 7202ms
+   ✓ Issue 50 Login > UI-L01: validates email/password locally and focuses the first invalid field without an API call 767ms
+   ✓ Issue 50 Login > UI-L01: prevents duplicate submissions and disables the form while signing in 1915ms
+   ✓ Issue 50 Login > UI-L01: renders safe INVALID_CREDENTIALS feedback without account details 861ms
+   ✓ Issue 50 Login > UI-L01: renders safe USER_INACTIVE feedback without account details 758ms
+   ✓ Issue 50 Login > UI-L01: renders safe LOGIN_THROTTLED feedback without account details 728ms
+   ✓ Issue 50 Login > UI-L01/UI-H01: normalizes email, sends credentials, and lands by the authenticated role 701ms
+   ✓ Issue 50 Login > UI-L01: sends a must-change-password user directly to Change Password 781ms
+   ✓ Issue 50 Login > UI-L01: gives a generic retryable message for network/server failures 684ms
+ ✓ tests/lab-03/StaffTicketDetail.test.tsx (25 tests) 10481ms
+   ✓ Issue #58 Staff Ticket Detail > renders read-only ticket data, distinct communications, literal markup, indication and attachment states 552ms
+   ✓ Issue #58 Staff Ticket Detail > loads the safe owner directory and captures the displayed expectedOwnerId for Reassign 885ms
+   ✓ Issue #58 Staff Ticket Detail > handles stale Reassign by refreshing and requiring an explicit retry 832ms
+   ✓ Issue #58 Staff Ticket Detail > keeps owner-directory forbidden and retry feedback separate from the detail 575ms
+   ✓ Issue #58 Staff Ticket Detail > requires confirmation for significant transitions and explains Closed finality 321ms
+   ✓ Issue #58 Staff Ticket Detail > reuses the exact status idempotency key after an ambiguous server error 445ms
+   ✓ Issue #58 Staff Ticket Detail > requires a Public Comment for Waiting for Requester and submits it with the status mutation 668ms
+   ✓ Issue #58 Staff Ticket Detail > requires a reason before cancellation and explains the unfinished Action effect 770ms
+   ✓ Issue #58 Staff Ticket Detail > clears a cancellation reason when navigating to another Ticket 754ms
+   ✓ Issue #58 Staff Ticket Detail > ignores a stale Action-parent refresh after navigating away and back to the same Ticket 1026ms
+   ✓ Issue #58 Staff Ticket Detail > keeps Public Comments and Internal Notes available while a Ticket is Resolved 930ms
+   ✓ Issue #58 Staff Ticket Detail > posts Public Comments and Internal Notes through separate forms and clears each draft 701ms
+   ✓ Issue #58 Staff Ticket Detail > renders safe failure feedback without exposing API codes and keeps unrelated actions available 309ms
+ ✓ tests/lab-03/UserManagement.test.tsx (13 tests) 9338ms
+   ✓ Issue #60 Administrator User Management > UI-U01/UI-U02: renders deterministic table/cards, badges, search, Role, and active-status filters 1678ms
+   ✓ Issue #60 Administrator User Management > UI-U01: creates a User, validates fields, clears sensitive values, refreshes, and announces success 2140ms
+   ✓ Issue #60 Administrator User Management > UI-U01: keeps the Create dialog open for duplicate email and shows a safe field conflict 1290ms
+   ✓ Issue #60 Administrator User Management > UI-U01: edits another User and resets their Initial Password as a distinct confirmed action 1267ms
+   ✓ Issue #60 Administrator User Management > UI-U01: allows own name/email edits while disabling self Role, active, and reset controls 406ms
+   ✓ Issue #60 Administrator User Management > UI-U01: distinguishes loading, empty, no-results, forbidden, and retryable failure states 334ms
+   ✓ Issue #60 Administrator User Management > UI-U02: returns Reset Initial Password focus after both Cancel and Escape 316ms
+   ✓ Issue #60 Administrator User Management > UI-U02: focuses the dialog fallback and blocks Tab while a mutation disables every control 1130ms
+ ✓ tests/lab-04/ActionsTaken.test.tsx (28 tests) 18997ms
+   ✓ Issue #88 Actions Taken > shows cycle, separate assignee and performer, inactive-assignee warning, and truthful baseline label 479ms
+   ✓ Issue #88 Actions Taken > creates a Planned Action with an untouched date omitted and sends a scoped idempotency key 1991ms
+   ✓ Issue #88 Actions Taken > keeps the exact create body and key for an ambiguous server failure retry 1710ms
+   ✓ Issue #88 Actions Taken > starts a new create intent after the user edits a field following an ambiguous failure 1262ms
+   ✓ Issue #88 Actions Taken > parses a user-edited datetime-local value as Bangkok +07 and validates against server time 703ms
+   ✓ Issue #88 Actions Taken > starts and completes current-cycle Actions with the captured versions and completion actor kept distinct 638ms
+   ✓ Issue #88 Actions Taken > retries an ambiguous completion with the exact saved body and idempotency key 545ms
+   ✓ Issue #88 Actions Taken > preserves Action timestamp precision for a description-only terminal correction 1102ms
+   ✓ Issue #88 Actions Taken > completes an Action created in the Ticket's first minute without truncating its timestamp 403ms
+   ✓ Issue #88 Actions Taken > keeps edit versions captured when a background parent/list refresh advances versions 817ms
+   ✓ Issue #88 Actions Taken > retains an inactive assignee label while allowing a descriptive edit without changing assignment 789ms
+   ✓ Issue #88 Actions Taken > cancels an Action with an explicit reason without presenting it as completed work 762ms
+   ✓ Issue #88 Actions Taken > preserves an edit draft through conflict reload and submits only after explicit review 794ms
+   ✓ Issue #88 Actions Taken > focuses the first invalid date and completion Result fields 745ms
+   ✓ Issue #88 Actions Taken > confirms discarding a nonempty create draft and returns focus to its opener 1006ms
+   ✓ Issue #88 Actions Taken > returns focus to the Edit control when changes are discarded 570ms
+   ✓ Issue #88 Actions Taken > keeps editor controls from replacing a form while its save is pending 738ms
+   ✓ Issue #88 Actions Taken > preserves but disables an Action edit draft when the parent is finalized or its cycle advances 738ms
+   ✓ Issue #88 Actions Taken > preserves but blocks an open transition after the Ticket enters a final status 597ms
+   ✓ Issue #88 Actions Taken > keeps transition versions captured while a completion form stays open across refresh 410ms
+   ✓ Issue #88 Actions Taken > refreshes an off-page deep-linked Action after its successful transition 376ms
+   ✓ Issue #88 Actions Taken > does not apply an old create response after in-place navigation to another Ticket 853ms
+
+ Test Files  17 passed (17)
+      Tests  185 passed (185)
+   Start at  14:16:52
+   Duration  29.61s (transform 13.45s, setup 19.25s, collect 47.29s, tests 66.52s, environment 72.07s, prepare 11.00s)
+
+EXIT_CODE=0
