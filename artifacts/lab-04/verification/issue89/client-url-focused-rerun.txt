@@ -1,0 +1,26 @@
+Issue 89 list URL synchronization/date validation focused rerun; 2026-10-29 Asia/Bangkok
+Command: npm --prefix client test -- --run tests/lab-02/MyTickets.test.tsx tests/lab-03/StaffTicketQueue.test.tsx
+
+> toktickit-client@1.0.0 test
+> vitest run --run tests/lab-02/MyTickets.test.tsx tests/lab-03/StaffTicketQueue.test.tsx
+
+
+ RUN  v2.1.9 D:/Software Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/client
+
+ ✓ tests/lab-02/MyTickets.test.tsx (24 tests) 3298ms
+   ✓ My Tickets — list > renders the tickets the server returned 631ms
+   ✓ My Tickets — list > links each ticket to its detail screen 427ms
+   ✓ My Tickets — list > round-trips Dashboard filters, page size, search, sort, and page through the URL 767ms
+   ✓ My Tickets — search, filters and sorting > UI-13: sends the search term after debouncing 356ms
+ ✓ tests/lab-03/StaffTicketQueue.test.tsx (15 tests) 2921ms
+   ✓ Issue 56 Staff Ticket Queue > loads Staff Dashboard priority-set and priority-recent drilldowns from the URL 341ms
+   ✓ Issue 56 Staff Ticket Queue > syncs the mounted page from external URL changes and restores state on Back 786ms
+   ✓ Issue 56 Staff Ticket Queue > replaces a Dashboard status/priority set with the selected single value and keeps date bounds 338ms
+   ✓ Issue 56 Staff Ticket Queue > UI-Q02: uses bounded pagination at the first, middle, and last page without an overflow strip 306ms
+
+ Test Files  2 passed (2)
+      Tests  39 passed (39)
+   Start at  23:10:57
+   Duration  8.44s (transform 1.72s, setup 916ms, collect 3.39s, tests 6.22s, environment 3.87s, prepare 493ms)
+
+Exit code: 0

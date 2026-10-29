@@ -1,0 +1,134 @@
+Commands: isolated Prisma migrate/seed; Playwright specs e2e/lab-03/staff-ticket-flow.spec.ts and e2e/lab-04/actions-taken-flow.spec.ts
+Target: dedicated PostgreSQL 16 loopback test container; generated issue61_verify task-owned schema
+API/client ports: 31890/51789; separate task-owned temporary upload root
+Screenshot path: ignored test-results\issue89-browser-<run-id>
+No source .env or public application database used; credentials omitted
+
+=== Create task-owned schema ===
+issue61_verify_a5adc58d9a8c4fe7b82569ba
+Exit status: 0
+
+=== Deploy migrations ===
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+Datasource "db": PostgreSQL database "lab4test", schema "issue61_verify_a5adc58d9a8c4fe7b82569ba" at "127.0.0.1:55434"
+
+8 migrations found in prisma/migrations
+
+Applying migration `20260815105141_init`
+Applying migration `20260904150857_add_active_to_category`
+Applying migration `20260904150907_lab2_core_models`
+Applying migration `20260918120000_lab3_user_workflow`
+Applying migration `20260918130000_auth_session_csrf_ciphertext`
+Applying migration `20260918140000_revoke_legacy_auth_sessions`
+Applying migration `20261024000000_lab4_actions_workflow`
+Applying migration `20261025000000_lab4_restrict_workflow_comment_delete`
+
+The following migration(s) have been applied:
+
+migrations/
+  └─ 20260815105141_init/
+    └─ migration.sql
+  └─ 20260904150857_add_active_to_category/
+    └─ migration.sql
+  └─ 20260904150907_lab2_core_models/
+    └─ migration.sql
+  └─ 20260918120000_lab3_user_workflow/
+    └─ migration.sql
+  └─ 20260918130000_auth_session_csrf_ciphertext/
+    └─ migration.sql
+  └─ 20260918140000_revoke_legacy_auth_sessions/
+    └─ migration.sql
+  └─ 20261024000000_lab4_actions_workflow/
+    └─ migration.sql
+  └─ 20261025000000_lab4_restrict_workflow_comment_delete/
+    └─ migration.sql
+
+All migrations have been successfully applied.
+Exit status: 0
+
+=== Seed isolated schema ===
+
+> toktickit-server@1.0.0 prisma:seed
+> tsx prisma/seed.ts
+
+Seeded 4 categories, 7 related systems, 5 active requesters, 3 active IT staff, and 1 active administrator.
+Exit status: 0
+
+=== Prepare E2E reference data ===
+Prepared 4 categories and 7 related systems for isolated E2E.
+Exit status: 0
+
+=== Targeted Staff and Actions browser regression ===
+
+Running 3 tests using 1 worker
+
+(node:27432) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 1 [e2e] › e2e\lab-03\staff-ticket-flow.spec.ts:61:3 › E2E-S01 — real Staff Queue and Ticket workflow › queue filters, ownership actions, communications, resolution lifecycle, attachments, and direct guards (13.8s)
+  x  2 [e2e] › e2e\lab-03\staff-ticket-flow.spec.ts:253:3 › E2E-S01 — real Staff Queue and Ticket workflow › Requester can upload, download, and remove an attachment through the browser (8.4s)
+(node:9608) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+E2E-88 disabled outline color rgb(0, 107, 60); border rgb(0, 107, 60): matches Zen green.
+E2E-88 responsive geometry 1440x900: no horizontal overflow, clipped content, unreadable controls, or overlapping controls.
+E2E-88 responsive geometry 820x1024: no horizontal overflow, clipped content, unreadable controls, or overlapping controls.
+E2E-88 responsive geometry 390x844: no horizontal overflow, clipped content, unreadable controls, or overlapping controls.
+  ok 3 [e2e] › e2e\lab-04\actions-taken-flow.spec.ts:43:3 › E2E-88 — Actions Taken Staff and Requester journey › creates, edits, completes, corrects and cancels Actions; resolves/reopens; keeps Requester reads safe (12.5s)
+
+
+  1) [e2e] › e2e\lab-03\staff-ticket-flow.spec.ts:253:3 › E2E-S01 — real Staff Queue and Ticket workflow › Requester can upload, download, and remove an attachment through the browser
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('1 active of 5')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByText('1 active of 5')
+
+
+      265 |         buffer: Buffer.from("89504e470d0a1a0a0000000d49484452", "hex"),
+      266 |       });
+    > 267 |       await expect(page.getByText("1 active of 5")).toBeVisible();
+          |                                                     ^
+      268 |       const download = page.waitForEvent("download");
+      269 |       await page.getByRole("button", { name: "Download" }).click();
+      270 |       expect((await download).suggestedFilename()).toBe("issue-61-evidence.png");
+        at D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\e2e\lab-03\staff-ticket-flow.spec.ts:267:53
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\lab-03-staff-ticket-flow-E-4b155-achment-through-the-browser-e2e\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\lab-03-staff-ticket-flow-E-4b155-achment-through-the-browser-e2e\error-context.md
+
+    Error Context: test-results\lab-03-staff-ticket-flow-E-4b155-achment-through-the-browser-e2e\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\lab-03-staff-ticket-flow-E-4b155-achment-through-the-browser-e2e\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\lab-03-staff-ticket-flow-E-4b155-achment-through-the-browser-e2e\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [e2e] › e2e\lab-03\staff-ticket-flow.spec.ts:253:3 › E2E-S01 — real Staff Queue and Ticket workflow › Requester can upload, download, and remove an attachment through the browser
+  2 passed (44.3s)
+Exit status: 1
+FAILURE: Targeted Staff and Actions browser regression failed with exit 1
+at Invoke-Captured, <No file>: line 27
+at <ScriptBlock>, <No file>: line 61
+
+=== Drop exact task-owned schema ===
+issue61_verify_a5adc58d9a8c4fe7b82569ba
+Exit status: 0
+
+=== Verify task schema cleanup ===
+issue61_verify schemas remaining: 0
+Exit status: 0
+
+Exit status: 1

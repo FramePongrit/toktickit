@@ -1,6 +1,6 @@
 # Lab 4 Peer Review and Evidence Record
 
-Status: **contract and PRs #95/#96/#97 peer-reviewed and merged; PR #98 awaiting human review; release pending**. Prepared 2026-10-23; review ledger updated 2026-10-29. This file distinguishes actual events from pending review and test evidence.
+Status: **contract and PRs #95/#96/#97/#98 peer-reviewed and merged; Issue #89 / PR #99 awaiting human review; release pending**. Prepared 2026-10-23; review ledger updated 2026-10-29. This file distinguishes actual events from pending review and test evidence.
 
 Repository: [FramePongrit/toktickit](https://github.com/FramePongrit/toktickit). Baseline: main 1a20e3465922a2c1dacc5a9eb18e55b0840284b8, [Lab 3 release PR 83](https://github.com/FramePongrit/toktickit/pull/83). Integration branch: lab4-staging. Current contract branch: feature/lab4-engineering-contract.
 
@@ -32,8 +32,8 @@ Plan IDs come from [issue-plan.md](issue-plan.md). Published Issues are linked b
 | L4-02 | [#85](https://github.com/FramePongrit/toktickit/issues/85) | feature/lab4-data-migration / [#95](https://github.com/FramePongrit/toktickit/pull/95) | Sxr1n | Three human findings fixed; corrected head0a75793 re-approved | APPROVED October26 03:01:15; merged4d487a1 at03:01:40 Asia/Bangkok | Done |
 | L4-03 | [#86](https://github.com/FramePongrit/toktickit/issues/86) | feature/lab4-actions-api / [#96](https://github.com/FramePongrit/toktickit/pull/96) | narakosi-dev; AI Reviewer checked617bd9d | APPROVED on e9a0401; suggested later complete Actions lifecycle E2E | APPROVED October28 01:59:55; merged e6e782d at02:01:37 Asia/Bangkok | Done |
 | L4-04 | [#87](https://github.com/FramePongrit/toktickit/issues/87) | feature/lab4-ticket-workflow / [#97](https://github.com/FramePongrit/toktickit/pull/97) | Sxr1n; AI Reviewer confirmed99f9e45 | APPROVED05ec455; four nonblocking notes recorded below | APPROVED October28 16:49:09; merged030f5da October29 13:21:23 Asia/Bangkok | Done |
-| L4-05 | [#88](https://github.com/FramePongrit/toktickit/issues/88) | feature/lab4-actions-ui / [#98](https://github.com/FramePongrit/toktickit/pull/98) | Human pending; AI Reviewer confirmed60e9d9d | Actions UI implemented; client185/server236/browser1+2 pass; independent31client/browser1 pass, initial refresh timeout retained | Human approval/merge pending | PR Review |
-| L4-06 | [#89](https://github.com/FramePongrit/toktickit/issues/89) | feature/lab4-dashboard-api / Pending | Pending | Pending | Pending | Backlog |
+| L4-05 | [#88](https://github.com/FramePongrit/toktickit/issues/88) | feature/lab4-actions-ui / [#98](https://github.com/FramePongrit/toktickit/pull/98) | Sxr1n; AI Reviewer confirmed60e9d9d | APPROVED93c108e, no blocker; four follow-ups below | APPROVED October29 18:29:24; merged6b1277d at18:32:30 Asia/Bangkok | Done |
+| L4-06 | [#89](https://github.com/FramePongrit/toktickit/issues/89) | feature/lab4-dashboard-api / [#99](https://github.com/FramePongrit/toktickit/pull/99) | AI Reviewer confirmed6f08f4e; human pending | Metrics/query/activity/PERF and narrow PR98 fixes verified; evidence below | Pending | PR Review |
 | L4-07 | [#90](https://github.com/FramePongrit/toktickit/issues/90) | feature/lab4-dashboard-ui / Pending | Pending | Pending | Pending | Backlog |
 | L4-08 | [#91](https://github.com/FramePongrit/toktickit/issues/91) | feature/lab4-quality-evidence / Pending | Pending | Pending | Pending | Backlog |
 | L4-09 | [#92](https://github.com/FramePongrit/toktickit/issues/92) | feature/lab4-final-evidence / Pending | Pending | Pending | Pending | Backlog |
@@ -111,6 +111,12 @@ Source `60e9d9d0715af270eeb3b2422c9d54b7e02f017a` passed client185/server236, bo
 
 Root and AI Reviewer inspected [three-size Actions and state captures](../../artifacts/lab-04/screenshots/actions-taken/README.md), including corrected identity/conflict framing. Real browser assertions verify separate assignee/performer,409 draft/review retry,503 exact retry, keyboard tab selection, disabled Zen-green color and responsive geometry. This is scoped visual/automated accessibility evidence; full human/increased-text/whole-app and final-main checks remain pending.
 
+### PR #98 human approval and integration
+
+[Sxr1n's approval](https://github.com/FramePongrit/toktickit/pull/98#pullrequestreview-5696946340) covers `93c108e0a1c1cd7bf2240e5c3fb2fe5e2f907830`, October29 at18:29:24 Asia/Bangkok. PR98 merged at18:32:30 as `6b1277d5e0335f5e8013cd1cc60248c6eeafc668`; Issue88 closed at18:41:06 and card Done. The review found no blocker and explicitly accepted recorded timeout evidence; earlier pending-review wording is historical.
+
+Three narrow follow-ups accompany #89: client-side Result validation for Completed corrections (Cancelled remains optional), readable names from already-authorized identity data with an honest unknown-ID fallback, and audit pagination that fetches only its own history. No additional User lookup/privacy surface is authorized. The suggested large ActionsTakenPanel split is acknowledged as a later maintenance/refactor candidate, not a new feature or an inferred release blocker; broad restructuring is outside this API increment. CI evidence remains explicitly local-only. The approved engineering contract defines #89 backend then #90 UI and later verification/docs/release; final release scope/readiness must be assessed before release rather than pretending remaining work is complete.
+
 ## 3. Contract-authoring inspection (historical snapshot before publication)
 
 | Check | Evidence/result |
@@ -161,3 +167,11 @@ For selected Dashboard metrics, record independent DB queries with redacted fixt
 - [ ] Final-main repository remains source of truth; actual submission cutoff checked; PDF submitted by October 29, 2026.
 
 Current state: none of these future release/completion boxes is claimed complete by the documentation authoring task.
+
+## 6. Issue #89 / PR #99 implementation review
+
+October29,2026, Asia/Bangkok. [PR99](https://github.com/FramePongrit/toktickit/pull/99) targets lab4-staging. Source `6f08f4e5e1a7ccaf5d53d3240d7cc28d7dc65495` has no remaining actionable AI review findings. Human approval and merge are pending; Project89 is PR Review. [Complete evidence](../../artifacts/lab-04/verification/issue89/README.md) records server247/client196/browser3/builds, guarded1000Ticket/5000Action performance and independentSQL. Reviewer independently passed API/rules11tests11.10s and PERF1test9.53s, maxp9578.62ms, and verified cleanup by directpsql. These are local checks, not CI or human approval.
+
+Review fixed concrete issues before handoff: Dashboard Action UI hrefs, nullable Staff resolvedAt projection, shared count/list predicates, exact date-boundary assertions, PERF owned-row cleanup/target restrictions/opt-in discovery/content/query checks, list URL/pageSize/back-forward synchronization, mutually exclusive filters and impossible-calendar-date rejection. Strict400 unknown requesterId-query tests retain independent ownership checks. Narrow PR98 follow-ups now validate Completed correction Result, paginate history independently and display safe known names with ID fallback. The larger Actions panel refactor remains deferred maintenance.
+
+The first manual-server combined browser run had one attachmentPOST500; canonical Staff2/2 and combined3/3 later passed without a product fix. Its cause remains unconfirmed. Diagnostic pre-browser stalls, temporary instrumentation removal and exact fixture cleanup are recorded; do not describe that failure as explained. Fullcourse E2E/final-main/CI/release/PDF and DashboardUI remain later work.

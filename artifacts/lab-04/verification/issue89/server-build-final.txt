@@ -1,0 +1,7 @@
+Command: npm --prefix server run build
+Environment: local TypeScript production build; no database
+
+> toktickit-server@1.0.0 build
+> tsc
+
+Exit status: 0

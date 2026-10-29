@@ -1,0 +1,26 @@
+Issue 89 focused API/unit verification; 2026-10-29 Asia/Bangkok
+Command: DATABASE_URL=<dedicated schema lab4_issue89_base, credentials omitted>; LAB4_PG_CONTAINER=<dedicated test container>; npm test -- --run tests/lab-04/dashboard-rules.unit.test.ts tests/lab-04/dashboard.api.test.ts
+Branch: feature/lab4-dashboard-api
+Base HEAD at run: 6b1277d5e0335f5e8013cd1cc60248c6eeafc668
+
+> toktickit-server@1.0.0 test
+> vitest run --run tests/lab-04/dashboard-rules.unit.test.ts tests/lab-04/dashboard.api.test.ts
+
+
+ RUN  v2.1.9 D:/Software Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/server
+
+Environment variables loaded from .env
+Running seed command `tsx prisma/seed.ts` ...
+Seeded 4 categories, 7 related systems, 5 active requesters, 3 active IT staff, and 1 active administrator.
+
+The seed command has been executed.
+ ✓ tests/lab-04/dashboard.api.test.ts (7 tests) 2267ms
+   ✓ Issue #89 Dashboard and Staff Actions APIs > advances only Ticket.updatedAt for successful visible activity and leaves failures, replays, and Internal Notes unchanged 354ms
+ ✓ tests/lab-04/dashboard-rules.unit.test.ts (4 tests) 8ms
+
+ Test Files  2 passed (2)
+      Tests  11 passed (11)
+   Start at  19:15:33
+   Duration  4.98s (transform 220ms, setup 0ms, collect 559ms, tests 2.28s, environment 0ms, prepare 93ms)
+
+Exit code: 0

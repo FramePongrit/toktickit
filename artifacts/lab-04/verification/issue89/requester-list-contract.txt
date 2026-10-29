@@ -1,0 +1,27 @@
+Issue 89 strict query contract regression; 2026-10-29 Asia/Bangkok
+Command: DATABASE_URL=<dedicated schema lab4_issue89_base, credentials omitted>; LAB4_PG_CONTAINER=<dedicated test container>; npm test -- --run tests/lab-02/my-tickets.api.test.ts tests/lab-03/requester-regression.api.test.ts tests/lab-04/dashboard-rules.unit.test.ts tests/lab-04/dashboard.api.test.ts
+
+> toktickit-server@1.0.0 test
+> vitest run --run tests/lab-02/my-tickets.api.test.ts tests/lab-03/requester-regression.api.test.ts tests/lab-04/dashboard-rules.unit.test.ts tests/lab-04/dashboard.api.test.ts
+
+
+ RUN  v2.1.9 D:/Software Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/server
+
+Environment variables loaded from .env
+Running seed command `tsx prisma/seed.ts` ...
+Seeded 4 categories, 7 related systems, 5 active requesters, 3 active IT staff, and 1 active administrator.
+
+The seed command has been executed.
+ ✓ tests/lab-04/dashboard.api.test.ts (7 tests) 3219ms
+   ✓ Issue #89 Dashboard and Staff Actions APIs > returns all Staff status counts and Dashboard metrics matching independent SQL, including old-cycle performed work 307ms
+   ✓ Issue #89 Dashboard and Staff Actions APIs > advances only Ticket.updatedAt for successful visible activity and leaves failures, replays, and Internal Notes unchanged 412ms
+ ✓ tests/lab-02/my-tickets.api.test.ts (23 tests) 1494ms
+ ✓ tests/lab-03/requester-regression.api.test.ts (7 tests) 1265ms
+ ✓ tests/lab-04/dashboard-rules.unit.test.ts (4 tests) 20ms
+
+ Test Files  4 passed (4)
+      Tests  41 passed (41)
+   Start at  23:12:21
+   Duration  13.26s (transform 507ms, setup 0ms, collect 2.51s, tests 6.00s, environment 1ms, prepare 436ms)
+
+Exit code: 0
