@@ -5,6 +5,7 @@ import { createAttachmentsRouter } from "./attachments.routes.js";
 import { createAuthRouter, type AuthRouterDependencies } from "./auth.routes.js";
 import { createStaffTicketOwnersRouter, createStaffTicketsRouter } from "./staffTickets.routes.js";
 import { createAdminUsersRouter } from "./adminUsers.routes.js";
+import { createRequesterDashboardRouter, createStaffDashboardRouter } from "./dashboards.routes.js";
 import { createAuthenticationMiddleware, createCsrfMiddleware } from "../middleware/authentication.js";
 import { requireRoles } from "../middleware/authorization.js";
 import { HttpError } from "../lib/httpError.js";
@@ -20,9 +21,11 @@ export function createApiRouter(auth: AuthRouterDependencies): Router {
   });
   const csrf = createCsrfMiddleware({ sessions: auth.sessions });
   apiRouter.use("/tickets", createTicketsRouter({ authentication, csrf }));
+  apiRouter.use("/requester", createRequesterDashboardRouter({ authentication }));
   apiRouter.use("/attachments", createAttachmentsRouter({ authentication, csrf }));
   apiRouter.use("/staff/tickets", createStaffTicketsRouter({ authentication, csrf }));
   apiRouter.use("/staff", createStaffTicketOwnersRouter({ authentication, csrf }));
+  apiRouter.use("/staff", createStaffDashboardRouter({ authentication }));
   apiRouter.use("/admin/users", createAdminUsersRouter({ authentication, csrf }));
 
   // Feature routers for these namespaces arrive in later issues. Keep their

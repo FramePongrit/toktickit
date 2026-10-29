@@ -130,13 +130,14 @@ describe("GET /api/tickets — ownership", () => {
     expect(other.body.data[0].summary).toBe("Belongs to requester B only");
   });
 
-  it("API-17: ignores a requesterId supplied as a query parameter", async () => {
-    // Ownership comes from the authenticated User. Supplying requesterId must
-    // not widen the result set to another requester's data (BR-16).
+  it("API-17: rejects a requesterId supplied as an unsupported query parameter", async () => {
+    // Ownership comes from the authenticated User; the strict list contract
+    // rejects identity hints rather than treating them as filter input (BR-16).
     const res = await list(requesterB, { requesterId: requesterA, pageSize: 50 });
 
-    expect(res.status).toBe(200);
-    expect(res.body.total).toBe(1);
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("VALIDATION_FAILED");
+    expect(res.body).not.toHaveProperty("data");
   });
 });
 

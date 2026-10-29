@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { StrictMode } from "react";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { TicketDetailTabs } from "../../src/components/TicketDetailTabs.js";
@@ -210,8 +210,10 @@ describe("Issue #88 Actions Taken", () => {
 
   it("renders readable changed-field history without exposing a JSON snapshot", async () => {
     const user = userEvent.setup();
+    const current = { ...ACTION, assignee: ADMIN };
+    vi.spyOn(actionsApi, "fetchStaffActions").mockResolvedValue(actionPage([current]));
     vi.spyOn(actionsApi, "fetchStaffActionHistory").mockResolvedValue({
-      data: [{ id: 1, actionId: ACTION.id, sequence: 2, operation: "EDIT", actor: STAFF, occurredAt: "2026-10-29T03:00:00.000Z", reason: null, before: { description: "Old description" }, after: { description: "New description" } }],
+      data: [{ id: 1, actionId: ACTION.id, sequence: 2, operation: "EDIT", actor: STAFF, occurredAt: "2026-10-29T03:00:00.000Z", reason: null, before: { description: "Old description", assigneeId: STAFF.id, performedById: null }, after: { description: "New description", assigneeId: ADMIN.id, performedById: 999 } }],
       page: 1, pageSize: 10, total: 1, totalPages: 1,
     });
     mount();
@@ -219,7 +221,30 @@ describe("Issue #88 Actions Taken", () => {
     await user.click(screen.getByRole("button", { name: "View change history" }));
     expect(await screen.findByText("Description:")).toBeInTheDocument();
     expect(screen.getByText(/Old description.*New description/)).toBeInTheDocument();
+    expect(screen.getByText("Assignee ID:").closest("li")).toHaveTextContent("Alex Staff → Ada Admin");
+    expect(screen.getByText(/User ID 999 \(historical name unavailable\)/)).toBeInTheDocument();
     expect(screen.queryByText(/\{"description"/)).not.toBeInTheDocument();
+  });
+
+  it("changes only Action-history pages without reloading Actions or workflow", async () => {
+    const user = userEvent.setup();
+    const actions = vi.spyOn(actionsApi, "fetchStaffActions").mockResolvedValue(actionPage());
+    const workflow = vi.spyOn(actionsApi, "fetchStaffWorkflow").mockResolvedValue(WORKFLOW);
+    const history = vi.spyOn(actionsApi, "fetchStaffActionHistory").mockImplementation(async (_ticketId, _actionId, page) => ({
+      data: [{ id: page, actionId: ACTION.id, sequence: page, operation: "EDIT", actor: STAFF, occurredAt: "2026-10-29T03:00:00.000Z", reason: null, before: { description: `Page ${page} old` }, after: { description: `Page ${page} new` } }],
+      page, pageSize: 1, total: 2, totalPages: 2,
+    }));
+    mount();
+    await user.click((await screen.findAllByRole("button", { name: "View details" }))[0]);
+    await user.click(screen.getByRole("button", { name: "View change history" }));
+    await screen.findByText(/Page 1 old.*Page 1 new/);
+    const actionsCalls = actions.mock.calls.length;
+    const workflowCalls = workflow.mock.calls.length;
+    await user.click(within(screen.getByRole("navigation", { name: "history entries pages" })).getByRole("button", { name: "Next" }));
+    await screen.findByText(/Page 2 old.*Page 2 new/);
+    expect(history).toHaveBeenCalledTimes(2);
+    expect(actions).toHaveBeenCalledTimes(actionsCalls);
+    expect(workflow).toHaveBeenCalledTimes(workflowCalls);
   });
 
   it("uses the Staff single-Action endpoint for an off-page deep link and focuses that Action", async () => {
@@ -301,6 +326,22 @@ describe("Issue #88 Actions Taken", () => {
     await waitFor(() => expect(patch).toHaveBeenCalledTimes(1));
     expect(patch.mock.calls[0][2]).not.toHaveProperty("actionAt");
     expect(patch.mock.calls[0][2]).toMatchObject({ description: "Corrected wording", correctionReason: "Fix a transcription error" });
+  });
+
+  it("requires a nonempty Result when correcting a Completed Action", async () => {
+    const user = userEvent.setup();
+    const completed = { ...ACTION, status: "COMPLETED" as const, result: "Saved result", performedBy: STAFF, completedAt: "2026-10-29T04:00:00.000Z", permissions: { canEdit: true, allowedTransitions: [] as ActionTransition[] } };
+    const patch = vi.spyOn(actionsApi, "patchStaffAction");
+    vi.spyOn(actionsApi, "fetchStaffActions").mockResolvedValue(actionPage([completed]));
+    mount();
+    await user.click((await screen.findAllByRole("button", { name: "View details" }))[0]);
+    await user.click(screen.getByRole("button", { name: "Edit Action" }));
+    await user.clear(screen.getByLabelText(/^Result/));
+    await user.type(screen.getByLabelText(/^Correction Reason/), "Restore the missing result");
+    await user.click(screen.getByRole("button", { name: "Save revision" }));
+    expect(await screen.findByText("Result is required for a Completed Action correction.")).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Result/)).toHaveFocus();
+    expect(patch).not.toHaveBeenCalled();
   });
 
   it("completes an Action created in the Ticket's first minute without truncating its timestamp", async () => {

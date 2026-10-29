@@ -4,6 +4,8 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["tests/**/*.test.ts"],
+    // PERF-01 owns a fresh 1000-Ticket/5000-Action schema and runs by explicit config.
+    exclude: ["tests/lab-04/dashboard.performance.test.ts"],
     // Every suite runs against one shared development database. Left parallel,
     // suites that create and mutate tickets interfere with each other.
     fileParallelism: false,

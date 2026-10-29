@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { MyTicketsPage } from "../../src/pages/MyTicketsPage.js";
 import * as referenceData from "../../src/api/referenceData.js";
 import * as ticketsApi from "../../src/api/tickets.js";
@@ -41,16 +41,21 @@ function paged(data: TicketListItem[], overrides: Partial<PagedResult<TicketList
   };
 }
 
-function renderPage() {
+function renderPage(initialEntry = "/tickets") {
   return render(
-    <MemoryRouter initialEntries={["/tickets"]}>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
-        <Route path="/tickets" element={<MyTicketsPage />} />
+        <Route path="/tickets" element={<><MyTicketsPage /><LocationProbe /></>} />
         <Route path="/tickets/new" element={<h1>Create Ticket</h1>} />
         <Route path="/tickets/:id" element={<h1>Ticket detail</h1>} />
       </Routes>
     </MemoryRouter>
   );
+}
+
+function LocationProbe() {
+  const location = useLocation();
+  return <output data-testid="location">{location.pathname}{location.search}</output>;
 }
 
 /** The last query the page sent to the API. */
@@ -108,6 +113,68 @@ describe("My Tickets — list", () => {
 
     await waitFor(() => expect(spy).toHaveBeenCalled());
     expect(lastQuery(spy)).toMatchObject({ page: 1, pageSize: 10, sort: "createdAt", order: "desc" });
+  });
+
+  it("loads Requester Dashboard date, status-set, and resolved sort drilldowns from the URL", async () => {
+    const spy = vi.spyOn(ticketsApi, "fetchMyTickets").mockResolvedValue(paged([ticket()]));
+    renderPage("/tickets?statuses=RESOLVED%2CCLOSED&resolvedFrom=2026-10-23T17%3A00%3A00.000Z&resolvedThrough=2026-10-29T12%3A00%3A00.000Z&sort=resolvedAt&order=desc");
+
+    await waitFor(() => expect(lastQuery(spy)).toMatchObject({
+      statuses: "RESOLVED,CLOSED",
+      resolvedFrom: "2026-10-23T17:00:00.000Z",
+      resolvedThrough: "2026-10-29T12:00:00.000Z",
+      sort: "resolvedAt",
+      order: "desc",
+    }));
+    expect(screen.getByText(/Dashboard filters: Statuses/)).toBeInTheDocument();
+  });
+
+  it("round-trips Dashboard filters, page size, search, sort, and page through the URL", async () => {
+    const spy = vi.spyOn(ticketsApi, "fetchMyTickets").mockResolvedValue(
+      paged([ticket()], { page: 2, pageSize: 20, total: 45, totalPages: 3 })
+    );
+    const { unmount } = renderPage("/tickets?statuses=RESOLVED%2CCLOSED&updatedFrom=2026-10-23T17%3A00%3A00.000Z&updatedThrough=2026-10-29T12%3A00%3A00.000Z&page=2&pageSize=20");
+
+    await waitFor(() => expect(lastQuery(spy)).toMatchObject({ page: 2, pageSize: 20, statuses: "RESOLVED,CLOSED" }));
+    fireEvent.change(screen.getByLabelText("Search"), { target: { value: "VPN" } });
+    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("q=VPN"));
+    await waitFor(() => expect(lastQuery(spy)).toMatchObject({ page: 1, pageSize: 20, q: "VPN", statuses: "RESOLVED,CLOSED" }));
+
+    fireEvent.click(screen.getByRole("button", { name: /Summary/ }));
+    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("sort=summary"));
+    await waitFor(() => expect(lastQuery(spy)).toMatchObject({ page: 1, pageSize: 20, sort: "summary", q: "VPN" }));
+    const refreshUrl = screen.getByTestId("location").textContent!;
+    unmount();
+
+    spy.mockClear();
+    renderPage(refreshUrl);
+    await waitFor(() => expect(lastQuery(spy)).toMatchObject({
+      page: 1,
+      pageSize: 20,
+      q: "VPN",
+      statuses: "RESOLVED,CLOSED",
+      updatedFrom: "2026-10-23T17:00:00.000Z",
+      updatedThrough: "2026-10-29T12:00:00.000Z",
+      sort: "summary",
+    }));
+  });
+
+  it("shows invalid Ticket link filters and offers a reset instead of silently dropping them", async () => {
+    const spy = vi.spyOn(ticketsApi, "fetchMyTickets").mockResolvedValue(paged([ticket()]));
+    renderPage("/tickets?statuses=OPEN%2COPEN");
+
+    expect(await screen.findByText("This Ticket link has invalid filters")).toBeInTheDocument();
+    expect(spy).not.toHaveBeenCalled();
+    fireEvent.click(screen.getAllByRole("button", { name: "Clear Filters" })[0]);
+    await waitFor(() => expect(spy).toHaveBeenCalledWith(expect.objectContaining({ page: 1, sort: "createdAt" })));
+  });
+
+  it("rejects impossible offset dates instead of normalizing them into a different calendar day", async () => {
+    const spy = vi.spyOn(ticketsApi, "fetchMyTickets").mockResolvedValue(paged([ticket()]));
+    renderPage("/tickets?updatedFrom=2026-02-30T00%3A00%3A00Z");
+
+    expect(await screen.findByText("This Ticket link has invalid filters")).toBeInTheDocument();
+    expect(spy).not.toHaveBeenCalled();
   });
 });
 

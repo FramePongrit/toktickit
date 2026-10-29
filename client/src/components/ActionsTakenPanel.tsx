@@ -182,22 +182,25 @@ function publicActorLabel(event: PublicWorkflowEvent): string {
   return event.actor?.fullName ?? "Historical actor not recorded";
 }
 
-function changedFields(revision: ActionRevision): { label: string; before: string; after: string }[] {
+function changedFields(revision: ActionRevision, people: Map<number, string>): { label: string; before: string; after: string }[] {
   if (!revision.before || !revision.after) return [];
   const keys = new Set([...Object.keys(revision.before), ...Object.keys(revision.after)]);
   return [...keys]
     .filter((key) => JSON.stringify(revision.before?.[key] ?? null) !== JSON.stringify(revision.after?.[key] ?? null))
     .map((key) => ({
       label: FIELD_LABELS[key] ?? statusTitle(key),
-      before: displaySnapshotValue(revision.before?.[key]),
-      after: displaySnapshotValue(revision.after?.[key]),
+      before: displaySnapshotValue(revision.before?.[key], key, people),
+      after: displaySnapshotValue(revision.after?.[key], key, people),
     }));
 }
 
-function displaySnapshotValue(value: unknown): string {
+function displaySnapshotValue(value: unknown, field: string, people: Map<number, string>): string {
   if (value === null || value === undefined || value === "") return "Not set";
   if (typeof value === "boolean") return value ? "Yes" : "No";
   if (typeof value === "string" && /^\d{4}-\d\d-\d\dT/.test(value)) return formatDate(value);
+  if (["assigneeId", "createdById", "performedById", "cancelledById"].includes(field) && typeof value === "number") {
+    return people.get(value) ?? `User ID ${value} (historical name unavailable)`;
+  }
   if (typeof value === "object") return "Updated";
   return String(value);
 }
@@ -210,6 +213,7 @@ function ActionDraftFields({
   mode,
   terminal,
   terminalAssigneeName,
+  resultRequired,
   errors,
   busy,
 }: {
@@ -220,6 +224,7 @@ function ActionDraftFields({
   mode: "create" | "edit";
   terminal: boolean;
   terminalAssigneeName?: string;
+  resultRequired: boolean;
   errors: Record<string, string>;
   busy: boolean;
 }) {
@@ -250,7 +255,7 @@ function ActionDraftFields({
         )}
       </div>
       <div className="col-12 col-md-6">
-        <FormField id={`${prefix}-result`} label="Result" error={errors.result}>
+        <FormField id={`${prefix}-result`} label="Result" required={resultRequired} error={errors.result}>
           {({ id, describedBy, invalid }) => <textarea id={id} className={`form-control${invalid ? " is-invalid" : ""}`} rows={3} maxLength={2000} value={draft.result} onChange={(event) => onChange({ result: event.target.value })} aria-describedby={describedBy} aria-invalid={invalid} disabled={busy} />}
         </FormField>
       </div>
@@ -334,6 +339,8 @@ export function ActionsTakenPanel({
   const editorBusy = createBusy || editBusy || transitionBusy;
   const [historyActionId, setHistoryActionId] = useState<number | null>(null);
   const [histories, setHistories] = useState<Record<number, { data: ActionRevision[]; page: number; pageSize: number; total: number; totalPages: number }>>({});
+  const [historyPages, setHistoryPages] = useState<Record<number, number>>({});
+  const [historyReload, setHistoryReload] = useState(0);
   const [conflict, setConflict] = useState<ConflictState | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const createControlsBusy = editorBusy && !createBusy;
@@ -385,6 +392,7 @@ export function ActionsTakenPanel({
     setConflict(null);
     setHistoryActionId(null);
     setHistories({});
+    setHistoryPages({});
     setPanelFeedback(null);
     setStale(false);
     setRefreshing(false);
@@ -529,8 +537,7 @@ export function ActionsTakenPanel({
 
   useEffect(() => {
     if (!historyActionId || !isStaff) return;
-    const existing = histories[historyActionId];
-    const historyPage = existing?.page ?? 1;
+    const historyPage = historyPages[historyActionId] ?? 1;
     let active = true;
     fetchStaffActionHistory(ticket.id, historyActionId, historyPage, 10).then((result) => {
       if (active) setHistories((current) => ({ ...current, [historyActionId]: result }));
@@ -538,7 +545,7 @@ export function ActionsTakenPanel({
       if (active) setPanelFeedback({ kind: "error", message: "Action history could not be loaded. Please retry." });
     });
     return () => { active = false; };
-  }, [historyActionId, ticket.id, refreshKey, isStaff, resolvedRole, user?.id]);
+  }, [historyActionId, ticket.id, historyPages, historyReload, isStaff, resolvedRole, user?.id]);
 
   async function refreshAll() {
     const scope = operationScope.current;
@@ -562,6 +569,7 @@ export function ActionsTakenPanel({
       setStale(false);
       setLoadState("ready");
       setWorkflowState("ready");
+      setHistoryReload((key) => key + 1);
       setPanelFeedback({ kind: "success", message: `Latest Ticket, Actions, and workflow loaded${version ? ` (Ticket version ${version})` : ""}.` });
     } catch {
       if (operationScope.current !== scope) return;
@@ -626,7 +634,7 @@ export function ActionsTakenPanel({
     returnFocusToTrigger();
   }
 
-  function validateDraft(draft: ActionDraft, mode: "create" | "edit", terminal: boolean): Record<string, string> {
+  function validateDraft(draft: ActionDraft, mode: "create" | "edit", terminal: boolean, resultRequired = false): Record<string, string> {
     const errors: Record<string, string> = {};
     if (!draft.description.trim()) errors.description = "Enter an Action Description.";
     else if (draft.description.length > 2000) errors.description = "Action Description must be 2,000 characters or fewer.";
@@ -638,6 +646,7 @@ export function ActionsTakenPanel({
     if (draft.followUpNote.length > 2000) errors.followUpNote = "Follow-up Note must be 2,000 characters or fewer.";
     if (draft.followUpRequired && !draft.followUpNote.trim()) errors.followUpNote = "Enter a Follow-up Note when follow-up is required.";
     if (draft.result.length > 2000) errors.result = "Result must be 2,000 characters or fewer.";
+    if (resultRequired && !draft.result.trim()) errors.result = "Result is required for a Completed Action correction.";
     if (draft.attachmentNotes.length > 1000) errors.attachmentNotes = "Attachment Notes must be 1,000 characters or fewer.";
     if (terminal && mode === "edit" && !draft.correctionReason.trim()) errors.correctionReason = "Enter a Correction Reason for terminal Action changes.";
     if (terminal && draft.correctionReason.length > 1000) errors.correctionReason = "Correction Reason must be 1,000 characters or fewer.";
@@ -736,7 +745,8 @@ export function ActionsTakenPanel({
       return;
     }
     const terminal = editAction.status === "COMPLETED" || editAction.status === "CANCELLED";
-    const errors = validateDraft(editDraft, "edit", terminal);
+    const resultRequired = editAction.status === "COMPLETED";
+    const errors = validateDraft(editDraft, "edit", terminal, resultRequired);
     setFieldErrors(errors);
     if (Object.keys(errors).length) {
       focusFirstInvalid("edit", Object.keys(errors)[0]);
@@ -766,6 +776,7 @@ export function ActionsTakenPanel({
       setEditDraft(null);
       setConflict(null);
       setHistoryActionId(result.action.id);
+      setHistoryPages((current) => ({ ...current, [result.action.id]: 1 }));
       setFocusedActionId(result.action.id);
       await refreshAll();
     } catch (error) {
@@ -935,12 +946,8 @@ export function ActionsTakenPanel({
   }
 
   function changeHistoryPage(actionId: number, nextPage: number) {
-    const current = histories[actionId];
-    if (!current) return;
-    setHistories((items) => ({ ...items, [actionId]: { ...current, page: nextPage } }));
+    setHistoryPages((pages) => ({ ...pages, [actionId]: nextPage }));
     setHistoryActionId(actionId);
-    // The history effect uses the page stored for the open Action.
-    queueMicrotask(() => setRefreshKey((key) => key + 1));
   }
 
   function linkedOrCurrentActions(): TicketAction[] {
@@ -997,7 +1004,7 @@ export function ActionsTakenPanel({
         {!isWritableParent && <p className="zen-warning-panel" role="status">This Ticket became read-only. Your draft is preserved, but it cannot be saved.</p>}
         {createDraft.assigneeId && owners.some((owner) => String(owner.id) === createDraft.assigneeId) ? null : <p className="zen-muted">The default assignee is your account. Choose an active IT Staff member or Administrator if needed.</p>}
         <form onSubmit={(event) => void submitCreate(event)} noValidate aria-busy={createBusy}>
-          <ActionDraftFields draft={createDraft} onChange={(patch) => { draftChanged("create"); setCreateDraft((current) => ({ ...current, ...patch })); }} ticket={ticket} owners={owners} mode="create" terminal={false} errors={fieldErrors} busy={createBusy || createControlsBusy} />
+            <ActionDraftFields draft={createDraft} onChange={(patch) => { draftChanged("create"); setCreateDraft((current) => ({ ...current, ...patch })); }} ticket={ticket} owners={owners} mode="create" terminal={false} resultRequired={false} errors={fieldErrors} busy={createBusy || createControlsBusy} />
           <div className="d-flex flex-wrap gap-2">
             <button type="submit" className="btn btn-primary" disabled={createBusy || stale || !isWritableParent || createControlsBusy || ownerState !== "ready" || (conflict?.scope === "create" && !conflict.reviewed)}>{createBusy ? "Saving…" : createIntent.current ? "Retry exact create" : "Save Planned Action"}</button>
             <button type="button" className="btn btn-outline-primary" disabled={editorBusy} onClick={requestCloseCreate}>Cancel</button>
@@ -1076,7 +1083,7 @@ export function ActionsTakenPanel({
             <h4 className="h6">{action.status === "COMPLETED" || action.status === "CANCELLED" ? "Correct terminal Action" : "Edit Action"}</h4>
             {(!isWritableParent || action.workCycle !== currentCycle) && <p className="zen-warning-panel" role="status">This Ticket or Action became read-only. Your edit draft is preserved, but cannot be saved.</p>}
             {action.status === "COMPLETED" || action.status === "CANCELLED" ? <p className="zen-muted">Status, assignee, creator, performer, and server timestamps are read-only.</p> : null}
-            <ActionDraftFields draft={editDraft} onChange={(patch) => { draftChanged("edit", action.id); setEditDraft((current) => current ? { ...current, ...patch } : current); }} ticket={ticket} owners={owners} mode="edit" terminal={action.status === "COMPLETED" || action.status === "CANCELLED"} terminalAssigneeName={action.assignee.fullName} errors={fieldErrors} busy={editBusy || editControlsBusy} />
+            <ActionDraftFields draft={editDraft} onChange={(patch) => { draftChanged("edit", action.id); setEditDraft((current) => current ? { ...current, ...patch } : current); }} ticket={ticket} owners={owners} mode="edit" terminal={action.status === "COMPLETED" || action.status === "CANCELLED"} terminalAssigneeName={action.assignee.fullName} resultRequired={action.status === "COMPLETED"} errors={fieldErrors} busy={editBusy || editControlsBusy} />
             <div className="d-flex flex-wrap gap-2"><button type="submit" className="btn btn-primary" disabled={editBusy || editControlsBusy || stale || !isWritableParent || action.workCycle !== currentCycle || (conflict?.scope === "edit" && conflict.actionId === action.id && !conflict.reviewed)}>{editBusy ? "Saving…" : "Save revision"}</button><button type="button" className="btn btn-outline-primary" disabled={editorBusy} onClick={closeEdit}>Discard changes</button></div>
           </form>}
           {transitionDraft?.actionId === action.id && <form className="action-editor mt-3" onSubmit={(event) => void submitTransition(event)} noValidate aria-busy={transitionBusy}>
@@ -1096,7 +1103,7 @@ export function ActionsTakenPanel({
             </>}
             <div className="d-flex flex-wrap gap-2"><button type="submit" className={`btn ${transitionDraft.status === "CANCELLED" ? "btn-danger" : "btn-primary"}`} disabled={transitionBusy || transitionControlsBusy || stale || !isWritableParent || action.workCycle !== currentCycle || (conflict?.scope === "transition" && conflict.actionId === action.id && !conflict.reviewed)}>{transitionBusy ? "Saving…" : transitionIntents.current.has(action.id) ? "Retry exact transition" : transitionDraft.status === "IN_PROGRESS" ? "Confirm Start" : transitionDraft.status === "COMPLETED" ? "Confirm Complete" : "Confirm Cancel Action"}</button><button type="button" className="btn btn-outline-primary" disabled={editorBusy || transitionIntents.current.has(action.id)} onClick={closeTransition}>Cancel form</button></div>
           </form>}
-          {historyActionId === action.id && <ActionHistory ticketId={ticket.id} actionId={action.id} data={histories[action.id]} onPageChange={(nextPage) => changeHistoryPage(action.id, nextPage)} />}
+          {historyActionId === action.id && <ActionHistory ticketId={ticket.id} action={action} data={histories[action.id]} onPageChange={(nextPage) => changeHistoryPage(action.id, nextPage)} />}
         </section> : null)}
       </>}
 
@@ -1124,23 +1131,30 @@ export function ActionsTakenPanel({
 
 function ActionHistory({
   ticketId,
-  actionId,
+  action,
   data,
   onPageChange,
 }: {
   ticketId: number;
-  actionId: number;
+  action: TicketAction;
   data?: { data: ActionRevision[]; page: number; pageSize: number; total: number; totalPages: number };
   onPageChange: (page: number) => void;
 }) {
   if (!data) return <p className="zen-muted mt-3" role="status" aria-busy="true">Loading Action history…</p>;
-  return <section className="action-history mt-3" aria-labelledby={`action-history-heading-${actionId}`}>
-    <h4 id={`action-history-heading-${actionId}`} className="h6">Change history for Action {actionId}</h4>
+  const people = new Map<number, string>([
+    [action.assignee.id, action.assignee.fullName],
+    [action.createdBy.id, action.createdBy.fullName],
+    ...(action.performedBy ? [[action.performedBy.id, action.performedBy.fullName] as [number, string]] : []),
+    ...(action.cancelledBy ? [[action.cancelledBy.id, action.cancelledBy.fullName] as [number, string]] : []),
+    ...data.data.map((revision) => [revision.actor.id, revision.actor.fullName] as [number, string]),
+  ]);
+  return <section className="action-history mt-3" aria-labelledby={`action-history-heading-${action.id}`}>
+    <h4 id={`action-history-heading-${action.id}`} className="h6">Change history for Action {action.id}</h4>
     <ol className="action-revision-list">
       {data.data.map((revision) => <li key={revision.id}>
         <div className="d-flex flex-wrap justify-content-between gap-2"><strong>#{revision.sequence} · {statusTitle(revision.operation)}</strong><time dateTime={revision.occurredAt}>{formatDate(revision.occurredAt)}</time></div>
         <p className="mb-1">Changed by {revision.actor.fullName}{revision.reason ? ` · Reason: ${revision.reason}` : ""}</p>
-        {revision.before && revision.after ? <ul className="action-diff-list">{changedFields(revision).map((change) => <li key={change.label}><strong>{change.label}:</strong> {change.before} <span aria-hidden="true">→</span> {change.after}</li>)}</ul> : <p className="zen-muted mb-0">Action created.</p>}
+        {revision.before && revision.after ? <ul className="action-diff-list">{changedFields(revision, people).map((change) => <li key={change.label}><strong>{change.label}:</strong> {change.before} <span aria-hidden="true">→</span> {change.after}</li>)}</ul> : <p className="zen-muted mb-0">Action created.</p>}
       </li>)}
     </ol>
     {data.totalPages > 1 && <Pagination page={data.page} pageSize={data.pageSize} total={data.total} totalPages={data.totalPages} onPageChange={onPageChange} itemLabel="history entries" />}

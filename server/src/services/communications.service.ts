@@ -164,10 +164,13 @@ export async function createPublicComment(
     // Finality deliberately precedes body validation for parsed JSON bodies.
     assertNotFinal(ticket.currentStatus);
     const { body } = communicationBodySchema.parse(rawBody);
-    return tx.publicComment.create({
-      data: { ticketId, authorId: userId, body },
+    const now = new Date();
+    const comment = await tx.publicComment.create({
+      data: { ticketId, authorId: userId, body, createdAt: now },
       include: publicCommentInclude,
     });
+    await tx.ticket.update({ where: { id: ticketId }, data: { updatedAt: now }, select: { id: true } });
+    return comment;
   });
   return serializePublicComment(created);
 }
@@ -227,11 +230,13 @@ export async function setResolutionIndication(userId: number, ticketId: number) 
         "This Ticket already has an active Resolution Indication."
       );
     }
+    const now = new Date();
     return tx.ticket.update({
       where: { id: ticketId },
       data: {
-        resolutionIndicatedAt: new Date(),
+        resolutionIndicatedAt: now,
         resolutionIndicatedById: userId,
+        updatedAt: now,
       },
       select: {
         resolutionIndicatedAt: true,

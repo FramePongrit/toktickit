@@ -14,6 +14,7 @@ import { Pagination } from "../components/Pagination.js";
 import { StateBlock } from "../components/StateBlock.js";
 import { useDebouncedValue } from "../hooks/useDebouncedValue.js";
 import { ApiError } from "../lib/http.js";
+import { isOffsetDateTime } from "../lib/offsetDateTime.js";
 import { roleLabel } from "../context/AuthContext.js";
 import type {
   Priority,
@@ -36,6 +37,7 @@ const STATUSES: TicketStatus[] = [
 ];
 const PAGE_SIZES = [10, 20, 50] as const;
 const SORT_FIELDS: Array<{ value: StaffQueueSortField; label: string; defaultOrder: SortOrder }> = [
+  { value: "priorityRecent", label: "Priority, recently updated", defaultOrder: "desc" },
   { value: "itPriority", label: "IT Priority", defaultOrder: "desc" },
   { value: "createdAt", label: "Created date", defaultOrder: "asc" },
   { value: "updatedAt", label: "Updated date", defaultOrder: "asc" },
@@ -47,6 +49,12 @@ interface FilterState {
   q: string;
   status: string;
   itPriority: string;
+  statuses: string;
+  itPriorities: string;
+  updatedFrom: string;
+  updatedThrough: string;
+  resolvedFrom: string;
+  resolvedThrough: string;
   categoryId: string;
   owner: string;
 }
@@ -60,7 +68,7 @@ interface PageState {
   pageSize: 10 | 20 | 50;
 }
 
-const DEFAULT_FILTERS: FilterState = { q: "", status: "", itPriority: "", categoryId: "", owner: "" };
+const DEFAULT_FILTERS: FilterState = { q: "", status: "", itPriority: "", statuses: "", itPriorities: "", updatedFrom: "", updatedThrough: "", resolvedFrom: "", resolvedThrough: "", categoryId: "", owner: "" };
 
 function titleCase(value: string): string {
   return value
@@ -96,6 +104,41 @@ function parsePositiveInteger(value: string | null, fallback: number): number {
   return parsed > 0 ? parsed : fallback;
 }
 
+function validQueueUrl(params: URLSearchParams): boolean {
+  const allowed = new Set(["scope", "q", "status", "statuses", "itPriority", "itPriorities", "updatedFrom", "updatedThrough", "resolvedFrom", "resolvedThrough", "categoryId", "owner", "sort", "order", "page", "pageSize"]);
+  const keys = [...params.keys()];
+  if (keys.some((key) => !allowed.has(key) || params.getAll(key).length !== 1)) return false;
+  const get = (key: string) => params.get(key);
+  if (params.has("scope") && get("scope") !== "active" && get("scope") !== "all" && get("scope") !== "") return false;
+  if (params.has("status") && (!get("status") || !STATUSES.includes(get("status") as TicketStatus))) return false;
+  if (params.has("statuses")) {
+    const items = (get("statuses") ?? "").split(",").map((item) => item.trim());
+    if (!items.every(Boolean) || items.length > STATUSES.length || items.some((item) => !STATUSES.includes(item as TicketStatus)) || new Set(items).size !== items.length) return false;
+  }
+  if (get("status") && get("statuses")) return false;
+  if (params.has("itPriority") && get("itPriority") && !PRIORITIES.includes(get("itPriority") as Priority)) return false;
+  if (params.has("itPriorities")) {
+    const items = (get("itPriorities") ?? "").split(",").map((item) => item.trim());
+    if (!items.every(Boolean) || items.length > PRIORITIES.length || items.some((item) => !PRIORITIES.includes(item as Priority)) || new Set(items).size !== items.length) return false;
+  }
+  if (get("itPriority") && get("itPriorities")) return false;
+  if (get("owner") && get("owner") !== "me" && get("owner") !== "unassigned" && !/^[1-9]\d*$/.test(get("owner")!)) return false;
+  if (get("categoryId") && !/^[1-9]\d*$/.test(get("categoryId")!)) return false;
+  if (params.has("q") && (!get("q")!.trim() || get("q")!.length > 100)) return false;
+  if (get("sort") && !SORT_FIELDS.some((field) => field.value === get("sort"))) return false;
+  if (get("order") && get("order") !== "asc" && get("order") !== "desc") return false;
+  if (get("page") && !/^[1-9]\d*$/.test(get("page")!)) return false;
+  if (get("pageSize") && ![10, 20, 50].includes(Number(get("pageSize")))) return false;
+  for (const [from, through] of [["updatedFrom", "updatedThrough"], ["resolvedFrom", "resolvedThrough"]]) {
+    for (const key of [from, through]) {
+      const date = get(key);
+      if (params.has(key) && !isOffsetDateTime(date)) return false;
+    }
+    if (get(from) && get(through) && Date.parse(get(from)!) > Date.parse(get(through)!)) return false;
+  }
+  return true;
+}
+
 function readPageState(params: URLSearchParams): PageState {
   const pageSizeValue = Number(params.get("pageSize"));
   const pageSize = PAGE_SIZES.includes(pageSizeValue as 10 | 20 | 50)
@@ -114,6 +157,12 @@ function readPageState(params: URLSearchParams): PageState {
       q: params.get("q") ?? "",
       status: isStatus(params.get("status")) ? params.get("status")! : "",
       itPriority: isPriority(params.get("itPriority")) ? params.get("itPriority")! : "",
+      statuses: params.get("statuses") ?? "",
+      itPriorities: params.get("itPriorities") ?? "",
+      updatedFrom: params.get("updatedFrom") ?? "",
+      updatedThrough: params.get("updatedThrough") ?? "",
+      resolvedFrom: params.get("resolvedFrom") ?? "",
+      resolvedThrough: params.get("resolvedThrough") ?? "",
       categoryId: /^\d+$/.test(params.get("categoryId") ?? "") ? params.get("categoryId")! : "",
       owner: safeOwner,
     },
@@ -136,6 +185,12 @@ function queryFromState(state: PageState, search: string): StaffQueueQuery {
   if (trimmedSearch) query.q = trimmedSearch;
   if (state.filters.status) query.status = state.filters.status as TicketStatus;
   if (state.filters.itPriority) query.itPriority = state.filters.itPriority as Priority;
+  if (state.filters.statuses) query.statuses = state.filters.statuses;
+  if (state.filters.itPriorities) query.itPriorities = state.filters.itPriorities;
+  if (state.filters.updatedFrom) query.updatedFrom = state.filters.updatedFrom;
+  if (state.filters.updatedThrough) query.updatedThrough = state.filters.updatedThrough;
+  if (state.filters.resolvedFrom) query.resolvedFrom = state.filters.resolvedFrom;
+  if (state.filters.resolvedThrough) query.resolvedThrough = state.filters.resolvedThrough;
   if (state.filters.categoryId) query.categoryId = Number(state.filters.categoryId);
   if (state.filters.owner === "me" || state.filters.owner === "unassigned") query.owner = state.filters.owner;
   else if (/^\d+$/.test(state.filters.owner)) query.owner = Number(state.filters.owner);
@@ -148,6 +203,12 @@ function stateToParams(state: PageState): URLSearchParams {
   if (state.filters.q) params.set("q", state.filters.q);
   if (state.filters.status) params.set("status", state.filters.status);
   if (state.filters.itPriority) params.set("itPriority", state.filters.itPriority);
+  if (state.filters.statuses) params.set("statuses", state.filters.statuses);
+  if (state.filters.itPriorities) params.set("itPriorities", state.filters.itPriorities);
+  if (state.filters.updatedFrom) params.set("updatedFrom", state.filters.updatedFrom);
+  if (state.filters.updatedThrough) params.set("updatedThrough", state.filters.updatedThrough);
+  if (state.filters.resolvedFrom) params.set("resolvedFrom", state.filters.resolvedFrom);
+  if (state.filters.resolvedThrough) params.set("resolvedThrough", state.filters.resolvedThrough);
   if (state.filters.categoryId) params.set("categoryId", state.filters.categoryId);
   if (state.filters.owner) params.set("owner", state.filters.owner);
   params.set("sort", state.sort);
@@ -194,7 +255,7 @@ function SortButton({
   order: SortOrder;
   onChange: (field: StaffQueueSortField) => void;
 }) {
-  const active = field === sort;
+  const active = field === sort || (field === "itPriority" && sort === "priorityRecent");
   return (
     <button
       type="button"
@@ -296,8 +357,11 @@ function QueueSkeleton() {
 
 export function StaffTicketQueuePage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [state, setState] = useState<PageState>(() => readPageState(searchParams));
-  const [searchInput, setSearchInput] = useState(state.filters.q);
+  const searchSignature = searchParams.toString();
+  const params = new URLSearchParams(searchSignature);
+  const invalidQuery = !validQueueUrl(params);
+  const state = readPageState(params);
+  const searchInput = state.filters.q;
   const [result, setResult] = useState<{ data: StaffQueueItem[]; page: number; pageSize: number; total: number; totalPages: number } | null>(null);
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
   const [loadError, setLoadError] = useState<ApiError | null>(null);
@@ -309,15 +373,24 @@ export function StaffTicketQueuePage() {
   const debouncedSearch = useDebouncedValue(searchInput);
 
   const filtersActive = Boolean(
-    searchInput.trim() || state.filters.status || state.filters.itPriority || state.filters.categoryId || state.filters.owner
+    searchInput.trim() || state.filters.status || state.filters.itPriority || state.filters.statuses || state.filters.itPriorities ||
+    state.filters.updatedFrom || state.filters.updatedThrough || state.filters.resolvedFrom || state.filters.resolvedThrough || state.filters.categoryId || state.filters.owner
   );
-
-  useEffect(() => {
-    setSearchParams(stateToParams({ ...state, filters: { ...state.filters, q: searchInput } }), { replace: true });
-  }, [state, searchInput, setSearchParams]);
+  const hasFilters = filtersActive || invalidQuery;
+  const linkedFilterLabels = [
+    state.filters.statuses && `Statuses: ${state.filters.statuses}`,
+    state.filters.itPriorities && `IT priorities: ${state.filters.itPriorities}`,
+    state.filters.updatedFrom || state.filters.updatedThrough ? `Updated: ${state.filters.updatedFrom || "any date"} to ${state.filters.updatedThrough || "any date"}` : "",
+    state.filters.resolvedFrom || state.filters.resolvedThrough ? `Resolved: ${state.filters.resolvedFrom || "any date"} to ${state.filters.resolvedThrough || "any date"}` : "",
+  ].filter(Boolean);
 
   useEffect(() => {
     let cancelled = false;
+    if (invalidQuery) {
+      setLoadError(new ApiError(400, "VALIDATION_FAILED", "This queue link contains invalid filters. Clear filters to start again."));
+      setLoadState("error");
+      return () => { cancelled = true; };
+    }
     setLoadState("loading");
     setLoadError(null);
     fetchStaffQueue(queryFromState(state, debouncedSearch))
@@ -332,7 +405,7 @@ export function StaffTicketQueuePage() {
         setLoadState("error");
       });
     return () => { cancelled = true; };
-  }, [state.scope, state.page, state.pageSize, state.sort, state.order, state.filters.status, state.filters.itPriority, state.filters.categoryId, state.filters.owner, debouncedSearch, reload]);
+  }, [state.scope, state.page, state.pageSize, state.sort, state.order, state.filters.status, state.filters.itPriority, state.filters.statuses, state.filters.itPriorities, state.filters.updatedFrom, state.filters.updatedThrough, state.filters.resolvedFrom, state.filters.resolvedThrough, state.filters.categoryId, state.filters.owner, debouncedSearch, reload, invalidQuery]);
 
   useEffect(() => {
     fetchCategories().then(setCategories).catch(() => undefined);
@@ -351,35 +424,36 @@ export function StaffTicketQueuePage() {
   }, [ownerReload]);
 
   function updateState(patch: Partial<PageState>, resetPage = true) {
-    setState((previous) => ({ ...previous, ...patch, page: resetPage ? 1 : patch.page ?? previous.page }));
+    const next = { ...state, ...patch, page: resetPage ? 1 : patch.page ?? state.page };
+    setSearchParams(stateToParams(next), { replace: true });
   }
 
   function updateFilter(field: keyof FilterState, value: string) {
-    if (field === "q") {
-      setSearchInput(value);
-      setState((previous) => ({ ...previous, page: 1 }));
-      return;
-    }
-    setState((previous) => ({ ...previous, filters: { ...previous.filters, [field]: value }, page: 1 }));
+    const filters = { ...state.filters, [field]: value };
+    if (field === "status") filters.statuses = "";
+    if (field === "statuses") filters.status = "";
+    if (field === "itPriority") filters.itPriorities = "";
+    if (field === "itPriorities") filters.itPriority = "";
+    setSearchParams(stateToParams({ ...state, filters, page: 1 }), { replace: true });
   }
 
   function clearFilters() {
-    setSearchInput("");
-    setState((previous) => ({
-      ...previous,
+    setSearchParams(stateToParams({
+      ...state,
       filters: { ...DEFAULT_FILTERS },
       sort: "itPriority",
       order: "desc",
       page: 1,
       pageSize: 10,
-    }));
+    }), { replace: true });
   }
 
   function changeSort(field: StaffQueueSortField) {
-    setState((previous) => {
-      if (previous.sort === field) return { ...previous, order: previous.order === "asc" ? "desc" : "asc", page: 1 };
-      return { ...previous, sort: field, order: SORT_FIELDS.find((item) => item.value === field)?.defaultOrder ?? "asc", page: 1 };
-    });
+    if (state.sort === field) {
+      updateState({ order: state.order === "asc" ? "desc" : "asc" });
+    } else {
+      updateState({ sort: field, order: SORT_FIELDS.find((item) => item.value === field)?.defaultOrder ?? "asc" });
+    }
   }
 
   const ownerOptions = useMemo(() => owners.map((owner) => ({ ...owner, label: `${owner.fullName} — ${roleLabel(owner.role)}` })), [owners]);
@@ -443,16 +517,17 @@ export function StaffTicketQueuePage() {
             <select id="staff-queue-page-size" className="form-select" value={state.pageSize} onChange={(event) => updateState({ pageSize: Number(event.target.value) as 10 | 20 | 50 })}><option value={10}>10 tickets</option><option value={20}>20 tickets</option><option value={50}>50 tickets</option></select>
           </div>
         </div>
-        <button type="button" className="btn btn-outline-primary mt-3" onClick={clearFilters} disabled={!filtersActive}>Clear Filters</button>
+        {linkedFilterLabels.length > 0 && <p className="form-text mt-3 mb-0" role="status">Dashboard filters: {linkedFilterLabels.join(" · ")}</p>}
+        <button type="button" className="btn btn-outline-primary mt-3" onClick={clearFilters} disabled={!hasFilters}>Clear Filters</button>
       </section>
 
       {loadState === "loading" && <QueueSkeleton />}
       {loadState === "error" && (
         <StateBlock
           kind="error"
-          title={loadError?.status === 403 ? "You do not have access to the Staff Queue" : "Could not load the ticket queue"}
-          description={loadError?.status === 403 ? "Only IT Staff and Administrators can view this queue." : "The service did not respond. Your query has been kept, so you can safely retry."}
-          action={loadError?.status === 403 ? <Link className="btn btn-outline-primary" to="/">Return to your workspace</Link> : <button type="button" className="btn btn-outline-primary" onClick={() => setReload((value) => value + 1)}>Retry</button>}
+          title={loadError?.status === 403 ? "You do not have access to the Staff Queue" : invalidQuery ? "This queue link has invalid filters" : "Could not load the ticket queue"}
+          description={loadError?.status === 403 ? "Only IT Staff and Administrators can view this queue." : invalidQuery ? "Review the status, priority and date filters, or clear the link filters to start again." : "The service did not respond. Your query has been kept, so you can safely retry."}
+          action={loadError?.status === 403 ? <Link className="btn btn-outline-primary" to="/">Return to your workspace</Link> : invalidQuery ? <button type="button" className="btn btn-outline-primary" onClick={clearFilters}>Clear Filters</button> : <button type="button" className="btn btn-outline-primary" onClick={() => setReload((value) => value + 1)}>Retry</button>}
         />
       )}
       {loadState === "ready" && result && result.total === 0 && !filtersActive && <StateBlock kind="empty" title={`No Tickets in this ${state.scope === "active" ? "scope" : "view"}.`} description={stateDescription} />}
