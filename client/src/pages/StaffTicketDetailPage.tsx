@@ -19,6 +19,8 @@ import type {
   InternalNote,
   Priority,
   PublicComment,
+  ResolutionGate,
+  ResolutionGateReason,
   Role,
   TicketDetail,
   TicketOwnerOption,
@@ -196,7 +198,9 @@ function ConfirmationDialog({
       <p className="mb-3">
         {status === "CLOSED"
           ? "Closing this Ticket is final. Closed Tickets are read-only and cannot be reopened."
-          : `Update this Ticket to ${titleCase(status)}?`}
+          : status === "CANCELLED"
+            ? "This is final. All unfinished Actions in the current work cycle will be cancelled with the reason entered above."
+            : `Update this Ticket to ${titleCase(status)}?`}
       </p>
       <div className="d-flex flex-wrap justify-content-end gap-2">
         <button ref={cancelRef} type="button" className="btn btn-outline-primary" onClick={onCancel} disabled={busy}>
@@ -214,6 +218,24 @@ function ownerText(owner: TicketOwnerOption | null | undefined): React.ReactNode
   if (!owner) return <span className="zen-muted">Unassigned</span>;
   return <>{owner.fullName} <span className="zen-muted">({roleLabel(owner.role)})</span></>;
 }
+
+function isResolutionGate(value: unknown): value is ResolutionGate {
+  if (!value || typeof value !== "object") return false;
+  const gate = value as Record<string, unknown>;
+  return typeof gate.canResolve === "boolean"
+    && typeof gate.completedCount === "number"
+    && typeof gate.unfinishedCount === "number"
+    && typeof gate.followUpCount === "number"
+    && Array.isArray(gate.reasons)
+    && gate.reasons.every((reason) => ["NO_COMPLETED_ACTION", "UNFINISHED_ACTIONS", "FOLLOW_UP_REQUIRED", "OWNER_REQUIRED"].includes(String(reason)));
+}
+
+const GATE_REASON_TEXT: Record<ResolutionGateReason, string> = {
+  NO_COMPLETED_ACTION: "Complete at least one Action in this work cycle.",
+  UNFINISHED_ACTIONS: "Finish or cancel the unfinished Actions in this work cycle.",
+  FOLLOW_UP_REQUIRED: "Clear required follow-up on Completed Actions before resolving.",
+  OWNER_REQUIRED: "Assign an active IT Staff member or Administrator before changing status.",
+};
 
 export function StaffTicketDetailPage() {
   const { id } = useParams();
@@ -235,6 +257,7 @@ export function StaffTicketDetailPage() {
   const [priorityDraft, setPriorityDraft] = useState<Priority>("MEDIUM");
   const [statusDraft, setStatusDraft] = useState<TicketStatus | "">("");
   const [waitingComment, setWaitingComment] = useState("");
+  const [cancelReason, setCancelReason] = useState("");
   const [publicDraft, setPublicDraft] = useState("");
   const [noteDraft, setNoteDraft] = useState("");
   const [statusDialog, setStatusDialog] = useState<TicketStatus | null>(null);
@@ -262,6 +285,10 @@ export function StaffTicketDetailPage() {
           setPriorityDraft(loaded.itPriority ?? loaded.requestedPriority);
           setStatusDraft("");
           setWaitingComment("");
+          setCancelReason("");
+          setStatusDialog(null);
+          setReviewRequired(null);
+          statusIntent.current = null;
         }
         setLoadState("ready");
       })
@@ -442,6 +469,7 @@ export function StaffTicketDetailPage() {
     const body = JSON.stringify({
       expectedTicketVersion: ticket.version ?? 1,
       status,
+      ...(status === "CANCELLED" ? { cancelReason: cancelReason.trim() } : {}),
       ...(status === "WAITING_FOR_REQUESTER" ? { publicComment: waitingComment.trim() } : {}),
     });
     if (!statusIntent.current || statusIntent.current.body !== body) {
@@ -449,17 +477,27 @@ export function StaffTicketDetailPage() {
     }
     setStatusFeedback({ busy: true, error: null, success: null });
     try {
-      const result = await updateStaffTicketStatus(
-        ticket.id,
-        status,
-        ticket.version ?? 1,
-        status === "WAITING_FOR_REQUESTER" ? waitingComment.trim() : undefined,
-        statusIntent.current.key
-      );
+      const result = status === "CANCELLED"
+        ? await updateStaffTicketStatus(
+          ticket.id,
+          status,
+          ticket.version ?? 1,
+          undefined,
+          statusIntent.current.key,
+          cancelReason.trim()
+        )
+        : await updateStaffTicketStatus(
+          ticket.id,
+          status,
+          ticket.version ?? 1,
+          status === "WAITING_FOR_REQUESTER" ? waitingComment.trim() : undefined,
+          statusIntent.current.key
+        );
       statusIntent.current = null;
       setStatusDialog(null);
       setStatusDraft("");
       setWaitingComment("");
+      setCancelReason("");
       setStatusFeedback({ busy: false, error: null, success: `Ticket status updated to ${titleCase(status)}.` });
       setReload((value) => value + 1);
       setTicket((current) => current ? {
@@ -468,6 +506,9 @@ export function StaffTicketDetailPage() {
         version: result.ticketVersion,
         resolutionIndication: result.resolutionIndication,
         allowedTransitions: result.allowedTransitions,
+        workCycle: result.workCycle,
+        resolvedAt: result.resolvedAt,
+        resolutionGate: result.resolutionGate,
       } : current);
     } catch (error) {
       if (error instanceof ApiError && error.status < 500) statusIntent.current = null;
@@ -476,6 +517,16 @@ export function StaffTicketDetailPage() {
         finalError(setStatusFeedback);
       } else if (error instanceof ApiError && error.code === "TICKET_OWNER_REQUIRED") {
         setStatusFeedback({ busy: false, error: "Assign an active IT Staff member or Administrator with Claim/Reassign before updating status.", success: null });
+      } else if (error instanceof ApiError && error.code === "RESOLUTION_GATE_FAILED") {
+        const gate = error.meta?.resolutionGate;
+        if (isResolutionGate(gate)) {
+          setTicket((current) => current ? {
+            ...current,
+            resolutionGate: gate,
+            allowedTransitions: current.allowedTransitions?.filter((next) => next !== "RESOLVED"),
+          } : current);
+        }
+        setStatusFeedback({ busy: false, error: error.message, success: null });
       } else if (error instanceof ApiError && error.code === "VALIDATION_FAILED" && status === "WAITING_FOR_REQUESTER") {
         setStatusFeedback({ busy: false, error: "Enter a Public Comment when waiting for the Requester.", success: null });
       } else if (error instanceof ApiError && (error.code === "STALE_TICKET_VERSION" || error.code === "IDEMPOTENCY_KEY_REUSED")) {
@@ -491,6 +542,10 @@ export function StaffTicketDetailPage() {
     event.preventDefault();
     if (!statusDraft) {
       setStatusFeedback({ busy: false, error: "Select a permitted next status.", success: null });
+      return;
+    }
+    if (statusDraft === "CANCELLED" && !cancelReason.trim()) {
+      setStatusFeedback({ busy: false, error: "Enter a reason before cancelling this Ticket.", success: null });
       return;
     }
     setStatusFeedback(idleFeedback());
@@ -562,6 +617,11 @@ export function StaffTicketDetailPage() {
 
   const isFinal = FINAL_STATUSES.has(ticket.currentStatus);
   const allowedTransitions = ticket.allowedTransitions ?? [];
+  const resolutionTimeLabel = ticket.resolvedAt
+    ? `Resolved ${formatDateTime(ticket.resolvedAt)}`
+    : ticket.currentStatus === "RESOLVED" || ticket.currentStatus === "CLOSED"
+      ? "Legacy resolution time unknown."
+      : "Not resolved in this cycle.";
   const comments = sorted(ticket.publicComments);
   const notes = sorted(ticket.internalNotes);
 
@@ -664,6 +724,11 @@ export function StaffTicketDetailPage() {
       <section className="zen-card staff-action-card p-3 p-md-4 mb-4" aria-labelledby="status-heading">
         <h2 className="h5" id="status-heading">Status</h2>
         <p className="zen-muted">Only status transitions permitted by the server are offered.</p>
+        <p className="zen-muted" data-testid="ticket-work-cycle">Work cycle {ticket.workCycle ?? 1} · {resolutionTimeLabel}</p>
+        {ticket.resolutionGate && <div className="zen-warning-panel mb-3" aria-label="Resolution requirements">
+          <p className="mb-1">Cycle {ticket.workCycle ?? 1}: {ticket.resolutionGate.completedCount} completed, {ticket.resolutionGate.unfinishedCount} unfinished, {ticket.resolutionGate.followUpCount} requiring follow-up.</p>
+          {ticket.resolutionGate.reasons.length > 0 && <ul className="mb-0">{ticket.resolutionGate.reasons.map((reason) => <li key={reason}>{GATE_REASON_TEXT[reason]}</li>)}</ul>}
+        </div>}
         {!isFinal && (allowedTransitions.length === 0 ? (
           <p className="zen-warning-panel mb-0" role="status">Assign an eligible Owner with Claim or Reassign before updating status.</p>
         ) : (
@@ -674,6 +739,7 @@ export function StaffTicketDetailPage() {
               {allowedTransitions.map((status) => <option key={status} value={status}>{titleCase(status)}</option>)}
             </select>
             {statusDraft === "WAITING_FOR_REQUESTER" && <div className="mt-3"><label className="form-label fw-semibold" htmlFor="waiting-public-comment">Public Comment for Requester<span className="zen-required" aria-hidden="true">*</span><span className="visually-hidden"> (required)</span></label><textarea id="waiting-public-comment" className="form-control" rows={4} maxLength={MESSAGE_LIMIT} value={waitingComment} onChange={(event) => setWaitingComment(event.target.value)} aria-describedby="waiting-comment-hint" /><p id="waiting-comment-hint" className="zen-muted mt-1 mb-0">{MESSAGE_LIMIT - waitingComment.length} characters remaining.</p></div>}
+            {statusDraft === "CANCELLED" && <div className="mt-3"><label className="form-label fw-semibold" htmlFor="ticket-cancel-reason">Cancellation reason<span className="zen-required" aria-hidden="true">*</span><span className="visually-hidden"> (required)</span></label><textarea id="ticket-cancel-reason" className="form-control" rows={3} maxLength={1000} value={cancelReason} onChange={(event) => { setCancelReason(event.target.value); setStatusFeedback(idleFeedback()); }} aria-describedby="ticket-cancel-hint" /><p id="ticket-cancel-hint" className="zen-muted mt-1 mb-0">{1000 - cancelReason.length} characters remaining. Unfinished current-cycle Actions will be cancelled together.</p></div>}
             <ActionFeedback feedback={statusFeedback} testId="status-feedback" onReload={reviewRequired === "status" ? () => void reloadForReview() : undefined} />
             <button ref={statusTriggerRef} type="submit" className="btn btn-primary mt-3" disabled={statusFeedback.busy}>{statusFeedback.busy ? "Updating…" : "Update status"}</button>
             {statusDialog && <ConfirmationDialog status={statusDialog} busy={statusFeedback.busy} onCancel={() => setStatusDialog(null)} onConfirm={() => void performStatus(statusDialog)} />}

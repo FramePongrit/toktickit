@@ -31,20 +31,16 @@ import {
   serializePublicComment,
   serializeResolutionIndication,
 } from "./communications.service.js";
+import { actionSnapshot, appendActionRevision } from "./actions.service.js";
+import {
+  allowedTicketTransitions,
+  resolutionGate,
+  TICKET_TRANSITIONS,
+  type ResolutionGate,
+} from "../lib/ticketRules.js";
 
 const FINAL_STATUSES = new Set<TicketStatus>(["CLOSED", "CANCELLED"]);
 const ELIGIBLE_OWNER_ROLES = new Set<Role>(["STAFF", "ADMIN"]);
-
-export const STATUS_TRANSITIONS: Record<TicketStatus, readonly TicketStatus[]> = {
-  NEW: ["OPEN", "CANCELLED"],
-  OPEN: ["IN_PROGRESS", "WAITING_FOR_REQUESTER", "CANCELLED"],
-  IN_PROGRESS: ["WAITING_FOR_REQUESTER", "RESOLVED", "CANCELLED"],
-  WAITING_FOR_REQUESTER: ["OPEN", "IN_PROGRESS", "CANCELLED"],
-  RESOLVED: ["CLOSED", "REOPENED"],
-  REOPENED: ["IN_PROGRESS", "WAITING_FOR_REQUESTER", "RESOLVED", "CANCELLED"],
-  CLOSED: [],
-  CANCELLED: [],
-};
 
 const safeOwnerSelect = {
   id: true,
@@ -84,9 +80,10 @@ function ownerIsEligible(owner: { active: boolean; role: Role } | null | undefin
 
 function allowedTransitionsFor(
   status: TicketStatus,
-  owner: { active: boolean; role: Role } | null | undefined
+  owner: { active: boolean; role: Role } | null | undefined,
+  gate: ResolutionGate
 ): TicketStatus[] {
-  return ownerIsEligible(owner) ? [...STATUS_TRANSITIONS[status]] : [];
+  return allowedTicketTransitions(status, ownerIsEligible(owner), gate);
 }
 
 function serializeAttachment(attachment: StaffTicketDetail["attachments"][number]) {
@@ -102,7 +99,7 @@ function serializeAttachment(attachment: StaffTicketDetail["attachments"][number
   };
 }
 
-export function serializeStaffTicketDetail(ticket: StaffTicketDetail) {
+export function serializeStaffTicketDetail(ticket: StaffTicketDetail, gate: ResolutionGate, serverTime: Date) {
   return {
     id: ticket.id,
     ticketNumber: ticket.ticketNumber,
@@ -112,6 +109,9 @@ export function serializeStaffTicketDetail(ticket: StaffTicketDetail) {
     itPriority: ticket.itPriority,
     currentStatus: ticket.currentStatus,
     version: ticket.version,
+    workCycle: ticket.workCycle,
+    resolvedAt: ticket.resolvedAt,
+    serverTime,
     createdAt: ticket.createdAt,
     updatedAt: ticket.updatedAt,
     category: ticket.category,
@@ -125,13 +125,16 @@ export function serializeStaffTicketDetail(ticket: StaffTicketDetail) {
     publicComments: ticket.publicComments.map(serializePublicComment),
     internalNotes: ticket.internalNotes.map(serializeInternalNote),
     attachments: ticket.attachments.map(serializeAttachment),
-    allowedTransitions: allowedTransitionsFor(ticket.currentStatus, ticket.owner),
+    allowedTransitions: allowedTransitionsFor(ticket.currentStatus, ticket.owner, gate),
+    resolutionGate: gate,
   };
 }
 
 interface LockedTicket {
   id: number;
   currentStatus: TicketStatus;
+  workCycle: number;
+  resolvedAt: Date | null;
   ownerId: number | null;
   resolutionIndicatedAt: Date | null;
   resolutionIndicatedById: number | null;
@@ -172,7 +175,7 @@ async function notifyLockTestHook(
 
 async function lockTicket(tx: TransactionClient, ticketId: number): Promise<LockedTicket> {
   const rows = await tx.$queryRaw<LockedTicket[]>`
-    SELECT "id", "currentStatus", "ownerId", "resolutionIndicatedAt", "resolutionIndicatedById", "version", "itPriority"
+    SELECT "id", "currentStatus", "ownerId", "workCycle", "resolvedAt", "resolutionIndicatedAt", "resolutionIndicatedById", "version", "itPriority"
     FROM "Ticket"
     WHERE "id" = ${ticketId}
     FOR UPDATE
@@ -228,19 +231,38 @@ function ownerConflict(code: "TICKET_ALREADY_ASSIGNED" | "TICKET_OWNER_CHANGED",
   return HttpError.conflict(code, message, { owner: serializeOwner(owner) });
 }
 
-async function loadDetail(ticketId: number): Promise<StaffTicketDetail> {
-  const ticket = await getPrisma().ticket.findUnique({
-    where: { id: ticketId },
-    include: staffDetailInclude,
+async function currentCycleGate(
+  tx: TransactionClient,
+  ticketId: number,
+  workCycle: number,
+  ownerIsEligible: boolean
+): Promise<ResolutionGate> {
+  const groups = await tx.actionTaken.groupBy({
+    by: ["status", "followUpRequired"],
+    where: { ticketId, workCycle },
+    _count: { _all: true },
   });
-  if (!ticket) {
-    throw HttpError.notFound("TICKET_NOT_FOUND", "The requested ticket does not exist.");
+  const counts = { completedCount: 0, unfinishedCount: 0, followUpCount: 0 };
+  for (const group of groups) {
+    const count = group._count._all;
+    if (group.status === "COMPLETED") {
+      counts.completedCount += count;
+      if (group.followUpRequired) counts.followUpCount += count;
+    } else if (group.status === "PLANNED" || group.status === "IN_PROGRESS") {
+      counts.unfinishedCount += count;
+    }
   }
-  return ticket;
+  return resolutionGate(counts, ownerIsEligible);
 }
 
 export async function getStaffTicketDetail(ticketId: number) {
-  return serializeStaffTicketDetail(await loadDetail(ticketId));
+  const result = await getPrisma().$transaction(async (tx) => {
+    const ticket = await tx.ticket.findUnique({ where: { id: ticketId }, include: staffDetailInclude });
+    if (!ticket) throw HttpError.notFound("TICKET_NOT_FOUND", "The requested ticket does not exist.");
+    const gate = await currentCycleGate(tx, ticket.id, ticket.workCycle, ownerIsEligible(ticket.owner));
+    return { ticket, gate };
+  });
+  return serializeStaffTicketDetail(result.ticket, result.gate, new Date());
 }
 
 export async function claimStaffTicket(
@@ -383,21 +405,34 @@ export async function updateStaffTicketStatus(
         await notifyLockTestHook(tx, ticketId, "STATUS_AFTER_USER_LOCKS");
         const ticket = await lockTicket(tx, ticketId);
         if (ticket.ownerId !== lastOwnerId) throw new OwnerSnapshotChanged();
+        await notifyLockTestHook(tx, ticketId, "STATUS_AFTER_PARENT_LOCK");
         assertNotFinal(ticket.currentStatus);
         const owner = lockedOwner(users, ticket.ownerId);
         assertCurrentOwner(owner);
         if (!parsed.success) throw parsed.error;
         const input: StaffStatusMutationInput = parsed.data;
         assertTicketVersion(input.expectedTicketVersion, ticket);
-        const allowed = STATUS_TRANSITIONS[ticket.currentStatus];
+        const allowed = TICKET_TRANSITIONS[ticket.currentStatus];
         if (!allowed.includes(input.status)) {
           throw HttpError.conflict("INVALID_STATUS_TRANSITION", "This status transition is not permitted.");
         }
+        const gate = await currentCycleGate(tx, ticket.id, ticket.workCycle, ownerIsEligible(owner));
+        if (input.status === "RESOLVED" && !gate.canResolve) {
+          throw HttpError.conflict("RESOLUTION_GATE_FAILED", "Complete the current-cycle work before resolving this Ticket.", {
+            resolutionGate: gate,
+          });
+        }
 
+        const now = new Date();
+        let publicCommentId: number | null = null;
         const waiting = input.status === "WAITING_FOR_REQUESTER";
         if (waiting) {
           const { body } = communicationBodySchema.parse({ body: input.publicComment });
-          await tx.publicComment.create({ data: { ticketId, authorId: actor.userId, body } });
+          const comment = await tx.publicComment.create({
+            data: { ticketId, authorId: actor.userId, body, createdAt: now },
+            select: { id: true },
+          });
+          publicCommentId = comment.id;
           await notifyLockTestHook(tx, ticketId, "STATUS_AFTER_WAITING_COMMENT");
         } else if (input.publicComment !== undefined) {
           throw HttpError.validationFailed("The submitted data is invalid.", [
@@ -405,12 +440,53 @@ export async function updateStaffTicketStatus(
           ]);
         }
 
+        if (input.status === "CANCELLED") {
+          const unfinished = await tx.$queryRaw<Prisma.ActionTakenGetPayload<{}>[]>`
+            SELECT *
+            FROM "ActionTaken"
+            WHERE "ticketId" = ${ticketId}
+              AND "workCycle" = ${ticket.workCycle}
+              AND "status" IN ('PLANNED'::"ActionStatus", 'IN_PROGRESS'::"ActionStatus")
+            ORDER BY "id" ASC
+            FOR UPDATE
+          `;
+          for (const action of unfinished) {
+            const before = actionSnapshot(action);
+            const cancelled = await tx.actionTaken.update({
+              where: { id: action.id },
+              data: {
+                status: "CANCELLED",
+                performedById: null,
+                completedAt: null,
+                cancelledAt: now,
+                cancelledById: actor.userId,
+                cancelReason: input.cancelReason!,
+                version: { increment: 1 },
+                updatedAt: now,
+              },
+            });
+            await appendActionRevision(
+              tx,
+              cancelled,
+              "TICKET_CANCEL",
+              actor.userId,
+              before,
+              input.cancelReason!,
+              now
+            );
+            await notifyLockTestHook(tx, ticketId, "STATUS_AFTER_CANCEL_ACTION_REVISION");
+          }
+        }
+
         const updated = await tx.ticket.update({
           where: { id: ticketId },
           data: {
             currentStatus: input.status,
             version: { increment: 1 },
+            ...(input.status === "RESOLVED" && { resolvedAt: now }),
             ...(input.status === "REOPENED" && {
+              workCycle: { increment: 1 },
+              resolvedAt: null,
               resolutionIndicatedAt: null,
               resolutionIndicatedById: null,
             }),
@@ -419,14 +495,33 @@ export async function updateStaffTicketStatus(
             resolutionIndicatedBy: { select: safeOwnerSelect },
           },
         });
+        await tx.ticketWorkflowEvent.create({
+          data: {
+            ticketId,
+            workCycle: updated.workCycle,
+            kind: "TRANSITION",
+            fromStatus: ticket.currentStatus,
+            toStatus: updated.currentStatus,
+            actorId: actor.userId,
+            occurredAt: now,
+            publicCommentId,
+            reason: input.status === "CANCELLED" ? input.cancelReason! : null,
+            ticketVersion: updated.version,
+          },
+        });
+        await notifyLockTestHook(tx, ticketId, "STATUS_AFTER_WORKFLOW_EVENT");
+        const updatedGate = await currentCycleGate(tx, ticket.id, updated.workCycle, ownerIsEligible(owner));
         const body = {
           currentStatus: updated.currentStatus,
           resolutionIndication: serializeResolutionIndication(
             updated.resolutionIndicatedAt,
             updated.resolutionIndicatedBy
           ),
-          allowedTransitions: allowedTransitionsFor(updated.currentStatus, owner),
+          allowedTransitions: allowedTransitionsFor(updated.currentStatus, owner, updatedGate),
           ticketVersion: updated.version,
+          workCycle: updated.workCycle,
+          resolvedAt: updated.resolvedAt,
+          resolutionGate: updatedGate,
         };
         await saveIdempotencySuccess(tx, scope, digest, 200, body);
         return { status: 200, body, replayed: false as const };

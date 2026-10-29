@@ -24,6 +24,7 @@ import {
   updateStaffItPriority,
   updateStaffTicketStatus,
 } from "../services/staffTicketOperations.service.js";
+import { listStaffTicketWorkflow } from "../services/workflow.service.js";
 
 export interface StaffTicketsRouteDependencies {
   authentication: RequestHandler;
@@ -138,6 +139,16 @@ export function createStaffTicketsRouter(dependencies: StaffTicketsRouteDependen
     asyncHandler(async (req, res) => {
       const { id } = idParamSchema.parse(req.params);
       res.status(200).json(await getStaffTicketDetail(id));
+    })
+  );
+
+  router.get(
+    "/:id/workflow",
+    dependencies.authentication,
+    requireStaffRole,
+    asyncHandler(async (req, res) => {
+      const { id } = idParamSchema.parse(req.params);
+      res.status(200).json(await listStaffTicketWorkflow(id, req.query));
     })
   );
 

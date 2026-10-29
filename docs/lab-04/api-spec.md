@@ -70,7 +70,7 @@ Examples are illustrative, not current DB facts. permissions are derived from cu
 | GET /staff/tickets/:id/workflow | Staff/Admin public WorkflowEvent list. |
 | GET /tickets/:id/workflow | Requester-owned public WorkflowEvent list. |
 
-Workflow lists use page/pageSize, occurredAt ASC,id ASC and {id,kind,fromStatus,toStatus,workCycle,actor,occurredAt,reason,publicCommentId}. BASELINE has fromStatus=null, actor=null and an explicit migration-snapshot label; CREATED is the original new-Ticket event. These do not assert historical transitions. Public reasons must never be populated from an Internal Note. Final/old-cycle reads remain available to permitted readers.
+Workflow lists use page/pageSize, occurredAt ASC,id ASC and {id,kind,fromStatus,toStatus,workCycle,actor,occurredAt,reason,publicCommentId}. BASELINE has fromStatus=null, actor=null and the optional `label` field set to `Lab 4 migration snapshot; original transition time unknown`; other kinds omit label. CREATED is the original new-Ticket event. These do not assert historical transitions. Public reasons must never be populated from an Internal Note. Final/old-cycle reads remain available to permitted readers. Return this public projection rather than raw database event rows.
 
 ## 3. Action create and edit
 

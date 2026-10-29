@@ -1,6 +1,6 @@
 # Lab 4 Peer Review and Evidence Record
 
-Status: **contract and PR #95 peer-reviewed and merged; PR #96 awaiting human review; release pending**. Prepared 2026-10-23; review ledger updated 2026-10-26. This file distinguishes actual events from pending review and test evidence.
+Status: **contract and PRs #95/#96 peer-reviewed and merged; PR #97 awaiting human review; release pending**. Prepared 2026-10-23; review ledger updated 2026-10-28. This file distinguishes actual events from pending review and test evidence.
 
 Repository: [FramePongrit/toktickit](https://github.com/FramePongrit/toktickit). Baseline: main 1a20e3465922a2c1dacc5a9eb18e55b0840284b8, [Lab 3 release PR 83](https://github.com/FramePongrit/toktickit/pull/83). Integration branch: lab4-staging. Current contract branch: feature/lab4-engineering-contract.
 
@@ -30,8 +30,8 @@ Plan IDs come from [issue-plan.md](issue-plan.md). Published Issues are linked b
 |---|---|---|---|---|---|---|
 | L4-01 | [#84](https://github.com/FramePongrit/toktickit/issues/84) | feature/lab4-engineering-contract / [#94](https://github.com/FramePongrit/toktickit/pull/94) | Sxr1n | Seven clarification comments; response below | APPROVED; merged 954604e | Done |
 | L4-02 | [#85](https://github.com/FramePongrit/toktickit/issues/85) | feature/lab4-data-migration / [#95](https://github.com/FramePongrit/toktickit/pull/95) | Sxr1n | Three human findings fixed; corrected head0a75793 re-approved | APPROVED October26 03:01:15; merged4d487a1 at03:01:40 Asia/Bangkok | Done |
-| L4-03 | [#86](https://github.com/FramePongrit/toktickit/issues/86) | feature/lab4-actions-api / [#96](https://github.com/FramePongrit/toktickit/pull/96) | Human pending; AI Reviewer checked617bd9d | Pagination, session precedence, ownership refresh, ambiguous retry and fixture cleanup fixed; server227/client151/browser2 passed | Human approval/merge pending | PR Review |
-| L4-04 | [#87](https://github.com/FramePongrit/toktickit/issues/87) | feature/lab4-ticket-workflow / Pending | Pending | Pending | Pending | Backlog |
+| L4-03 | [#86](https://github.com/FramePongrit/toktickit/issues/86) | feature/lab4-actions-api / [#96](https://github.com/FramePongrit/toktickit/pull/96) | narakosi-dev; AI Reviewer checked617bd9d | APPROVED on e9a0401; suggested later complete Actions lifecycle E2E | APPROVED October28 01:59:55; merged e6e782d at02:01:37 Asia/Bangkok | Done |
+| L4-04 | [#87](https://github.com/FramePongrit/toktickit/issues/87) | feature/lab4-ticket-workflow / [#97](https://github.com/FramePongrit/toktickit/pull/97) | Human pending; AI Reviewer confirmed99f9e45 | Gates/cycles/atomic cancellation/public workflow implemented; server236/client153/browser2 pass | Human approval/merge pending | PR Review |
 | L4-05 | [#88](https://github.com/FramePongrit/toktickit/issues/88) | feature/lab4-actions-ui / Pending | Pending | Pending | Pending | Backlog |
 | L4-06 | [#89](https://github.com/FramePongrit/toktickit/issues/89) | feature/lab4-dashboard-api / Pending | Pending | Pending | Pending | Backlog |
 | L4-07 | [#90](https://github.com/FramePongrit/toktickit/issues/90) | feature/lab4-dashboard-ui / Pending | Pending | Pending | Pending | Backlog |
@@ -82,6 +82,16 @@ Correction verification: Executor passed server 19 files/206 tests and migration
 AI Reviewer found and Executor corrected double pagination parsing, revoked-session error precedence, stale status controls after Claim/Reassign and loss of the request key on HTTP500 retry. The review also added real lock-wait/session revocation, same-Action/finality races, Requester/CSRF/cross-Ticket/terminal-edge cases and corrected the Reassign test to exercise empty-to-enabled controls. Browser testing found an IdempotencyRecord fixture-teardown FK; cleanup is scoped to fixture User IDs and the full targeted file passed afterward. Reviewer independently passed21tests and confirmed no actionable findings on source `617bd9d65bf11dbc221a8f7ad839d0bb871c171b`, including the fixture delta. This is AI verification, not human peer approval.
 
 Final local results: server227, client151, migration12, security21, targeted browser2, both builds and diff integrity passed. [Complete Issue86 evidence](../../artifacts/lab-04/verification/issue86/README.md) preserves commands, outputs and environment. The earlier application DB was not migrated. #87 workflow scope and human review/merge remain pending.
+
+### PR #96 human approval and integration
+
+[narakosi-dev's approval](https://github.com/FramePongrit/toktickit/pull/96#pullrequestreview-5672719657) covers the complete evidence head `e9a04017e3a7eb9f5bc5a5fc5cdfdd103d73d654`, October 28 at 01:59:55 Asia/Bangkok. [PR #96](https://github.com/FramePongrit/toktickit/pull/96) merged at 02:01:37 as `e6e782da2a8d8a75b592a86fa48f09711f32357a`; Issue #86 closed at 02:02:43 and its card is Done. The review suggested expanding complete Actions lifecycle browser coverage, concurrency/retry/error paths from the user's perspective. That suggestion is retained for the Actions UI/quality increments; it is not falsely claimed covered by the two Staff regression browser cases. Issue #87 starts from this exact reviewed merge. Earlier pending-human-review wording records the October 26 handoff.
+
+### Issue #87 AI review and verification
+
+Executor corrected preliminary feedback for TicketDetail field placement, explicit public event projection/BASELINE label, honest unknown legacy resolution-time wording and cancellation intent reset between Ticket IDs. Reviewer requested and verified cancelled-only rejection, repeated cycle/replay/retained Close time, unchanged terminal Actions during cancellation and authorized final workflow reads. It also caught invalid Waiting-event fixtures and helped diagnose race harness scheduling; corrected barriers observe real PostgreSQL lock waits. No product deadlock was found from those race failures. Legacy assertions remain intact, with scoped FK cleanup and valid completion/reason fixtures.
+
+AI Reviewer independently ran the new rules/workflow files: 2files/9tests passed, zero failures/skips,5.56s. It inspected the final cross-Ticket UI regression and confirmed no actionable findings on source `99f9e450fa5bef4c8080dd82aa064ed793ea3479`. Complete local verification passed server236/client153/security21/migration12/browser2 and both builds. [Complete Issue87 evidence](../../artifacts/lab-04/verification/issue87/README.md) identifies source, environment, commands, output and cleanup. These are local/AI checks; no human approval or CI result is claimed. Full Actions UI and release evidence remain later increments.
 
 ## 3. Contract-authoring inspection (historical snapshot before publication)
 

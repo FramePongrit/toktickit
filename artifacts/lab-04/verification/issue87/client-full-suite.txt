@@ -1,0 +1,57 @@
+Issue #87 full client regression
+Environment: local Vitest/jsdom; no database.
+Command: npm --prefix client test.
+
+> toktickit-client@1.0.0 test
+> vitest run
+
+
+ RUN  v2.1.9 D:/Software Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/client
+
+ ✓ tests/lab-03/RequesterRegression.test.ts (2 tests) 13ms
+ ✓ tests/lab-01/App.test.tsx (3 tests) 187ms
+ ✓ tests/lab-02/RequesterTicketDetail.test.tsx (6 tests) 355ms
+ ✓ tests/lab-02/AttachmentSection.test.tsx (17 tests) 471ms
+ ✓ tests/lab-02/AppShell.test.tsx (2 tests) 154ms
+ ✓ tests/lab-03/RequesterTicketDetail.test.tsx (16 tests) 791ms
+ ✓ tests/lab-02/CreateTicket.test.tsx (16 tests) 967ms
+ ✓ tests/lab-03/AppShell.test.tsx (11 tests) 704ms
+ ✓ tests/lab-02/MyTickets.test.tsx (20 tests) 1104ms
+   ✓ My Tickets — search, filters and sorting > UI-13: sends the search term after debouncing 338ms
+ ✓ tests/lab-03/StaffTicketQueue.test.tsx (10 tests) 1264ms
+   ✓ Issue 56 Staff Ticket Queue > UI-Q01: wires approved query controls, restores URL state, and resets page on changes 369ms
+ ✓ tests/lab-03/ChangePassword.test.tsx (5 tests) 4168ms
+   ✓ Issue 50 Change Password > UI-L02: validates rules, confirmation, and reuse before making a mutation 947ms
+   ✓ Issue 50 Change Password > UI-L02: supports self-service mode and clears password fields during save 1007ms
+   ✓ Issue 50 Change Password > UI-L02: sends the current CSRF token, prevents duplicate password changes, and replaces it after success 1159ms
+   ✓ Issue 50 Change Password > UI-L02: gives safe current-password failure feedback and does not expose server details 874ms
+ ✓ tests/lab-03/Login.test.tsx (8 tests) 5186ms
+   ✓ Issue 50 Login > UI-L01: prevents duplicate submissions and disables the form while signing in 703ms
+   ✓ Issue 50 Login > UI-L01: renders safe INVALID_CREDENTIALS feedback without account details 695ms
+   ✓ Issue 50 Login > UI-L01: renders safe USER_INACTIVE feedback without account details 712ms
+   ✓ Issue 50 Login > UI-L01: renders safe LOGIN_THROTTLED feedback without account details 699ms
+   ✓ Issue 50 Login > UI-L01/UI-H01: normalizes email, sends credentials, and lands by the authenticated role 739ms
+   ✓ Issue 50 Login > UI-L01: sends a must-change-password user directly to Change Password 747ms
+   ✓ Issue 50 Login > UI-L01: gives a generic retryable message for network/server failures 697ms
+ ✓ tests/lab-03/StaffTicketDetail.test.tsx (24 tests) 6263ms
+   ✓ Issue #58 Staff Ticket Detail > requires a Public Comment for Waiting for Requester and submits it with the status mutation 509ms
+   ✓ Issue #58 Staff Ticket Detail > requires a reason before cancellation and explains the unfinished Action effect 755ms
+   ✓ Issue #58 Staff Ticket Detail > clears a cancellation reason when navigating to another Ticket 673ms
+   ✓ Issue #58 Staff Ticket Detail > keeps Public Comments and Internal Notes available while a Ticket is Resolved 847ms
+   ✓ Issue #58 Staff Ticket Detail > posts Public Comments and Internal Notes through separate forms and clears each draft 669ms
+ ✓ tests/lab-03/UserManagement.test.tsx (13 tests) 7184ms
+   ✓ Issue #60 Administrator User Management > UI-U01/UI-U02: renders deterministic table/cards, badges, search, Role, and active-status filters 752ms
+   ✓ Issue #60 Administrator User Management > UI-U01: creates a User, validates fields, clears sensitive values, refreshes, and announces success 1335ms
+   ✓ Issue #60 Administrator User Management > UI-U01: keeps the Create dialog open for duplicate email and shows a safe field conflict 1104ms
+   ✓ Issue #60 Administrator User Management > UI-U01: edits another User and resets their Initial Password as a distinct confirmed action 1191ms
+   ✓ Issue #60 Administrator User Management > UI-U01: allows own name/email edits while disabling self Role, active, and reset controls 369ms
+   ✓ Issue #60 Administrator User Management > UI-U02: returns Reset Initial Password focus after both Cancel and Escape 313ms
+   ✓ Issue #60 Administrator User Management > UI-U02: focuses the dialog fallback and blocks Tab while a mutation disables every control 1188ms
+
+ Test Files  14 passed (14)
+      Tests  153 passed (153)
+   Start at  02:33:53
+   Duration  12.28s (transform 2.85s, setup 6.66s, collect 12.86s, tests 28.81s, environment 33.39s, prepare 5.60s)
+
+
+Exit code: 0

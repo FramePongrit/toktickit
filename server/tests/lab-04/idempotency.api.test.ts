@@ -89,6 +89,7 @@ afterAll(async () => {
   setActionLockTestHook(undefined);
   setStaffTicketOperationsLockTestHook(undefined);
   await prisma.idempotencyRecord.deleteMany({ where: { userId: { in: userIds } } });
+  await prisma.ticketWorkflowEvent.deleteMany({ where: { ticketId: { in: ticketIds } } });
   await prisma.actionRevision.deleteMany({ where: { action: { ticketId: { in: ticketIds } } } });
   await prisma.actionTaken.deleteMany({ where: { ticketId: { in: ticketIds } } });
   await prisma.publicComment.deleteMany({ where: { ticketId: { in: ticketIds } } });

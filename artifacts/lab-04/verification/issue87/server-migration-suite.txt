@@ -1,0 +1,62 @@
+Issue #87 migration and recovery suites
+Environment: PostgreSQL 16 dedicated container; test database lab4test; explicit task-owned schema lab4_issue87_base; migration harness uses disposable random schemas/databases and cleans them up.
+Command: npm --prefix server run test:migration (escalated host DB/container access; URL/credentials omitted).
+
+> toktickit-server@1.0.0 test:migration
+> vitest run --config vitest.migration.config.ts
+
+
+ RUN  v2.1.9 D:/Software Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/server
+
+stdout | tests/lab-03/migration-seed.regression.test.ts
+Seeded 4 categories, 7 related systems, 5 active requesters, 3 active IT staff, and 1 active administrator.
+
+stdout | tests/lab-03/migration-seed.regression.test.ts > MIG-01 — actual Lab 2 through Lab 4 upgrade > renames in place, preserves historical relations/files, copies IT Priority, then backfills credentials
+Seeded 4 categories, 7 related systems, 5 active requesters, 3 active IT staff, and 1 active administrator.
+
+stdout | tests/lab-03/migration-seed.regression.test.ts > MIG-01 — actual Lab 2 through Lab 4 upgrade > preserves a directly established changed credential across a repeat seed
+Seeded 4 categories, 7 related systems, 5 active requesters, 3 active IT staff, and 1 active administrator.
+
+stdout | tests/lab-03/migration-seed.regression.test.ts > MIG-02 — idempotent workflow seed > seeds a separate fresh Lab 4 schema without duplicates and advances, but never lowers, the 2026 ticket counter
+Seeded 4 categories, 7 related systems, 5 active requesters, 3 active IT staff, and 1 active administrator.
+
+stdout | tests/lab-03/migration-seed.regression.test.ts > MIG-02 — idempotent workflow seed > seeds a separate fresh Lab 4 schema without duplicates and advances, but never lowers, the 2026 ticket counter
+Seeded 4 categories, 7 related systems, 5 active requesters, 3 active IT staff, and 1 active administrator.
+
+stdout | tests/lab-03/migration-seed.regression.test.ts > MIG-02 — idempotent workflow seed > seeds a separate fresh Lab 4 schema without duplicates and advances, but never lowers, the 2026 ticket counter
+Seeded 4 categories, 7 related systems, 5 active requesters, 3 active IT staff, and 1 active administrator.
+
+ ✓ tests/lab-03/migration-seed.regression.test.ts (4 tests) 7332ms
+   ✓ MIG-01 — actual Lab 2 through Lab 4 upgrade > renames in place, preserves historical relations/files, copies IT Priority, then backfills credentials 637ms
+   ✓ MIG-01 — actual Lab 2 through Lab 4 upgrade > preserves a directly established changed credential across a repeat seed 596ms
+   ✓ MIG-02 — idempotent workflow seed > seeds a separate fresh Lab 4 schema without duplicates and advances, but never lowers, the 2026 ticket counter 1307ms
+stdout | tests/lab-04/migration.regression.test.ts > MIG-02 — Lab 4 seed is additive and repeatable > seeds workflow coverage, then preserves changed credentials and user work
+Seeded 4 categories, 7 related systems, 5 active requesters, 3 active IT staff, and 1 active administrator.
+
+stdout | tests/lab-04/migration.regression.test.ts > MIG-02 — Lab 4 seed is additive and repeatable > seeds workflow coverage, then preserves changed credentials and user work
+Seeded 4 categories, 7 related systems, 5 active requesters, 3 active IT staff, and 1 active administrator.
+
+stdout | tests/lab-04/migration.regression.test.ts > MIG-02 — Lab 4 seed is additive and repeatable > seeds workflow coverage, then preserves changed credentials and user work
+Seeded 4 categories, 7 related systems, 5 active requesters, 3 active IT staff, and 1 active administrator.
+
+ ✓ tests/lab-04/migration.regression.test.ts (2 tests) 2520ms
+   ✓ MIG-02 — Lab 4 seed is additive and repeatable > seeds workflow coverage, then preserves changed credentials and user work 1620ms
+stdout | tests/lab-04/recovery.integration.test.ts
+Seeded 4 categories, 7 related systems, 5 active requesters, 3 active IT staff, and 1 active administrator.
+
+ ✓ tests/lab-04/recovery.integration.test.ts (1 test) 4982ms
+   ✓ MIG-03 — isolated database and attachment recovery > restores a custom-format database backup and matching file bytes without changing the source 2585ms
+ ✓ tests/lab-04/backup-runbook.test.ts (5 tests) 2605ms
+   ✓ Lab 4 backup and restore runbook > hashes source uploads before copying and rejects a corrupted backup copy 552ms
+   ✓ Lab 4 backup and restore runbook > fails before createdb when the backup is missing database.dump in a fresh PowerShell process 388ms
+   ✓ Lab 4 backup and restore runbook > fails before createdb when the backup is missing uploads in a fresh PowerShell process 377ms
+   ✓ Lab 4 backup and restore runbook > fails before createdb when the backup is missing uploads-sha256.csv in a fresh PowerShell process 369ms
+   ✓ Lab 4 backup and restore runbook > rejects altered backup bytes before createdb and accepts an empty upload inventory 912ms
+
+ Test Files  4 passed (4)
+      Tests  12 passed (12)
+   Start at  02:31:23
+   Duration  18.35s (transform 257ms, setup 0ms, collect 259ms, tests 17.44s, environment 0ms, prepare 201ms)
+
+
+Exit code: 0

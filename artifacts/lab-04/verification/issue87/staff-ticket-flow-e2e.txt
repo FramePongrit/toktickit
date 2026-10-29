@@ -1,0 +1,16 @@
+Issue #87 targeted Staff browser E2E
+Environment: PostgreSQL 16 disposable lab4test database; isolated schema issue61_verify_6ad65b1a01074b389fbf6a3c; owned loopback ports; temporary upload root.
+Command: Playwright e2e/lab-03/staff-ticket-flow.spec.ts --project=e2e --reporter=line --output=<temporary> (existing API/Vite instances, environment values redacted).
+
+Running 2 tests using 1 worker
+
+
+
+(node:39768) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[1/2] [e2e] › e2e\lab-03\staff-ticket-flow.spec.ts:61:3 › E2E-S01 — real Staff Queue and Ticket workflow › queue filters, ownership actions, communications, resolution lifecycle, attachments, and direct guards
+[2/2] [e2e] › e2e\lab-03\staff-ticket-flow.spec.ts:253:3 › E2E-S01 — real Staff Queue and Ticket workflow › Requester can upload, download, and remove an attachment through the browser
+  2 passed (15.2s)
+
+Exit code: 0
+Cleanup verified: no issue61_verify_* schemas remain; owned API/Vite ports are free; temporary upload and Playwright output directories were removed.

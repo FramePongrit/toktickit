@@ -3,6 +3,7 @@ import type {
   PagedResult,
   Priority,
   PublicComment,
+  ResolutionGate,
   ResolutionIndication,
   StaffQueueItem,
   TicketOwnerOption,
@@ -74,14 +75,20 @@ export function updateStaffTicketStatus(
   status: TicketStatus,
   expectedTicketVersion: number,
   publicComment: string | undefined,
-  idempotencyKey: string
-): Promise<Pick<TicketDetail, "currentStatus" | "resolutionIndication" | "allowedTransitions"> & { ticketVersion: number }> {
-  return request<Pick<TicketDetail, "currentStatus" | "resolutionIndication" | "allowedTransitions"> & { ticketVersion: number }>(
+  idempotencyKey: string,
+  cancelReason?: string
+): Promise<Pick<TicketDetail, "currentStatus" | "resolutionIndication" | "allowedTransitions" | "workCycle" | "resolvedAt"> & { ticketVersion: number; resolutionGate: ResolutionGate }> {
+  return request<Pick<TicketDetail, "currentStatus" | "resolutionIndication" | "allowedTransitions" | "workCycle" | "resolvedAt"> & { ticketVersion: number; resolutionGate: ResolutionGate }>(
     `/api/staff/tickets/${id}/status`,
     {
       method: "PATCH",
       headers: { "Idempotency-Key": idempotencyKey },
-      body: JSON.stringify({ expectedTicketVersion, status, ...(publicComment === undefined ? {} : { publicComment }) }),
+      body: JSON.stringify({
+        expectedTicketVersion,
+        status,
+        ...(publicComment === undefined ? {} : { publicComment }),
+        ...(cancelReason === undefined ? {} : { cancelReason }),
+      }),
     }
   );
 }

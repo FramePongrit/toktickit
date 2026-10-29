@@ -114,6 +114,7 @@ afterAll(async () => {
     attachments.map((attachment) => fs.promises.rm(storedFilePath(attachment.storedFilename), { force: true }))
   );
 
+  await prisma.ticketWorkflowEvent.deleteMany({ where: { ticket: { requesterId: { in: [ownerId, strangerId] } } } });
   await prisma.attachment.deleteMany({
     where: { ticket: { requesterId: { in: [ownerId, strangerId] } } },
   });
