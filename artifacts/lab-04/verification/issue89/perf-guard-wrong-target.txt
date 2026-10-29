@@ -1,0 +1,29 @@
+PERF-01 target validation negative check; 2026-10-29 Asia/Bangkok
+Expected behavior: rejects the wrong schema before attempting any database query or fixture write.
+Command: npx vitest run --config vitest.dashboard-perf.config.ts with dedicated loopback URL but wrong schema lab4_issue89_wrong
+
+ RUN  v2.1.9 D:/Software Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/server
+
+ ❯ tests/lab-04/dashboard.performance.test.ts (1 test | 1 skipped) 8ms
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/lab-04/dashboard.performance.test.ts [ tests/lab-04/dashboard.performance.test.ts ]
+Error: PERF-01 is restricted to the dedicated loopback PostgreSQL test container and lab4_issue89_perf schema.
+ ❯ assertPerformanceTarget tests/lab-04/dashboard.performance.test.ts:51:11
+     49|   if (url.hostname !== "127.0.0.1" || url.port !== "55434" || url.path…
+     50|     || schema !== "lab4_issue89_perf" || process.env.LAB4_PG_CONTAINER…
+     51|     throw new Error("PERF-01 is restricted to the dedicated loopback P…
+       |           ^
+     52|   }
+     53|   targetValidated = true;
+ ❯ tests/lab-04/dashboard.performance.test.ts:57:3
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+ Test Files  1 failed (1)
+      Tests  1 skipped (1)
+   Start at  23:05:17
+   Duration  3.73s (transform 1.35s, setup 29ms, collect 2.79s, tests 8ms, environment 0ms, prepare 290ms)
+
+Expected rejection exit code: 1

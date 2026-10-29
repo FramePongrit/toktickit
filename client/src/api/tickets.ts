@@ -124,7 +124,7 @@ export function indicateResolution(id: number): Promise<ResolutionIndication> {
   ).then((response) => response.resolutionIndication);
 }
 
-export type TicketSortField = "createdAt" | "ticketNumber" | "requestedPriority" | "summary";
+export type TicketSortField = "createdAt" | "ticketNumber" | "requestedPriority" | "summary" | "updatedAt" | "resolvedAt";
 
 export interface TicketQuery {
   page: number;
@@ -133,12 +133,18 @@ export interface TicketQuery {
   categoryId?: number;
   relatedSystemId?: number;
   priority?: Priority;
+  status?: TicketStatus;
+  statuses?: string;
+  updatedFrom?: string;
+  updatedThrough?: string;
+  resolvedFrom?: string;
+  resolvedThrough?: string;
   sort: TicketSortField;
   order: "asc" | "desc";
 }
 
 export type StaffQueueScope = "active" | "all";
-export type StaffQueueSortField = "itPriority" | "createdAt" | "updatedAt" | "ticketNumber" | "status";
+export type StaffQueueSortField = "itPriority" | "createdAt" | "updatedAt" | "ticketNumber" | "status" | "priorityRecent";
 export type SortOrder = "asc" | "desc";
 
 export interface StaffQueueQuery {
@@ -148,6 +154,12 @@ export interface StaffQueueQuery {
   q?: string;
   status?: import("../types/index.js").TicketStatus;
   itPriority?: Priority;
+  statuses?: string;
+  itPriorities?: string;
+  updatedFrom?: string;
+  updatedThrough?: string;
+  resolvedFrom?: string;
+  resolvedThrough?: string;
   categoryId?: number;
   owner?: "me" | "unassigned" | number;
   sort: StaffQueueSortField;

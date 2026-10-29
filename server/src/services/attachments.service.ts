@@ -151,7 +151,8 @@ export async function addAttachment(
         );
       }
 
-      return tx.attachment.create({
+      const now = new Date();
+      const created = await tx.attachment.create({
         data: {
           ticketId,
           originalFilename: file.originalname,
@@ -159,8 +160,11 @@ export async function addAttachment(
           mimeType: file.mimetype,
           sizeBytes: file.size,
           uploadedByRequesterId: requesterId,
+          uploadedAt: now,
         },
       });
+      await tx.ticket.update({ where: { id: ticketId }, data: { updatedAt: now }, select: { id: true } });
+      return created;
     });
 
     return serializeAttachment(created);
@@ -210,14 +214,16 @@ export async function removeAttachment(
     }
 
     const { removalReason } = removeAttachmentSchema.parse(rawBody);
+    const now = new Date();
     const updated = await tx.attachment.update({
       where: { id: attachmentId },
       data: {
-        removedAt: new Date(),
+        removedAt: now,
         removedByRequesterId: requesterId,
         removalReason,
       },
     });
+    await tx.ticket.update({ where: { id: attachment.ticketId }, data: { updatedAt: now }, select: { id: true } });
 
     return serializeAttachment(updated);
   });

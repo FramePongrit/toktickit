@@ -159,7 +159,7 @@ describe("Issue #52 — authenticated Requester regression", () => {
     expect(unchanged.itPriority).toBe("MEDIUM");
   });
 
-  it("API-R04: ignores requesterId query input and returns only the authenticated User's tickets", async () => {
+  it("API-R04: rejects requesterId query input as an unsupported identity hint", async () => {
     const response = await withAuth(
       request(app)
         .get("/api/tickets")
@@ -168,9 +168,9 @@ describe("Issue #52 — authenticated Requester regression", () => {
       false
     );
 
-    expect(response.status).toBe(200);
-    expect(response.body.data.map((ticket: { id: number }) => ticket.id)).toEqual([requesterBTicketId]);
-    expect(response.body.data.map((ticket: { id: number }) => ticket.id)).not.toContain(requesterATicketId);
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe("VALIDATION_FAILED");
+    expect(response.body).not.toHaveProperty("data");
   });
 
   it("API-R05: requires the session CSRF token for a Requester mutation", async () => {

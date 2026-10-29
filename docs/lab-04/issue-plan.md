@@ -80,7 +80,7 @@ Tests: UNIT-02, API-W01-05, API-C03 and affected legacy workflow tests updated f
 
 ### L4-05 - Actions Taken and workflow UI
 
-Branch: feature/lab4-actions-ui. Depends on: L4-03/04. Original target: October 25; started October 29 from reviewed integration `030f5da`. [Issue #88](https://github.com/FramePongrit/toktickit/issues/88), [PR #98](https://github.com/FramePongrit/toktickit/pull/98): PR Review, human approval/merge pending. Tested source `60e9d9d`: client185/server236, both builds, new browser1/inherited browser2 pass; independent31client tests and unchanged browser repeat1 pass. [Complete evidence and retained initial refresh timeout](../../artifacts/lab-04/verification/issue88/README.md); [three-viewport/state captures](../../artifacts/lab-04/screenshots/actions-taken/README.md).
+Branch: feature/lab4-actions-ui. Depends on: L4-03/04. Original target: October 25; started October 29 from reviewed integration `030f5da`. [Issue #88](https://github.com/FramePongrit/toktickit/issues/88), [PR #98](https://github.com/FramePongrit/toktickit/pull/98): approved by Sxr1n on `93c108e`, merged October29 at18:32:30 Asia/Bangkok as `6b1277d`; Issue/card Done. Tested source `60e9d9d`: client185/server236, both builds, new browser1/inherited browser2 pass; independent31client tests and unchanged browser repeat1 pass. [Complete evidence and retained initial refresh timeout](../../artifacts/lab-04/verification/issue88/README.md); [three-viewport/state captures](../../artifacts/lab-04/screenshots/actions-taken/README.md).
 
 Tasks: add Actions tab, ordered paginated desktop table/mobile cards, inline create/edit/correction forms, assignee directory, actual performer display, start/complete/cancel controls, staff audit and public timeline. Deep Action links fetch/focus the right record across list pages. Add gate/cancellation/reopen explanations and current parent/version refresh. Preserve drafts and retry intent safely; maintain inherited communications/attachments/admin controls.
 
@@ -90,7 +90,7 @@ Tests: UI-03/04/06, initial STYLE-01/02; E2E-01/02 preparation. Keep component/A
 
 ### L4-06 - Role Dashboard APIs and exact drill-down queries
 
-Branch: feature/lab4-dashboard-api. Depends on: L4-03/04. Target: October 26.
+Branch: feature/lab4-dashboard-api. Depends on: L4-03/04. Original target: October26; started October29 from reviewed integration `6b1277d`. [Issue #89](https://github.com/FramePongrit/toktickit/issues/89): PR Review, [PR #99](https://github.com/FramePongrit/toktickit/pull/99) into lab4-staging. Source `6f08f4e` independently reviewed; server247/client196/browser3/builds and guarded1000/5000PERF passed. Human approval/merge pending. Dashboard UI remains L4-07.
 
 Tasks: backend role-owned snapshots/counts/previews and Bangkok boundaries; all-eight-status counts; assigned vs performed Action semantics; database-limited queries/shared filter predicates. Extend Ticket status/priority sets/date sorting and inline My Actions endpoint. Advance updatedAt for agreed prospective public activity, not Internal Notes/replays; preserve legacy timestamps. Add independent SQL comparisons and query-plan/performance fixtures.
 
@@ -177,4 +177,4 @@ Project: [TokTickIT Individual Sprints](https://github.com/users/FramePongrit/pr
 | L4-09 | [#92](https://github.com/FramePongrit/toktickit/issues/92) |
 | L4-10 | [#93](https://github.com/FramePongrit/toktickit/issues/93) |
 
-Contract PR #94 and implementation PRs #95/#96/#97 are merged. Issue #88 starts at reviewed integration `030f5da`; implementation PRs target `lab4-staging` directly. Later branches must start from the reviewed integration head. Each feature branch is published with its own upstream when its reviewed increment is ready.
+Contract PR #94 and implementation PRs #95/#96/#97/#98 are merged. Issue #89 starts at reviewed integration `6b1277d`; implementation PRs target `lab4-staging` directly. Later branches must start from the reviewed integration head. Each feature branch is published with its own upstream when its reviewed increment is ready.

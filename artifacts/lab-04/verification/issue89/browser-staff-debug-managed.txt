@@ -1,0 +1,89 @@
+Target: Playwright-managed webServer on localhost:3000/5173, isolated generated task schema on dedicated PG16 container
+Spec: e2e/lab-03/staff-ticket-flow.spec.ts (both cases)
+Temporary LAB4_DEBUG_UNEXPECTED_ERRORS=1 only for this local process; remove after diagnosis
+Separate task-owned upload root; credentials omitted
+
+=== Create isolated schema ===
+issue61_verify_52c7a07ec5a442c1afc7ddbd
+Exit status: 0
+
+=== Deploy migration ===
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+Datasource "db": PostgreSQL database "lab4test", schema "issue61_verify_52c7a07ec5a442c1afc7ddbd" at "127.0.0.1:55434"
+
+8 migrations found in prisma/migrations
+
+Applying migration `20260815105141_init`
+Applying migration `20260904150857_add_active_to_category`
+Applying migration `20260904150907_lab2_core_models`
+Applying migration `20260918120000_lab3_user_workflow`
+Applying migration `20260918130000_auth_session_csrf_ciphertext`
+Applying migration `20260918140000_revoke_legacy_auth_sessions`
+Applying migration `20261024000000_lab4_actions_workflow`
+Applying migration `20261025000000_lab4_restrict_workflow_comment_delete`
+
+The following migration(s) have been applied:
+
+migrations/
+  └─ 20260815105141_init/
+    └─ migration.sql
+  └─ 20260904150857_add_active_to_category/
+    └─ migration.sql
+  └─ 20260904150907_lab2_core_models/
+    └─ migration.sql
+  └─ 20260918120000_lab3_user_workflow/
+    └─ migration.sql
+  └─ 20260918130000_auth_session_csrf_ciphertext/
+    └─ migration.sql
+  └─ 20260918140000_revoke_legacy_auth_sessions/
+    └─ migration.sql
+  └─ 20261024000000_lab4_actions_workflow/
+    └─ migration.sql
+  └─ 20261025000000_lab4_restrict_workflow_comment_delete/
+    └─ migration.sql
+
+All migrations have been successfully applied.
+Exit status: 0
+
+=== Seed ===
+
+> toktickit-server@1.0.0 prisma:seed
+> tsx prisma/seed.ts
+
+Seeded 4 categories, 7 related systems, 5 active requesters, 3 active IT staff, and 1 active administrator.
+Exit status: 0
+
+=== Prepare reference data ===
+Prepared 4 categories and 7 related systems for isolated E2E.
+Exit status: 0
+
+=== Playwright-managed Staff browser regression ===
+[WebServer] (node:17356) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] TokTickIT API listening on http://localhost:3000
+[WebServer] (node:20724) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer]
+[WebServer]   VITE v6.4.3  ready in 517 ms
+[WebServer]
+[WebServer]   ➜  Local:   http://localhost:5173/
+
+Running 2 tests using 1 worker
+
+(node:32152) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 1 [e2e] › e2e\lab-03\staff-ticket-flow.spec.ts:61:3 › E2E-S01 — real Staff Queue and Ticket workflow › queue filters, ownership actions, communications, resolution lifecycle, attachments, and direct guards (13.4s)
+  ok 2 [e2e] › e2e\lab-03\staff-ticket-flow.spec.ts:253:3 › E2E-S01 — real Staff Queue and Ticket workflow › Requester can upload, download, and remove an attachment through the browser (2.2s)
+
+  2 passed (22.5s)
+Exit status: 0
+
+=== Drop exact task-owned schema ===
+issue61_verify_52c7a07ec5a442c1afc7ddbd
+Exit status: 0
+
+=== Verify schema cleanup ===
+issue61_verify schemas remaining: 0
+Exit status: 0
+Exit status: 0
