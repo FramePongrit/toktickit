@@ -1,0 +1,63 @@
+COMMAND: npm run e2e -- --project=e2e e2e/lab-04/actions-taken-flow.spec.ts (isolated test schema; DB URL redacted)
+
+> toktickit-e2e@1.0.0 e2e
+> playwright test --project=e2e e2e/lab-04/actions-taken-flow.spec.ts
+
+[WebServer] (node:24288) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] TokTickIT API listening on http://localhost:3000
+[WebServer] (node:32728) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer]
+[WebServer]   VITE v6.4.3  ready in 577 ms
+[WebServer]
+[WebServer]   ➜  Local:   http://localhost:5173/
+
+Running 1 test using 1 worker
+
+(node:28968) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+E2E-88 responsive geometry 1440x900: no horizontal overflow, clipped content, unreadable controls, or overlapping controls.
+E2E-88 responsive geometry 820x1024: no horizontal overflow, clipped content, unreadable controls, or overlapping controls.
+E2E-88 responsive geometry 390x844: no horizontal overflow, clipped content, unreadable controls, or overlapping controls.
+  x  1 [e2e] › e2e\lab-04\actions-taken-flow.spec.ts:41:3 › E2E-88 — Actions Taken Staff and Requester journey › creates, edits, completes, corrects and cancels Actions; resolves/reopens; keeps Requester reads safe (2.0m)
+
+
+  1) [e2e] › e2e\lab-04\actions-taken-flow.spec.ts:41:3 › E2E-88 — Actions Taken Staff and Requester journey › creates, edits, completes, corrects and cancels Actions; resolves/reopens; keeps Requester reads safe
+
+    Test timeout of 120000ms exceeded.
+
+    Error: locator.click: Test timeout of 120000ms exceeded.
+    Call log:
+      - waiting for locator('.action-card').filter({ hasText: 'Create and retry a second Action' }).getByRole('button', { name: 'View details' })
+
+
+      186 |       await expect(page.getByText("Create and retry a second Action").first()).toBeVisible();
+      187 |       const cancelledActionCard = page.locator(".action-card").filter({ hasText: "Create and retry a second Action" });
+    > 188 |       await cancelledActionCard.getByRole("button", { name: "View details" }).click();
+          |                                                                               ^
+      189 |       await expect(page.getByText("Duplicate work item").first()).toBeVisible();
+      190 |       await expect(page.getByRole("button", { name: "New Action" })).toHaveCount(0);
+      191 |       await expect(page.getByRole("button", { name: "View change history" })).toHaveCount(0);
+        at D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\e2e\lab-04\actions-taken-flow.spec.ts:188:79
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\lab-04-actions-taken-flow--46981--keeps-Requester-reads-safe-e2e\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\lab-04-actions-taken-flow--46981--keeps-Requester-reads-safe-e2e\error-context.md
+
+    Error Context: test-results\lab-04-actions-taken-flow--46981--keeps-Requester-reads-safe-e2e\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\lab-04-actions-taken-flow--46981--keeps-Requester-reads-safe-e2e\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\lab-04-actions-taken-flow--46981--keeps-Requester-reads-safe-e2e\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [e2e] › e2e\lab-04\actions-taken-flow.spec.ts:41:3 › E2E-88 — Actions Taken Staff and Requester journey › creates, edits, completes, corrects and cancels Actions; resolves/reopens; keeps Requester reads safe
+EXIT_CODE=1
+ENVIRONMENT: PostgreSQL 16 dedicated test container; schema=lab4_issue88_base; app ports=3000/5173; no main database access.

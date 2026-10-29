@@ -70,7 +70,7 @@ Increment boundary: this Issue implements Ticket-status expected versions and id
 
 ### L4-04 - Ticket resolution gate, work cycles and atomic cancellation
 
-Branch: feature/lab4-ticket-workflow. Depends on: L4-03. Original target: October 25; started October 28 from reviewed integration `e6e782d`. [Issue #87](https://github.com/FramePongrit/toktickit/issues/87), [PR #97](https://github.com/FramePongrit/toktickit/pull/97): PR Review, human approval/merge pending. Source `99f9e45` passed server236/client153/security21/migration12/browser2 and both builds, with independent9-test review. [Complete evidence](../../artifacts/lab-04/verification/issue87/README.md).
+Branch: feature/lab4-ticket-workflow. Depends on: L4-03. Original target: October 25; started October 28 from reviewed integration `e6e782d`. [Issue #87](https://github.com/FramePongrit/toktickit/issues/87), [PR #97](https://github.com/FramePongrit/toktickit/pull/97): approved by Sxr1n on `05ec455`, merged October 29 at 13:21:23 Asia/Bangkok as `030f5da`; Issue/card Done. Source `99f9e45` passed server236/client153/security21/migration12/browser2 and both builds, with independent9-test review. [Complete evidence](../../artifacts/lab-04/verification/issue87/README.md).
 
 Tasks: preserve the Ticket matrix and Owner prerequisite; implement gate/available transitions/reasons, workflow events, resolvedAt and cycle increments; retain advisory indication and Waiting comment atomicity. Cancel unfinished current-cycle Actions with Ticket transaction and history. Resolve vs edit/final/Admin race behavior must remain valid. Add shared authorized workflow read routes.
 
@@ -80,7 +80,7 @@ Tests: UNIT-02, API-W01-05, API-C03 and affected legacy workflow tests updated f
 
 ### L4-05 - Actions Taken and workflow UI
 
-Branch: feature/lab4-actions-ui. Depends on: L4-03/04. Target: October 25.
+Branch: feature/lab4-actions-ui. Depends on: L4-03/04. Original target: October 25; started October 29 from reviewed integration `030f5da`. [Issue #88](https://github.com/FramePongrit/toktickit/issues/88), [PR #98](https://github.com/FramePongrit/toktickit/pull/98): PR Review, human approval/merge pending. Tested source `60e9d9d`: client185/server236, both builds, new browser1/inherited browser2 pass; independent31client tests and unchanged browser repeat1 pass. [Complete evidence and retained initial refresh timeout](../../artifacts/lab-04/verification/issue88/README.md); [three-viewport/state captures](../../artifacts/lab-04/screenshots/actions-taken/README.md).
 
 Tasks: add Actions tab, ordered paginated desktop table/mobile cards, inline create/edit/correction forms, assignee directory, actual performer display, start/complete/cancel controls, staff audit and public timeline. Deep Action links fetch/focus the right record across list pages. Add gate/cancellation/reopen explanations and current parent/version refresh. Preserve drafts and retry intent safely; maintain inherited communications/attachments/admin controls.
 
@@ -177,4 +177,4 @@ Project: [TokTickIT Individual Sprints](https://github.com/users/FramePongrit/pr
 | L4-09 | [#92](https://github.com/FramePongrit/toktickit/issues/92) |
 | L4-10 | [#93](https://github.com/FramePongrit/toktickit/issues/93) |
 
-Contract PR #94 and implementation PRs #95/#96 are merged. Issue #87 starts at reviewed integration `e6e782d`; implementation PRs target `lab4-staging` directly. Later branches must start from the reviewed integration head. Each feature branch is published with its own upstream when its reviewed increment is ready.
+Contract PR #94 and implementation PRs #95/#96/#97 are merged. Issue #88 starts at reviewed integration `030f5da`; implementation PRs target `lab4-staging` directly. Later branches must start from the reviewed integration head. Each feature branch is published with its own upstream when its reviewed increment is ready.

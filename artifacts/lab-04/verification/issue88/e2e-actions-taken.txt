@@ -1,0 +1,61 @@
+COMMAND: npm run e2e -- --project=e2e e2e/lab-04/actions-taken-flow.spec.ts (isolated test schema; DB URL redacted)
+
+> toktickit-e2e@1.0.0 e2e
+> playwright test --project=e2e e2e/lab-04/actions-taken-flow.spec.ts
+
+[WebServer] (node:26964) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] TokTickIT API listening on http://localhost:3000
+[WebServer] (node:35652) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] 2:04:58 PM [vite] (client) Re-optimizing dependencies because vite config has changed
+[WebServer]
+[WebServer]   VITE v6.4.3  ready in 507 ms
+[WebServer]
+[WebServer]   ➜  Local:   http://localhost:5173/
+
+Running 1 test using 1 worker
+
+(node:42968) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x  1 [e2e] › e2e\lab-04\actions-taken-flow.spec.ts:41:3 › E2E-88 — Actions Taken Staff and Requester journey › creates, edits, completes, corrects and cancels Actions; resolves/reopens; keeps Requester reads safe (30.5s)
+
+
+  1) [e2e] › e2e\lab-04\actions-taken-flow.spec.ts:41:3 › E2E-88 — Actions Taken Staff and Requester journey › creates, edits, completes, corrects and cancels Actions; resolves/reopens; keeps Requester reads safe
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: 'View change history' })
+
+
+      90 |       await expect(page.getByText(/revision was recorded/i)).toBeVisible();
+      91 |       await expect(page.getByText("Inspect the VPN account configuration").first()).toBeVisible();
+    > 92 |       await page.getByRole("button", { name: "View change history" }).click();
+         |                                                                       ^
+      93 |       await expect(page.getByText("Description:")).toBeVisible();
+      94 |       await expect(page.getByText(/Inspect VPN account and confirm access.*Inspect the VPN account configuration/)).toBeVisible();
+      95 |       await capture(page, "action-history-readable-correction");
+        at D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\e2e\lab-04\actions-taken-flow.spec.ts:92:71
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\lab-04-actions-taken-flow--46981--keeps-Requester-reads-safe-e2e\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\lab-04-actions-taken-flow--46981--keeps-Requester-reads-safe-e2e\error-context.md
+
+    Error Context: test-results\lab-04-actions-taken-flow--46981--keeps-Requester-reads-safe-e2e\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\lab-04-actions-taken-flow--46981--keeps-Requester-reads-safe-e2e\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\lab-04-actions-taken-flow--46981--keeps-Requester-reads-safe-e2e\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [e2e] › e2e\lab-04\actions-taken-flow.spec.ts:41:3 › E2E-88 — Actions Taken Staff and Requester journey › creates, edits, completes, corrects and cancels Actions; resolves/reopens; keeps Requester reads safe
+EXIT_CODE=1
+ENVIRONMENT: PostgreSQL 16 dedicated test container; schema=lab4_issue88_base; app ports=3000/5173; no main database access.
