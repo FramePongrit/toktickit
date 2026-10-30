@@ -59,6 +59,7 @@ test.describe.serial("E2E-S01 — real Staff Queue and Ticket workflow", () => {
   });
 
   test("queue filters, ownership actions, communications, resolution lifecycle, attachments, and direct guards", async ({ page, request }) => {
+    test.setTimeout(60_000);
     const requesterApi = await playwrightRequest.newContext({ baseURL: API_URL });
     const staffApi = await playwrightRequest.newContext({ baseURL: API_URL });
     try {
@@ -88,6 +89,9 @@ test.describe.serial("E2E-S01 — real Staff Queue and Ticket workflow", () => {
       expect((await missingCsrfClaim.json()).error.code).toBe("CSRF_INVALID");
 
       await loginUi(page, staff);
+      await expect(page).toHaveURL(/\/staff\/dashboard$/);
+      await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
+      await page.getByRole("link", { name: "Staff Queue" }).click();
       await expect(page).toHaveURL(/\/staff\/tickets(?:\?|$)/);
       await expect(page.getByRole("heading", { name: "Ticket Queue" })).toBeVisible();
 

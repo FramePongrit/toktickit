@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { ApiError } from "../lib/http.js";
 import { FormField } from "../components/FormField.js";
-import { landingPath, useAuth } from "../context/AuthContext.js";
+import { destinationAfterAuth, useAuth } from "../context/AuthContext.js";
 
 interface Values {
   email: string;
@@ -29,6 +29,7 @@ function safeLoginMessage(error: unknown): string {
 export function LoginPage() {
   const { signIn } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const [values, setValues] = useState<Values>({ email: "", password: "" });
@@ -66,7 +67,8 @@ export function LoginPage() {
     setSubmitting(true);
     try {
       const user = await signIn(normalized.email, normalized.password);
-      navigate(landingPath(user), { replace: true });
+      const destination = destinationAfterAuth(user, (location.state as { from?: unknown } | null)?.from);
+      navigate(destination.path, { replace: true, state: destination.state });
     } catch (error) {
       setSubmitError(safeLoginMessage(error));
       setValues((current) => ({ ...current, password: "" }));

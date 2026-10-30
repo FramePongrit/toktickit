@@ -60,6 +60,9 @@ test.describe.serial("E2E-U01 — Administrator User Management", () => {
       expect(staffSession.user.role).toBe("STAFF");
 
       await loginUi(page, admin);
+      await expect(page).toHaveURL(/\/staff\/dashboard$/);
+      await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
+      await page.getByRole("link", { name: "User Management" }).click();
       await expect(page).toHaveURL(/\/admin\/users$/);
       await expect(page.getByRole("heading", { name: "User Management" })).toBeVisible();
       await expect(page.getByTestId("admin-users-table")).toBeVisible();
@@ -190,6 +193,14 @@ test.describe.serial("E2E-U01 — Administrator User Management", () => {
     const userPath = (id: number) => `/api/admin/users/${id}`;
     try {
       await Promise.all([loginUi(firstPage, admin), loginUi(secondPage, lastActiveAdmin)]);
+      await Promise.all([
+        expect(firstPage).toHaveURL(/\/staff\/dashboard$/),
+        expect(secondPage).toHaveURL(/\/staff\/dashboard$/),
+      ]);
+      await Promise.all([
+        firstPage.getByRole("link", { name: "User Management" }).click(),
+        secondPage.getByRole("link", { name: "User Management" }).click(),
+      ]);
       await Promise.all([
         expect(firstPage).toHaveURL(/\/admin\/users$/),
         expect(secondPage).toHaveURL(/\/admin\/users$/),

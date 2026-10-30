@@ -1,8 +1,8 @@
 import { useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { ApiError } from "../lib/http.js";
 import { FormField } from "../components/FormField.js";
-import { landingPath, useAuth } from "../context/AuthContext.js";
+import { destinationAfterAuth, useAuth } from "../context/AuthContext.js";
 
 interface Values {
   currentPassword: string;
@@ -30,6 +30,7 @@ function safePasswordError(error: unknown): string {
 export function ChangePasswordPage() {
   const { user, updatePassword, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const currentRef = useRef<HTMLInputElement>(null);
   const [values, setValues] = useState<Values>(EMPTY);
   const [errors, setErrors] = useState<Partial<Record<keyof Values, string>>>({});
@@ -87,7 +88,8 @@ export function ChangePasswordPage() {
     try {
       const updated = await updatePassword(submitted.currentPassword, submitted.newPassword, submitted.confirmation);
       setSuccess(true);
-      window.setTimeout(() => navigate(landingPath(updated), { replace: true }), 250);
+      const destination = destinationAfterAuth(updated, (location.state as { from?: unknown } | null)?.from);
+      window.setTimeout(() => navigate(destination.path, { replace: true, state: destination.state }), 250);
     } catch (error) {
       const apiError = error instanceof ApiError ? error : null;
       const fieldErrors: Partial<Record<keyof Values, string>> = {};

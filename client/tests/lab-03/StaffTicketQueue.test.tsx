@@ -166,6 +166,44 @@ describe("Issue 56 Staff Ticket Queue", () => {
     await waitFor(() => expect(queue).toHaveBeenCalledWith(expect.objectContaining({ page: 1, sort: "itPriority" })));
   });
 
+  it("trims only outer search whitespace before URL/API serialization and preserves spaces between words", async () => {
+    const user = userEvent.setup();
+    const queue = vi.spyOn(ticketsApi, "fetchStaffQueue").mockResolvedValue(PAGE);
+    vi.spyOn(ticketsApi, "fetchTicketOwners").mockResolvedValue(OWNER_OPTIONS);
+    vi.spyOn(referenceData, "fetchCategories").mockResolvedValue([]);
+    renderQueue();
+
+    const search = screen.getByRole("searchbox", { name: "Search" });
+    expect(search).toHaveAttribute("maxLength", "100");
+    await user.type(search, "  printer   driver  ");
+    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("q=printer+++driver"), { timeout: 1500 });
+    await waitFor(() => expect(queue).toHaveBeenLastCalledWith(expect.objectContaining({ q: "printer   driver" })), { timeout: 1500 });
+  });
+
+  it("treats whitespace-only search input as empty and rejects overflow query links", async () => {
+    const user = userEvent.setup();
+    const queue = vi.spyOn(ticketsApi, "fetchStaffQueue").mockResolvedValue(PAGE);
+    vi.spyOn(ticketsApi, "fetchTicketOwners").mockResolvedValue(OWNER_OPTIONS);
+    vi.spyOn(referenceData, "fetchCategories").mockResolvedValue([]);
+    renderQueue("/staff/tickets?q=first");
+    await waitFor(() => expect(queue).toHaveBeenCalledWith(expect.objectContaining({ q: "first" })));
+
+    const search = screen.getByRole("searchbox", { name: "Search" });
+    await user.clear(search);
+    await user.type(search, "     ");
+    await waitFor(() => expect(screen.getByTestId("location")).not.toHaveTextContent("q="), { timeout: 1500 });
+    await waitFor(() => expect(queue).toHaveBeenLastCalledWith(expect.not.objectContaining({ q: expect.anything() })), { timeout: 1500 });
+
+    cleanup();
+    vi.restoreAllMocks();
+    const overflow = vi.spyOn(ticketsApi, "fetchStaffQueue").mockResolvedValue(PAGE);
+    vi.spyOn(ticketsApi, "fetchTicketOwners").mockResolvedValue(OWNER_OPTIONS);
+    vi.spyOn(referenceData, "fetchCategories").mockResolvedValue([]);
+    renderQueue(`/staff/tickets?q=${"x".repeat(101)}`);
+    expect(await screen.findByText("This queue link has invalid filters")).toBeInTheDocument();
+    expect(overflow).not.toHaveBeenCalled();
+  });
+
   it("rejects an impossible offset date instead of normalizing it into a different calendar day", async () => {
     const queue = vi.spyOn(ticketsApi, "fetchStaffQueue").mockResolvedValue(PAGE);
     vi.spyOn(ticketsApi, "fetchTicketOwners").mockResolvedValue(OWNER_OPTIONS);

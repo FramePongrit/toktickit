@@ -50,9 +50,9 @@ describe("Issue 50 authenticated application shell", () => {
     vi.stubGlobal("fetch", fetchMock);
   });
 
-  it("UI-H01: restores current user on startup and lands Staff at the Staff Queue", async () => {
+  it("UI-H01: restores current user on startup and lands Staff at the Dashboard", async () => {
     renderApp("/");
-    expect(await screen.findByTestId("staff-landing")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
     expect(screen.getByTestId("current-user")).toHaveTextContent("Shell User");
     expect(screen.getByTestId("current-role")).toHaveTextContent("IT Staff");
     const bootstrap = fetchMock.mock.calls.find(([input]) => pathOf(input) === "/api/auth/me");
@@ -60,9 +60,9 @@ describe("Issue 50 authenticated application shell", () => {
   });
 
   it.each([
-    ["REQUESTER", "/tickets", "My Tickets"],
-    ["STAFF", "/staff/tickets", "Staff Queue"],
-    ["ADMIN", "/admin/users", "User Management"],
+    ["REQUESTER", "/dashboard", "My Tickets"],
+    ["STAFF", "/staff/dashboard", "Staff Queue"],
+    ["ADMIN", "/staff/dashboard", "User Management"],
   ] as const)("UI-H01: defaults %s to %s and exposes its permitted navigation", async (role, landing, navName) => {
     const user = { ...BASE_USER, role };
     fetchMock.mockImplementation((input: RequestInfo | URL) => {
@@ -73,7 +73,8 @@ describe("Issue 50 authenticated application shell", () => {
     });
 
     renderApp("/");
-    expect(await screen.findByRole("heading", { name: role === "ADMIN" ? "User Management" : role === "STAFF" ? "Staff Queue" : "My Tickets" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute("href", role === "REQUESTER" ? "/dashboard" : "/staff/dashboard");
     expect(screen.getByRole("link", { name: navName })).toBeInTheDocument();
     if (role === "REQUESTER") {
       expect(screen.getAllByRole("link", { name: "Create Ticket" }).length).toBeGreaterThan(0);

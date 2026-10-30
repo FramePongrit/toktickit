@@ -75,6 +75,8 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
     headers,
   });
 
+  if (init.signal?.aborted) throw new DOMException("The request was cancelled.", "AbortError");
+
   if (!response.ok) {
     const error = await toApiError(response);
     if (error.code === "UNAUTHENTICATED" || error.code === "PASSWORD_CHANGE_REQUIRED") {

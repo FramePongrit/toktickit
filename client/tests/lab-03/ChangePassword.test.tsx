@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { AppRoutes } from "../../src/AppRouter.js";
 import { AuthProvider } from "../../src/context/AuthContext.js";
 import { setCsrfToken } from "../../src/lib/http.js";
@@ -21,6 +21,11 @@ function response(status: number, body?: unknown): Response {
 
 function pathOf(input: RequestInfo | URL): string {
   return new URL(String(input)).pathname;
+}
+
+function LocationProbe() {
+  const location = useLocation();
+  return <output data-testid="location">{location.pathname}{location.search}</output>;
 }
 
 function renderApp(initialEntry = "/change-password") {
@@ -121,8 +126,32 @@ describe("Issue 50 Change Password", () => {
     expect(new Headers((calls[0][1] as RequestInit).headers).get("X-CSRF-Token")).toBe("csrf-old");
 
     resolveChange(response(200, { user: staff, csrfToken: "csrf-new" }));
-    expect(await screen.findByTestId("staff-landing")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole("link", { name: "Change Password" })).toBeInTheDocument());
+  });
+
+  it("UI-05: restores a permitted destination after the mandatory password change", async () => {
+    const user = userEvent.setup();
+    const updated = { ...MANDATORY, mustChangePassword: false };
+    fetchMock.mockImplementation((input: RequestInfo | URL) => {
+      if (pathOf(input) === "/api/auth/me") return Promise.resolve(response(200, { user: MANDATORY, csrfToken: "csrf-old" }));
+      if (pathOf(input) === "/api/auth/change-password") return Promise.resolve(response(200, { user: updated, csrfToken: "csrf-new" }));
+      if (pathOf(input) === "/api/categories" || pathOf(input) === "/api/related-systems") return Promise.resolve(response(200, []));
+      return Promise.resolve(response(404));
+    });
+    render(
+      <MemoryRouter initialEntries={["/tickets/new?source=dashboard"]}>
+        <AuthProvider><><AppRoutes /><LocationProbe /></></AuthProvider>
+      </MemoryRouter>
+    );
+    await screen.findByRole("heading", { name: "Change password" });
+    await user.type(screen.getByLabelText(/Current Password/), "initial-password1");
+    await user.type(screen.getByLabelText(/^New Password/), "replacement-password2");
+    await user.type(screen.getByLabelText(/^Confirm New Password/), "replacement-password2");
+    await user.click(screen.getByRole("button", { name: "Save new password" }));
+
+    expect(await screen.findByRole("heading", { name: "Create Ticket" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("/tickets/new?source=dashboard"));
   });
 
   it("UI-L02: gives safe current-password failure feedback and does not expose server details", async () => {

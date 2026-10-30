@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   fetchStaffQueue,
@@ -124,7 +124,7 @@ function validQueueUrl(params: URLSearchParams): boolean {
   if (get("itPriority") && get("itPriorities")) return false;
   if (get("owner") && get("owner") !== "me" && get("owner") !== "unassigned" && !/^[1-9]\d*$/.test(get("owner")!)) return false;
   if (get("categoryId") && !/^[1-9]\d*$/.test(get("categoryId")!)) return false;
-  if (params.has("q") && (!get("q")!.trim() || get("q")!.length > 100)) return false;
+  if (params.has("q") && (!get("q")!.trim() || get("q")!.trim().length > 100)) return false;
   if (get("sort") && !SORT_FIELDS.some((field) => field.value === get("sort"))) return false;
   if (get("order") && get("order") !== "asc" && get("order") !== "desc") return false;
   if (get("page") && !/^[1-9]\d*$/.test(get("page")!)) return false;
@@ -361,7 +361,9 @@ export function StaffTicketQueuePage() {
   const params = new URLSearchParams(searchSignature);
   const invalidQuery = !validQueueUrl(params);
   const state = readPageState(params);
-  const searchInput = state.filters.q;
+  const [searchInput, setSearchInput] = useState(state.filters.q);
+  const previousSearchSignature = useRef(searchSignature);
+  const skipSearchCommit = useRef(false);
   const [result, setResult] = useState<{ data: StaffQueueItem[]; page: number; pageSize: number; total: number; totalPages: number } | null>(null);
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
   const [loadError, setLoadError] = useState<ApiError | null>(null);
@@ -371,6 +373,28 @@ export function StaffTicketQueuePage() {
   const [ownerState, setOwnerState] = useState<"loading" | "ready" | "error" | "forbidden">("loading");
   const [ownerReload, setOwnerReload] = useState(0);
   const debouncedSearch = useDebouncedValue(searchInput);
+
+  useEffect(() => {
+    if (previousSearchSignature.current === searchSignature) return;
+    previousSearchSignature.current = searchSignature;
+    skipSearchCommit.current = true;
+    setSearchInput(state.filters.q);
+  }, [searchSignature, state.filters.q]);
+
+  useEffect(() => {
+    if (skipSearchCommit.current) {
+      skipSearchCommit.current = false;
+      return;
+    }
+    if (debouncedSearch !== searchInput) return;
+    const q = searchInput.trim();
+    if (q === state.filters.q) return;
+    const next = new URLSearchParams(searchSignature);
+    if (q) next.set("q", q);
+    else next.delete("q");
+    next.set("page", "1");
+    setSearchParams(next, { replace: true });
+  }, [debouncedSearch, searchInput, state.filters.q, searchSignature, setSearchParams]);
 
   const filtersActive = Boolean(
     searchInput.trim() || state.filters.status || state.filters.itPriority || state.filters.statuses || state.filters.itPriorities ||
@@ -393,6 +417,10 @@ export function StaffTicketQueuePage() {
     }
     setLoadState("loading");
     setLoadError(null);
+    if (debouncedSearch !== searchInput || debouncedSearch.trim() !== state.filters.q.trim()) {
+      setLoadState("ready");
+      return () => { cancelled = true; };
+    }
     fetchStaffQueue(queryFromState(state, debouncedSearch))
       .then((next) => {
         if (cancelled) return;
@@ -405,7 +433,7 @@ export function StaffTicketQueuePage() {
         setLoadState("error");
       });
     return () => { cancelled = true; };
-  }, [state.scope, state.page, state.pageSize, state.sort, state.order, state.filters.status, state.filters.itPriority, state.filters.statuses, state.filters.itPriorities, state.filters.updatedFrom, state.filters.updatedThrough, state.filters.resolvedFrom, state.filters.resolvedThrough, state.filters.categoryId, state.filters.owner, debouncedSearch, reload, invalidQuery]);
+  }, [state.scope, state.page, state.pageSize, state.sort, state.order, state.filters.q, state.filters.status, state.filters.itPriority, state.filters.statuses, state.filters.itPriorities, state.filters.updatedFrom, state.filters.updatedThrough, state.filters.resolvedFrom, state.filters.resolvedThrough, state.filters.categoryId, state.filters.owner, debouncedSearch, searchInput, reload, invalidQuery]);
 
   useEffect(() => {
     fetchCategories().then(setCategories).catch(() => undefined);
@@ -424,12 +452,16 @@ export function StaffTicketQueuePage() {
   }, [ownerReload]);
 
   function updateState(patch: Partial<PageState>, resetPage = true) {
-    const next = { ...state, ...patch, page: resetPage ? 1 : patch.page ?? state.page };
+    const next = { ...state, filters: { ...state.filters, q: searchInput.trim() }, ...patch, page: resetPage ? 1 : patch.page ?? state.page };
     setSearchParams(stateToParams(next), { replace: true });
   }
 
   function updateFilter(field: keyof FilterState, value: string) {
-    const filters = { ...state.filters, [field]: value };
+    if (field === "q") {
+      setSearchInput(value.slice(0, 100));
+      return;
+    }
+    const filters = { ...state.filters, q: searchInput.trim(), [field]: value };
     if (field === "status") filters.statuses = "";
     if (field === "statuses") filters.status = "";
     if (field === "itPriority") filters.itPriorities = "";
@@ -438,6 +470,7 @@ export function StaffTicketQueuePage() {
   }
 
   function clearFilters() {
+    setSearchInput("");
     setSearchParams(stateToParams({
       ...state,
       filters: { ...DEFAULT_FILTERS },
@@ -478,7 +511,7 @@ export function StaffTicketQueuePage() {
         <div className="row g-3">
           <div className="col-12 col-md-6 col-lg-4">
             <label className="form-label fw-semibold" htmlFor="staff-queue-search">Search</label>
-            <input id="staff-queue-search" type="search" className="form-control" placeholder="Ticket number, summary, requester…" value={searchInput} onChange={(event) => updateFilter("q", event.target.value)} />
+            <input id="staff-queue-search" type="search" className="form-control" placeholder="Ticket number, summary, requester…" value={searchInput} maxLength={100} onChange={(event) => updateFilter("q", event.target.value)} />
           </div>
           <div className="col-12 col-md-6 col-lg-4">
             <label className="form-label fw-semibold" htmlFor="staff-queue-status">Status</label>
