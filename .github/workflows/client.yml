@@ -1,0 +1,57 @@
+name: Client checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  client:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - run: npm ci
+      - name: Run client tests
+        shell: bash
+        run: |
+          set -o pipefail
+          set +e
+          npm test 2>&1 | tee "$RUNNER_TEMP/client-test.log"
+          statuses=("${PIPESTATUS[@]}")
+          status="${statuses[0]}"
+          if [[ "$status" -eq 0 ]]; then status="${statuses[1]}"; fi
+          set -e
+          printf '\nExit code: %s\n' "$status" | tee -a "$RUNNER_TEMP/client-test.log"
+          exit "$status"
+      - name: Build client
+        shell: bash
+        run: |
+          set -o pipefail
+          set +e
+          npm run build 2>&1 | tee "$RUNNER_TEMP/client-build.log"
+          statuses=("${PIPESTATUS[@]}")
+          status="${statuses[0]}"
+          if [[ "$status" -eq 0 ]]; then status="${statuses[1]}"; fi
+          set -e
+          printf '\nExit code: %s\n' "$status" | tee -a "$RUNNER_TEMP/client-build.log"
+          exit "$status"
+      - name: Upload client test and build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-check-logs-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/client-test.log
+            ${{ runner.temp }}/client-build.log
+          if-no-files-found: warn
+          retention-days: 14

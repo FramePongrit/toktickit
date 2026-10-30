@@ -1,4 +1,5 @@
 import { test, expect, request as playwrightRequest } from "@playwright/test";
+import { getPrisma } from "../../server/src/prisma.js";
 import {
   API_URL,
   E2E_CHANGED_PASSWORD,
@@ -222,6 +223,13 @@ test.describe.serial("E2E-U01 — Administrator User Management", () => {
       await firstDialog.getByLabel("Active account").uncheck();
       await secondDialog.getByLabel("Active account").uncheck();
 
+      const activeAdminIdsBefore = await getPrisma().user.findMany({
+        where: { active: true, role: "ADMIN" },
+        orderBy: { id: "asc" },
+        select: { id: true },
+      });
+      expect(activeAdminIdsBefore.map(({ id }) => id)).toEqual([admin.id, lastActiveAdmin.id].sort((left, right) => left - right));
+
       const firstResponsePromise = firstPage.waitForResponse((response) =>
         response.url().endsWith(userPath(lastActiveAdmin.id)) && response.request().method() === "PATCH"
       );
@@ -236,6 +244,13 @@ test.describe.serial("E2E-U01 — Administrator User Management", () => {
       const [firstBody, secondBody] = await Promise.all([firstResponse.json(), secondResponse.json()]);
       const responses = [firstResponse, secondResponse];
       expect(responses.map((response) => response.status()).sort()).toEqual([200, 409]);
+      const activeAdminIdsAfter = await getPrisma().user.findMany({
+        where: { active: true, role: "ADMIN" },
+        orderBy: { id: "asc" },
+        select: { id: true },
+      });
+      expect(activeAdminIdsAfter).toHaveLength(1);
+      expect([admin.id, lastActiveAdmin.id]).toContain(activeAdminIdsAfter[0].id);
       const rejectedIndex = firstResponse.status() === 409 ? 0 : 1;
       const rejectedBody = rejectedIndex === 0 ? firstBody : secondBody;
       expect(rejectedBody.error.code).toBe("LAST_ACTIVE_ADMINISTRATOR");

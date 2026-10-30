@@ -32,8 +32,11 @@ export class ApiError extends Error {
 // localStorage, a URL, or a cookie.
 let csrfToken: string | null = null;
 let authFailureHandler: ((error: ApiError) => void) | null = null;
+// Ignore late auth failures from requests issued by a previous login session.
+let authSessionGeneration = 0;
 
 export function setCsrfToken(token: string | null): void {
+  if (csrfToken !== token) authSessionGeneration += 1;
   csrfToken = token;
 }
 
@@ -61,6 +64,7 @@ async function toApiError(response: Response): Promise<ApiError> {
 
 /** Every API call carries the browser session; mutations also carry CSRF. */
 export async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const requestSessionGeneration = authSessionGeneration;
   const method = (init.method ?? "GET").toUpperCase();
   const mutating = ["POST", "PUT", "PATCH", "DELETE"].includes(method);
   const headers = new Headers(init.headers);
@@ -75,16 +79,16 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
     headers,
   });
 
-  if (init.signal?.aborted) throw new DOMException("The request was cancelled.", "AbortError");
-
   if (!response.ok) {
     const error = await toApiError(response);
     if (error.code === "UNAUTHENTICATED" || error.code === "PASSWORD_CHANGE_REQUIRED") {
-      authFailureHandler?.(error);
+      if (requestSessionGeneration === authSessionGeneration) authFailureHandler?.(error);
     }
+    if (init.signal?.aborted) throw new DOMException("The request was cancelled.", "AbortError");
     throw error;
   }
 
+  if (init.signal?.aborted) throw new DOMException("The request was cancelled.", "AbortError");
   return response.status === 204 ? (undefined as T) : ((await response.json()) as T);
 }
 
@@ -96,11 +100,15 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
  * caller choose the filename from already-loaded safe metadata.
  */
 export async function downloadFile(path: string, filename: string): Promise<void> {
+  const requestSessionGeneration = authSessionGeneration;
   const response = await fetch(`${API_URL}${path}`, { credentials: "include" });
 
   if (!response.ok) {
     const error = await toApiError(response);
-    if (error.code === "UNAUTHENTICATED" || error.code === "PASSWORD_CHANGE_REQUIRED") {
+    if (
+      requestSessionGeneration === authSessionGeneration &&
+      (error.code === "UNAUTHENTICATED" || error.code === "PASSWORD_CHANGE_REQUIRED")
+    ) {
       authFailureHandler?.(error);
     }
     throw error;

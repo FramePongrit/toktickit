@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Link, MemoryRouter, useLocation, useNavigate } from "react-router-dom";
 import { StaffTicketQueuePage } from "../../src/pages/StaffTicketQueuePage.js";
@@ -71,7 +71,7 @@ function LocationProbe({ showNavigation = false }: { showNavigation?: boolean })
   const navigate = useNavigate();
   return <>
     <output data-testid="location">{location.pathname}{location.search}</output>
-    {showNavigation && <><Link to="/staff/tickets?scope=all&status=WAITING_FOR_REQUESTER&page=2&pageSize=20&sort=updatedAt&order=desc&updatedFrom=2026-10-23T17%3A00%3A00.000Z">Next dashboard query</Link><button type="button" onClick={() => navigate(-1)}>Back to first query</button></>}
+    {showNavigation && <><Link to="/staff/tickets?scope=all&status=WAITING_FOR_REQUESTER&page=2&pageSize=20&sort=updatedAt&order=desc&updatedFrom=2026-10-23T17%3A00%3A00.000Z">Next dashboard query</Link><button type="button" onClick={() => navigate(-1)}>Back to first query</button><button type="button" onClick={() => navigate(1)}>Forward to latest query</button></>}
   </>;
 }
 
@@ -178,6 +178,70 @@ describe("Issue 56 Staff Ticket Queue", () => {
     await user.type(search, "  printer   driver  ");
     await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("q=printer+++driver"), { timeout: 1500 });
     await waitFor(() => expect(queue).toHaveBeenLastCalledWith(expect.objectContaining({ q: "printer   driver" })), { timeout: 1500 });
+  });
+
+  it("marks old results busy while search is debouncing and while the new request is pending", async () => {
+    let resolveSearch!: (value: typeof PAGE) => void;
+    const searchResult = new Promise<typeof PAGE>((resolve) => { resolveSearch = resolve; });
+    const queue = vi.spyOn(ticketsApi, "fetchStaffQueue").mockImplementation((query) =>
+      query.q ? searchResult : Promise.resolve(PAGE)
+    );
+    vi.spyOn(ticketsApi, "fetchTicketOwners").mockResolvedValue(OWNER_OPTIONS);
+    vi.spyOn(referenceData, "fetchCategories").mockResolvedValue([]);
+    renderQueue();
+
+    await screen.findAllByRole("link", { name: "TCK-0101" });
+    const search = screen.getByRole("searchbox", { name: "Search" });
+    fireEvent.change(search, { target: { value: "vpn" } });
+
+    const results = screen.getByTestId("staff-queue-results");
+    expect(results).toHaveAttribute("aria-busy", "true");
+    expect(screen.getByTestId("staff-queue-search-pending")).toHaveTextContent("Updating ticket results");
+    expect(screen.getAllByRole("link", { name: "TCK-0101" })).not.toHaveLength(0);
+
+    await waitFor(() => expect(queue).toHaveBeenLastCalledWith(expect.objectContaining({ q: "vpn" })), { timeout: 1500 });
+    expect(results).toHaveAttribute("aria-busy", "true");
+    resolveSearch(PAGE);
+    await waitFor(() => expect(results).toHaveAttribute("aria-busy", "false"));
+    expect(screen.queryByTestId("staff-queue-search-pending")).not.toBeInTheDocument();
+  });
+
+  it("announces when a pasted search exceeds the 100-character limit", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(ticketsApi, "fetchStaffQueue").mockResolvedValue(PAGE);
+    vi.spyOn(ticketsApi, "fetchTicketOwners").mockResolvedValue(OWNER_OPTIONS);
+    vi.spyOn(referenceData, "fetchCategories").mockResolvedValue([]);
+    renderQueue();
+
+    const search = screen.getByRole("searchbox", { name: "Search" });
+    await user.click(search);
+    await user.paste("p".repeat(120));
+
+    expect(search).toHaveValue("p".repeat(100));
+    expect(screen.getByTestId("staff-queue-search-limit")).toHaveTextContent("Search is limited to 100 characters");
+    expect(search).toHaveAttribute("aria-describedby", "staff-queue-search-limit");
+  });
+
+  it("restores URL-backed search across Back and Forward while replacing intermediate Queue states", async () => {
+    const user = userEvent.setup();
+    const queue = vi.spyOn(ticketsApi, "fetchStaffQueue").mockResolvedValue(PAGE);
+    vi.spyOn(ticketsApi, "fetchTicketOwners").mockResolvedValue(OWNER_OPTIONS);
+    vi.spyOn(referenceData, "fetchCategories").mockResolvedValue([]);
+    renderQueue("/staff/tickets?q=first", true);
+
+    await waitFor(() => expect(queue).toHaveBeenCalledWith(expect.objectContaining({ q: "first" })));
+    await user.click(screen.getByRole("link", { name: "Next dashboard query" }));
+    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("scope=all"));
+    const search = screen.getByRole("searchbox", { name: "Search" });
+    await user.type(search, "second query");
+    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("q=second+query"), { timeout: 1500 });
+
+    await user.click(screen.getByRole("button", { name: "Back to first query" }));
+    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("q=first"));
+    expect(search).toHaveValue("first");
+    await user.click(screen.getByRole("button", { name: "Forward to latest query" }));
+    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("q=second+query"));
+    expect(search).toHaveValue("second query");
   });
 
   it("treats whitespace-only search input as empty and rejects overflow query links", async () => {

@@ -373,6 +373,8 @@ export function StaffTicketQueuePage() {
   const [ownerState, setOwnerState] = useState<"loading" | "ready" | "error" | "forbidden">("loading");
   const [ownerReload, setOwnerReload] = useState(0);
   const debouncedSearch = useDebouncedValue(searchInput);
+  const searchPending = debouncedSearch !== searchInput || debouncedSearch.trim() !== state.filters.q.trim();
+  const [searchLimitNotice, setSearchLimitNotice] = useState(false);
 
   useEffect(() => {
     if (previousSearchSignature.current === searchSignature) return;
@@ -417,7 +419,7 @@ export function StaffTicketQueuePage() {
     }
     setLoadState("loading");
     setLoadError(null);
-    if (debouncedSearch !== searchInput || debouncedSearch.trim() !== state.filters.q.trim()) {
+    if (searchPending) {
       setLoadState("ready");
       return () => { cancelled = true; };
     }
@@ -433,7 +435,7 @@ export function StaffTicketQueuePage() {
         setLoadState("error");
       });
     return () => { cancelled = true; };
-  }, [state.scope, state.page, state.pageSize, state.sort, state.order, state.filters.q, state.filters.status, state.filters.itPriority, state.filters.statuses, state.filters.itPriorities, state.filters.updatedFrom, state.filters.updatedThrough, state.filters.resolvedFrom, state.filters.resolvedThrough, state.filters.categoryId, state.filters.owner, debouncedSearch, searchInput, reload, invalidQuery]);
+  }, [state.scope, state.page, state.pageSize, state.sort, state.order, state.filters.q, state.filters.status, state.filters.itPriority, state.filters.statuses, state.filters.itPriorities, state.filters.updatedFrom, state.filters.updatedThrough, state.filters.resolvedFrom, state.filters.resolvedThrough, state.filters.categoryId, state.filters.owner, debouncedSearch, searchInput, searchPending, reload, invalidQuery]);
 
   useEffect(() => {
     fetchCategories().then(setCategories).catch(() => undefined);
@@ -511,7 +513,26 @@ export function StaffTicketQueuePage() {
         <div className="row g-3">
           <div className="col-12 col-md-6 col-lg-4">
             <label className="form-label fw-semibold" htmlFor="staff-queue-search">Search</label>
-            <input id="staff-queue-search" type="search" className="form-control" placeholder="Ticket number, summary, requester…" value={searchInput} maxLength={100} onChange={(event) => updateFilter("q", event.target.value)} />
+            <input
+              id="staff-queue-search"
+              type="search"
+              className="form-control"
+              placeholder="Ticket number, summary, requester…"
+              value={searchInput}
+              maxLength={100}
+              aria-describedby={searchLimitNotice ? "staff-queue-search-limit" : undefined}
+              onPaste={(event) => {
+                const input = event.currentTarget;
+                const selectionLength = (input.selectionEnd ?? input.value.length) - (input.selectionStart ?? input.value.length);
+                const pastedLength = event.clipboardData.getData("text").length;
+                setSearchLimitNotice(input.value.length - selectionLength + pastedLength > 100);
+              }}
+              onChange={(event) => {
+                if ((event.nativeEvent as InputEvent).inputType !== "insertFromPaste") setSearchLimitNotice(false);
+                updateFilter("q", event.target.value);
+              }}
+            />
+            {searchLimitNotice && <div id="staff-queue-search-limit" className="form-text" role="status" data-testid="staff-queue-search-limit">Search is limited to 100 characters; extra pasted characters were not added.</div>}
           </div>
           <div className="col-12 col-md-6 col-lg-4">
             <label className="form-label fw-semibold" htmlFor="staff-queue-status">Status</label>
@@ -554,27 +575,30 @@ export function StaffTicketQueuePage() {
         <button type="button" className="btn btn-outline-primary mt-3" onClick={clearFilters} disabled={!hasFilters}>Clear Filters</button>
       </section>
 
-      {loadState === "loading" && <QueueSkeleton />}
-      {loadState === "error" && (
-        <StateBlock
-          kind="error"
-          title={loadError?.status === 403 ? "You do not have access to the Staff Queue" : invalidQuery ? "This queue link has invalid filters" : "Could not load the ticket queue"}
-          description={loadError?.status === 403 ? "Only IT Staff and Administrators can view this queue." : invalidQuery ? "Review the status, priority and date filters, or clear the link filters to start again." : "The service did not respond. Your query has been kept, so you can safely retry."}
-          action={loadError?.status === 403 ? <Link className="btn btn-outline-primary" to="/">Return to your workspace</Link> : invalidQuery ? <button type="button" className="btn btn-outline-primary" onClick={clearFilters}>Clear Filters</button> : <button type="button" className="btn btn-outline-primary" onClick={() => setReload((value) => value + 1)}>Retry</button>}
-        />
-      )}
-      {loadState === "ready" && result && result.total === 0 && !filtersActive && <StateBlock kind="empty" title={`No Tickets in this ${state.scope === "active" ? "scope" : "view"}.`} description={stateDescription} />}
-      {loadState === "ready" && result && result.total === 0 && filtersActive && <StateBlock kind="no-results" title="No Tickets match these filters." description="Try a different search or clear the filters to see more Tickets." action={<button type="button" className="btn btn-outline-primary" onClick={clearFilters}>Clear Filters</button>} />}
-      {loadState === "ready" && result && result.total > 0 && (
-        <>
-          <div className="d-flex justify-content-between align-items-center gap-2 mb-2"><p className="zen-muted mb-0" aria-live="polite">Showing {(result.page - 1) * result.pageSize + 1} to {Math.min(result.page * result.pageSize, result.total)} of {result.total} tickets</p><span className="zen-muted">{result.total} total</span></div>
-          <div className="staff-queue-table d-none d-lg-block zen-card" data-testid="staff-queue-table">
-            <table className="table table-hover align-middle mb-0"><QueueTableHeader sort={state.sort} order={state.order} onSortChange={changeSort} /><tbody>{result.data.map((ticket) => <QueueTable key={ticket.id} ticket={ticket} />)}</tbody></table>
-          </div>
-          <QueueCards tickets={result.data} />
-          <Pagination page={result.page} pageSize={result.pageSize} total={result.total} totalPages={result.totalPages} onPageChange={(page) => updateState({ page }, false)} />
-        </>
-      )}
+      <div data-testid="staff-queue-results" aria-busy={searchPending || loadState === "loading"}>
+        {searchPending && <p className="zen-muted" role="status" aria-live="polite" data-testid="staff-queue-search-pending">Updating ticket results…</p>}
+        {loadState === "loading" && <QueueSkeleton />}
+        {loadState === "error" && (
+          <StateBlock
+            kind="error"
+            title={loadError?.status === 403 ? "You do not have access to the Staff Queue" : invalidQuery ? "This queue link has invalid filters" : "Could not load the ticket queue"}
+            description={loadError?.status === 403 ? "Only IT Staff and Administrators can view this queue." : invalidQuery ? "Review the status, priority and date filters, or clear the link filters to start again." : "The service did not respond. Your query has been kept, so you can safely retry."}
+            action={loadError?.status === 403 ? <Link className="btn btn-outline-primary" to="/">Return to your workspace</Link> : invalidQuery ? <button type="button" className="btn btn-outline-primary" onClick={clearFilters}>Clear Filters</button> : <button type="button" className="btn btn-outline-primary" onClick={() => setReload((value) => value + 1)}>Retry</button>}
+          />
+        )}
+        {loadState === "ready" && result && result.total === 0 && !filtersActive && <StateBlock kind="empty" title={`No Tickets in this ${state.scope === "active" ? "scope" : "view"}.`} description={stateDescription} />}
+        {loadState === "ready" && result && result.total === 0 && filtersActive && <StateBlock kind="no-results" title="No Tickets match these filters." description="Try a different search or clear the filters to see more Tickets." action={<button type="button" className="btn btn-outline-primary" onClick={clearFilters}>Clear Filters</button>} />}
+        {loadState === "ready" && result && result.total > 0 && (
+          <>
+            <div className="d-flex justify-content-between align-items-center gap-2 mb-2"><p className="zen-muted mb-0" aria-live="polite">Showing {(result.page - 1) * result.pageSize + 1} to {Math.min(result.page * result.pageSize, result.total)} of {result.total} tickets</p><span className="zen-muted">{result.total} total</span></div>
+            <div className="staff-queue-table d-none d-lg-block zen-card" data-testid="staff-queue-table">
+              <table className="table table-hover align-middle mb-0"><QueueTableHeader sort={state.sort} order={state.order} onSortChange={changeSort} /><tbody>{result.data.map((ticket) => <QueueTable key={ticket.id} ticket={ticket} />)}</tbody></table>
+            </div>
+            <QueueCards tickets={result.data} />
+            <Pagination page={result.page} pageSize={result.pageSize} total={result.total} totalPages={result.totalPages} onPageChange={(page) => updateState({ page }, false)} />
+          </>
+        )}
+      </div>
     </section>
   );
 }
