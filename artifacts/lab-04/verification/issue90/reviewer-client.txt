@@ -1,0 +1,52 @@
+Issue90 independent Reviewer client verification; Ponytail FULL
+Started: 2026-10-30T09:01:29.6075715+07:00
+Base HEAD: 171d8bc4d3022a5e67161983fb23fcac82f50da7
+Source: reviewed working implementation on feature/lab4-dashboard-ui; exact final commit pending
+Command: npm --prefix client test -- tests/lab-04/RequesterDashboard.test.tsx tests/lab-04/StaffDashboard.test.tsx tests/lab-03/StaffTicketQueue.test.tsx tests/lab-03/AppShell.test.tsx tests/lab-03/Login.test.tsx tests/lab-03/ChangePassword.test.tsx --no-file-parallelism
+Environment: Windows, DB-free component tests; local execution, not CI or human approval
+
+
+> toktickit-client@1.0.0 test
+> vitest run tests/lab-04/RequesterDashboard.test.tsx tests/lab-04/StaffDashboard.test.tsx tests/lab-03/StaffTicketQueue.test.tsx tests/lab-03/AppShell.test.tsx tests/lab-03/Login.test.tsx tests/lab-03/ChangePassword.test.tsx --no-file-parallelism
+
+
+ RUN  v2.1.9 D:/Software Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/client
+
+ ✓ tests/lab-03/StaffTicketQueue.test.tsx (17 tests) 4076ms
+   ✓ Issue 56 Staff Ticket Queue > syncs the mounted page from external URL changes and restores state on Back 893ms
+   ✓ Issue 56 Staff Ticket Queue > trims only outer search whitespace before URL/API serialization and preserves spaces between words 785ms
+   ✓ Issue 56 Staff Ticket Queue > treats whitespace-only search input as empty and rejects overflow query links 538ms
+   ✓ Issue 56 Staff Ticket Queue > UI-Q02: uses bounded pagination at the first, middle, and last page without an overflow strip 385ms
+ ✓ tests/lab-04/StaffDashboard.test.tsx (13 tests) 1082ms
+ ✓ tests/lab-04/RequesterDashboard.test.tsx (6 tests) 569ms
+ ✓ tests/lab-03/Login.test.tsx (9 tests) 6212ms
+   ✓ Issue 50 Login > UI-L01: prevents duplicate submissions and disables the form while signing in 720ms
+   ✓ Issue 50 Login > UI-L01: renders safe INVALID_CREDENTIALS feedback without account details 651ms
+   ✓ Issue 50 Login > UI-L01: renders safe USER_INACTIVE feedback without account details 666ms
+   ✓ Issue 50 Login > UI-L01: renders safe LOGIN_THROTTLED feedback without account details 655ms
+   ✓ Issue 50 Login > UI-L01/UI-H01: normalizes email, sends credentials, and lands Staff at Dashboard 720ms
+   ✓ Issue 50 Login > UI-L01: sends a must-change-password user directly to Change Password 1177ms
+   ✓ Issue 50 Login > UI-05: restores a permitted direct destination after Login 863ms
+   ✓ Issue 50 Login > UI-L01: gives a generic retryable message for network/server failures 638ms
+ ✓ tests/lab-03/ChangePassword.test.tsx (6 tests) 5879ms
+   ✓ Issue 50 Change Password > UI-L02: validates rules, confirmation, and reuse before making a mutation 951ms
+   ✓ Issue 50 Change Password > UI-L02: supports self-service mode and clears password fields during save 1072ms
+   ✓ Issue 50 Change Password > UI-L02: sends the current CSRF token, prevents duplicate password changes, and replaces it after success 1152ms
+   ✓ Issue 50 Change Password > UI-05: restores a permitted destination after the mandatory password change 1695ms
+   ✓ Issue 50 Change Password > UI-L02: gives safe current-password failure feedback and does not expose server details 909ms
+ ✓ tests/lab-03/AppShell.test.tsx (11 tests) 459ms
+
+ Test Files  6 passed (6)
+      Tests  62 passed (62)
+   Start at  09:01:31
+   Duration  27.88s (transform 1.15s, setup 720ms, collect 3.49s, tests 18.28s, environment 3.50s, prepare 552ms)
+
+
+Exit code: 0
+Finished: 2026-10-30T09:02:00.0525115+07:00
+No database or browser process used; no persistent private cache created.
+
+Exact-source confirmation: 5236ef59aa25be02ae578087449dfc07e35e4aea
+Confirmed git diff -- client server e2e is empty. Committed24files match reviewed implementation and tests.
+Final evidence inspected: client19files/219tests, Dashboard browser1/1, inherited browser7/7; eight actual screenshots at1440x900/820x1024/390x844 plus mobile identity variants.
+No remaining actionable findings. No duplicate broad/browser run by Reviewer; human approval/final-main release remain separate.

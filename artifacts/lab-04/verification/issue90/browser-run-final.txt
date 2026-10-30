@@ -1,0 +1,89 @@
+2026-10-30T02:21:52.406Z pw:webserver HTTP GET: http://127.0.0.1:3000/api/health
+2026-10-30T02:21:52.416Z pw:webserver Error while checking if http://127.0.0.1:3000/api/health is available: connect ECONNREFUSED 127.0.0.1:3000
+2026-10-30T02:21:52.417Z pw:webserver Starting WebServer process node --import tsx/esm src/index.ts...
+2026-10-30T02:21:52.438Z pw:webserver Process started
+2026-10-30T02:21:52.438Z pw:webserver Waiting for availability...
+2026-10-30T02:21:52.438Z pw:webserver HTTP GET: http://127.0.0.1:3000/api/health
+2026-10-30T02:21:52.440Z pw:webserver Error while checking if http://127.0.0.1:3000/api/health is available: connect ECONNREFUSED 127.0.0.1:3000
+2026-10-30T02:21:52.440Z pw:webserver Waiting 100ms
+[WebServer] (node:33264) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+2026-10-30T02:21:52.545Z pw:webserver HTTP GET: http://127.0.0.1:3000/api/health
+2026-10-30T02:21:52.546Z pw:webserver Error while checking if http://127.0.0.1:3000/api/health is available: connect ECONNREFUSED 127.0.0.1:3000
+2026-10-30T02:21:52.546Z pw:webserver Waiting 250ms
+2026-10-30T02:21:52.810Z pw:webserver HTTP GET: http://127.0.0.1:3000/api/health
+2026-10-30T02:21:52.811Z pw:webserver Error while checking if http://127.0.0.1:3000/api/health is available: connect ECONNREFUSED 127.0.0.1:3000
+2026-10-30T02:21:52.811Z pw:webserver Waiting 500ms
+[WebServer] TokTickIT API listening on http://localhost:3000
+2026-10-30T02:21:53.317Z pw:webserver HTTP GET: http://127.0.0.1:3000/api/health
+2026-10-30T02:21:53.324Z pw:webserver HTTP Status: 200
+2026-10-30T02:21:53.325Z pw:webserver WebServer available
+2026-10-30T02:21:53.325Z pw:webserver HTTP GET: http://localhost:5173/
+2026-10-30T02:21:53.641Z pw:webserver Error while checking if http://localhost:5173/ is available: connect ECONNREFUSED ::1:5173
+2026-10-30T02:21:53.641Z pw:webserver Starting WebServer process node node_modules/vite/bin/vite.js --host localhost --port 5173...
+2026-10-30T02:21:53.662Z pw:webserver Process started
+2026-10-30T02:21:53.662Z pw:webserver Waiting for availability...
+2026-10-30T02:21:53.662Z pw:webserver HTTP GET: http://localhost:5173/
+2026-10-30T02:21:53.964Z pw:webserver Error while checking if http://localhost:5173/ is available: connect ECONNREFUSED ::1:5173
+2026-10-30T02:21:53.964Z pw:webserver Waiting 100ms
+[WebServer] (node:18480) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+2026-10-30T02:21:54.069Z pw:webserver HTTP GET: http://localhost:5173/
+[WebServer]
+[WebServer]   VITE v6.4.3  ready in 341 ms
+[WebServer]
+[WebServer]   ➜  Local:   http://localhost:5173/
+2026-10-30T02:21:54.137Z pw:webserver HTTP Status: 200
+2026-10-30T02:21:54.138Z pw:webserver WebServer available
+
+Running 1 test using 1 worker
+
+(node:7664) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x  1 [e2e] › e2e\lab-04\dashboards.spec.ts:174:3 › E2E-03 — role Dashboards and exact drilldowns › renders role snapshots, follows links, refreshes after Action work and preserves Queue search URL (2.0m)
+2026-10-30T02:23:59.708Z pw:webserver Terminating the WebServer
+2026-10-30T02:24:00.066Z pw:webserver Terminated the WebServer
+2026-10-30T02:24:00.066Z pw:webserver Terminating the WebServer
+2026-10-30T02:24:00.387Z pw:webserver Terminated the WebServer
+
+
+  1) [e2e] › e2e\lab-04\dashboards.spec.ts:174:3 › E2E-03 — role Dashboards and exact drilldowns › renders role snapshots, follows links, refreshes after Action work and preserves Queue search URL
+
+    Test timeout of 120000ms exceeded.
+
+    Error: locator.waitFor: Test timeout of 120000ms exceeded.
+    Call log:
+      - waiting for getByTestId('current-user') to be visible
+
+
+       at support\fixtures.ts:120
+
+      118 |     if (await navigationToggle.isVisible()) await navigationToggle.click();
+      119 |   }
+    > 120 |   await currentUser.waitFor({ state: "visible" });
+          |                     ^
+      121 |   if ((await currentUser.textContent()) !== fullName) {
+      122 |     throw new Error(`Expected authenticated user ${fullName}`);
+      123 |   }
+        at expectCurrentUser (D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\e2e\support\fixtures.ts:120:21)
+        at loginUi (D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\e2e\support\fixtures.ts:110:3)
+        at D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\e2e\lab-04\dashboards.spec.ts:233:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\issue90\pw-output\lab-04-dashboards-E2E-03-—-43890--preserves-Queue-search-URL-e2e\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\issue90\pw-output\lab-04-dashboards-E2E-03-—-43890--preserves-Queue-search-URL-e2e\error-context.md
+
+    Error Context: test-results\issue90\pw-output\lab-04-dashboards-E2E-03-—-43890--preserves-Queue-search-URL-e2e\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\issue90\pw-output\lab-04-dashboards-E2E-03-—-43890--preserves-Queue-search-URL-e2e\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\issue90\pw-output\lab-04-dashboards-E2E-03-—-43890--preserves-Queue-search-URL-e2e\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [e2e] › e2e\lab-04\dashboards.spec.ts:174:3 › E2E-03 — role Dashboards and exact drilldowns › renders role snapshots, follows links, refreshes after Action work and preserves Queue search URL

@@ -1,0 +1,157 @@
+2026-10-30T02:20:59.626Z pw:webserver HTTP GET: http://127.0.0.1:3000/api/health
+2026-10-30T02:20:59.631Z pw:webserver Error while checking if http://127.0.0.1:3000/api/health is available: connect ECONNREFUSED 127.0.0.1:3000
+2026-10-30T02:20:59.631Z pw:webserver Starting WebServer process node --import tsx/esm src/index.ts...
+2026-10-30T02:20:59.654Z pw:webserver Process started
+2026-10-30T02:20:59.654Z pw:webserver Waiting for availability...
+2026-10-30T02:20:59.654Z pw:webserver HTTP GET: http://127.0.0.1:3000/api/health
+2026-10-30T02:20:59.656Z pw:webserver Error while checking if http://127.0.0.1:3000/api/health is available: connect ECONNREFUSED 127.0.0.1:3000
+2026-10-30T02:20:59.656Z pw:webserver Waiting 100ms
+[WebServer] (node:28756) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+2026-10-30T02:20:59.761Z pw:webserver HTTP GET: http://127.0.0.1:3000/api/health
+2026-10-30T02:20:59.762Z pw:webserver Error while checking if http://127.0.0.1:3000/api/health is available: connect ECONNREFUSED 127.0.0.1:3000
+2026-10-30T02:20:59.762Z pw:webserver Waiting 250ms
+2026-10-30T02:21:00.024Z pw:webserver HTTP GET: http://127.0.0.1:3000/api/health
+2026-10-30T02:21:00.025Z pw:webserver Error while checking if http://127.0.0.1:3000/api/health is available: connect ECONNREFUSED 127.0.0.1:3000
+2026-10-30T02:21:00.025Z pw:webserver Waiting 500ms
+[WebServer] TokTickIT API listening on http://localhost:3000
+2026-10-30T02:21:00.533Z pw:webserver HTTP GET: http://127.0.0.1:3000/api/health
+2026-10-30T02:21:00.539Z pw:webserver HTTP Status: 200
+2026-10-30T02:21:00.540Z pw:webserver WebServer available
+2026-10-30T02:21:00.540Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:00.541Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:00.541Z pw:webserver Starting WebServer process node node_modules/vite/bin/vite.js --host localhost --port 5173...
+2026-10-30T02:21:00.552Z pw:webserver Process started
+2026-10-30T02:21:00.553Z pw:webserver Waiting for availability...
+2026-10-30T02:21:00.553Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:00.553Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:00.553Z pw:webserver Waiting 100ms
+2026-10-30T02:21:00.657Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:00.658Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:00.658Z pw:webserver Waiting 250ms
+2026-10-30T02:21:00.917Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:00.919Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:00.919Z pw:webserver Waiting 500ms
+[WebServer] (node:27884) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer]
+[WebServer]   VITE v6.4.3  ready in 616 ms
+[WebServer]
+[WebServer]   ➜  Local:   http://localhost:5173/
+2026-10-30T02:21:01.429Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:01.430Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:01.430Z pw:webserver Waiting 1000ms
+2026-10-30T02:21:02.457Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:02.470Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:02.470Z pw:webserver Waiting 1000ms
+2026-10-30T02:21:03.472Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:03.474Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:03.476Z pw:webserver Waiting 1000ms
+2026-10-30T02:21:04.483Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:04.489Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:04.490Z pw:webserver Waiting 1000ms
+2026-10-30T02:21:05.501Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:05.503Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:05.504Z pw:webserver Waiting 1000ms
+2026-10-30T02:21:06.514Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:06.522Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:06.526Z pw:webserver Waiting 1000ms
+2026-10-30T02:21:07.535Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:07.537Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:07.537Z pw:webserver Waiting 1000ms
+2026-10-30T02:21:08.553Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:08.566Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:08.570Z pw:webserver Waiting 1000ms
+2026-10-30T02:21:09.580Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:09.586Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:09.586Z pw:webserver Waiting 1000ms
+2026-10-30T02:21:10.612Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:10.618Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:10.618Z pw:webserver Waiting 1000ms
+2026-10-30T02:21:11.619Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:11.623Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:11.623Z pw:webserver Waiting 1000ms
+2026-10-30T02:21:12.625Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:12.628Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:12.628Z pw:webserver Waiting 1000ms
+2026-10-30T02:21:13.634Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:13.637Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:13.637Z pw:webserver Waiting 1000ms
+2026-10-30T02:21:14.649Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:14.668Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:14.668Z pw:webserver Waiting 1000ms
+2026-10-30T02:21:15.680Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:15.681Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:15.681Z pw:webserver Waiting 1000ms
+2026-10-30T02:21:16.697Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:16.699Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:16.700Z pw:webserver Waiting 1000ms
+2026-10-30T02:21:17.701Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:17.704Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:17.704Z pw:webserver Waiting 1000ms
+2026-10-30T02:21:18.706Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:18.708Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:18.708Z pw:webserver Waiting 1000ms
+2026-10-30T02:21:19.709Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:19.713Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:19.713Z pw:webserver Waiting 1000ms
+2026-10-30T02:21:20.732Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:20.758Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:20.758Z pw:webserver Waiting 1000ms
+2026-10-30T02:21:21.774Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:21.778Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:21.778Z pw:webserver Waiting 1000ms
+2026-10-30T02:21:22.781Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:22.785Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:22.785Z pw:webserver Waiting 1000ms
+2026-10-30T02:21:23.896Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:23.901Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:23.901Z pw:webserver Waiting 1000ms
+2026-10-30T02:21:24.902Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:24.908Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:24.909Z pw:webserver Waiting 1000ms
+2026-10-30T02:21:25.921Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:25.923Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:25.924Z pw:webserver Waiting 1000ms
+2026-10-30T02:21:26.928Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:26.931Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:26.932Z pw:webserver Waiting 1000ms
+2026-10-30T02:21:27.950Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:27.951Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:27.952Z pw:webserver Waiting 1000ms
+2026-10-30T02:21:28.960Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:28.969Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:28.969Z pw:webserver Waiting 1000ms
+2026-10-30T02:21:29.978Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:29.983Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:29.983Z pw:webserver Waiting 1000ms
+2026-10-30T02:21:30.996Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:30.998Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:30.998Z pw:webserver Waiting 1000ms
+2026-10-30T02:21:32.000Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:32.005Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:32.005Z pw:webserver Waiting 1000ms
+2026-10-30T02:21:33.008Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:33.010Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:33.010Z pw:webserver Waiting 1000ms
+2026-10-30T02:21:34.016Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:34.017Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:34.017Z pw:webserver Waiting 1000ms
+2026-10-30T02:21:35.024Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:35.030Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:35.036Z pw:webserver Waiting 1000ms
+2026-10-30T02:21:36.041Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:36.049Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:36.049Z pw:webserver Waiting 1000ms
+2026-10-30T02:21:37.058Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:37.060Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:37.062Z pw:webserver Waiting 1000ms
+2026-10-30T02:21:38.064Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:38.065Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:38.065Z pw:webserver Waiting 1000ms
+2026-10-30T02:21:39.069Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:39.070Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:39.071Z pw:webserver Waiting 1000ms
+2026-10-30T02:21:40.073Z pw:webserver HTTP GET: http://127.0.0.1:5173/
+2026-10-30T02:21:40.076Z pw:webserver Error while checking if http://127.0.0.1:5173/ is available: connect ECONNREFUSED 127.0.0.1:5173
+2026-10-30T02:21:40.076Z pw:webserver Waiting 1000ms

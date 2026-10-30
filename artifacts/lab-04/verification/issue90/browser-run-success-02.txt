@@ -1,0 +1,91 @@
+2026-10-30T02:25:54.076Z pw:webserver HTTP GET: http://localhost:3000/api/health
+2026-10-30T02:25:54.401Z pw:webserver Error while checking if http://localhost:3000/api/health is available: connect ECONNREFUSED ::1:3000
+2026-10-30T02:25:54.401Z pw:webserver Starting WebServer process node --import tsx/esm src/index.ts...
+2026-10-30T02:25:54.427Z pw:webserver Process started
+2026-10-30T02:25:54.427Z pw:webserver Waiting for availability...
+2026-10-30T02:25:54.427Z pw:webserver HTTP GET: http://localhost:3000/api/health
+[WebServer] (node:22984) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+2026-10-30T02:25:54.743Z pw:webserver Error while checking if http://localhost:3000/api/health is available: connect ECONNREFUSED ::1:3000
+2026-10-30T02:25:54.743Z pw:webserver Waiting 100ms
+2026-10-30T02:25:54.848Z pw:webserver HTTP GET: http://localhost:3000/api/health
+[WebServer] TokTickIT API listening on http://localhost:3000
+2026-10-30T02:25:55.161Z pw:webserver HTTP Status: 200
+2026-10-30T02:25:55.162Z pw:webserver WebServer available
+2026-10-30T02:25:55.162Z pw:webserver HTTP GET: http://localhost:5173/
+2026-10-30T02:25:55.465Z pw:webserver Error while checking if http://localhost:5173/ is available: connect ECONNREFUSED ::1:5173
+2026-10-30T02:25:55.466Z pw:webserver Starting WebServer process node node_modules/vite/bin/vite.js --host localhost --port 5173...
+2026-10-30T02:25:55.500Z pw:webserver Process started
+2026-10-30T02:25:55.500Z pw:webserver Waiting for availability...
+2026-10-30T02:25:55.500Z pw:webserver HTTP GET: http://localhost:5173/
+2026-10-30T02:25:55.805Z pw:webserver Error while checking if http://localhost:5173/ is available: connect ECONNREFUSED ::1:5173
+2026-10-30T02:25:55.805Z pw:webserver Waiting 100ms
+[WebServer] (node:20248) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer]
+[WebServer]   VITE v6.4.3  ready in 327 ms
+[WebServer]
+[WebServer]   ➜  Local:   http://localhost:5173/
+2026-10-30T02:25:55.910Z pw:webserver HTTP GET: http://localhost:5173/
+2026-10-30T02:25:55.952Z pw:webserver HTTP Status: 200
+2026-10-30T02:25:55.952Z pw:webserver WebServer available
+
+Running 1 test using 1 worker
+
+(node:21408) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Issue90 requester Dashboard geometry {"viewport":"1440x900","document":"1440x1235","horizontalOverflow":0}; screenshot D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\test-results\issue90\screenshots-final\requester-dashboard-1440x900.png.
+Issue90 requester Dashboard geometry {"viewport":"820x1024","document":"820x1676","horizontalOverflow":0}; screenshot D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\test-results\issue90\screenshots-final\requester-dashboard-820x1024.png.
+Issue90 requester Dashboard geometry {"viewport":"390x844","document":"390x2282","horizontalOverflow":0}; screenshot D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\test-results\issue90\screenshots-final\requester-dashboard-390x844.png.
+Issue90 staff Dashboard geometry {"viewport":"1440x900","document":"1440x1643","horizontalOverflow":0}; screenshot D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\test-results\issue90\screenshots-final\staff-dashboard-1440x900.png.
+Issue90 staff Dashboard geometry {"viewport":"820x1024","document":"820x2118","horizontalOverflow":0}; screenshot D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\test-results\issue90\screenshots-final\staff-dashboard-820x1024.png.
+Issue90 staff Dashboard geometry {"viewport":"390x844","document":"390x2844","horizontalOverflow":0}; screenshot D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\test-results\issue90\screenshots-final\staff-dashboard-390x844.png.
+  x  1 [e2e] › e2e\lab-04\dashboards.spec.ts:174:3 › E2E-03 — role Dashboards and exact drilldowns › renders role snapshots, follows links, refreshes after Action work and preserves Queue search URL (20.1s)
+2026-10-30T02:26:19.973Z pw:webserver Terminating the WebServer
+2026-10-30T02:26:20.332Z pw:webserver Terminated the WebServer
+2026-10-30T02:26:20.333Z pw:webserver Terminating the WebServer
+2026-10-30T02:26:20.659Z pw:webserver Terminated the WebServer
+
+
+  1) [e2e] › e2e\lab-04\dashboards.spec.ts:174:3 › E2E-03 — role Dashboards and exact drilldowns › renders role snapshots, follows links, refreshes after Action work and preserves Queue search URL
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('Review the active Dashboard work item')
+    Expected: visible
+    Error: strict mode violation: getByText('Review the active Dashboard work item') resolved to 2 elements:
+        1) <td class="dashboard-wrap">Review the active Dashboard work item</td> aka getByRole('cell', { name: 'Review the active Dashboard' })
+        2) <p class="dashboard-wrap mb-2">Review the active Dashboard work item</p> aka locator('p').filter({ hasText: 'Review the active Dashboard' })
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByText('Review the active Dashboard work item')
+
+
+      292 |       await expect(page).toHaveURL(/\/staff\/dashboard\?actions=active-assigned/);
+      293 |       await expect(page.getByRole("heading", { name: "My Actions" })).toBeFocused();
+    > 294 |       await expect(page.getByText("Review the active Dashboard work item")).toBeVisible();
+          |                                                                             ^
+      295 |       await page.getByRole("link", { name: "Open Action" }).click();
+      296 |       await page.waitForURL((url) => url.pathname === `/staff/tickets/${activeTicket.id}` && url.searchParams.get("tab") === "actions" && url.searchParams.get("actionId") === String(activeAction.id));
+      297 |       await expect(page.getByRole("heading", { name: `Action ${activeAction.id} · Planned` })).toBeVisible();
+        at D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\e2e\lab-04\dashboards.spec.ts:294:77
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\issue90\pw-output-run3\lab-04-dashboards-E2E-03-—-43890--preserves-Queue-search-URL-e2e\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\issue90\pw-output-run3\lab-04-dashboards-E2E-03-—-43890--preserves-Queue-search-URL-e2e\error-context.md
+
+    Error Context: test-results\issue90\pw-output-run3\lab-04-dashboards-E2E-03-—-43890--preserves-Queue-search-URL-e2e\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\issue90\pw-output-run3\lab-04-dashboards-E2E-03-—-43890--preserves-Queue-search-URL-e2e\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\issue90\pw-output-run3\lab-04-dashboards-E2E-03-—-43890--preserves-Queue-search-URL-e2e\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [e2e] › e2e\lab-04\dashboards.spec.ts:174:3 › E2E-03 — role Dashboards and exact drilldowns › renders role snapshots, follows links, refreshes after Action work and preserves Queue search URL
