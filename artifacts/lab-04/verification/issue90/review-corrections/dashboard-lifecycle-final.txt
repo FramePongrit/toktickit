@@ -1,0 +1,29 @@
+Command: npm run e2e -- --project=e2e e2e/lab-04/dashboards.spec.ts
+Task schema: lab4_issue90_e2e_pr100_20261030a1 (dedicated PostgreSQL test container; credentials omitted)
+Exactly four lifecycle cases; screenshot capture is selected separately in dashboard-screenshots project.
+
+> toktickit-e2e@1.0.0 e2e
+> playwright test --project=e2e e2e/lab-04/dashboards.spec.ts
+
+[WebServer] (node:18984) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] TokTickIT API listening on http://localhost:3000
+[WebServer] (node:14808) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer]
+[WebServer]   VITE v6.4.3  ready in 298 ms
+[WebServer]
+[WebServer]   ➜  Local:   http://localhost:5173/
+
+Running 4 tests using 1 worker
+
+(node:25576) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 1 [e2e] › e2e\lab-04\dashboards.spec.ts:263:3 › E2E-03 — role Dashboards and exact drilldowns › Requester Dashboard shows fixture counts and owned Ticket drilldowns (2.6s)
+  ok 2 [e2e] › e2e\lab-04\dashboards.spec.ts:289:3 › E2E-03 — role Dashboards and exact drilldowns › Staff Dashboard drilldowns refresh after Action completion (2.7s)
+  ok 3 [e2e] › e2e\lab-04\dashboards.spec.ts:335:3 › E2E-03 — role Dashboards and exact drilldowns › Staff Queue search trims, reloads and restores its latest URL query (2.1s)
+Issue90 browser screenshots saved under D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\test-results\issue90\pr100-run-20261030a1\screenshots-final; E2E fixtures are scoped to the task-owned schema and cleaned up by created user IDs.
+  ok 4 [e2e] › e2e\lab-04\dashboards.spec.ts:363:3 › E2E-03 — role Dashboards and exact drilldowns › Admin login lands on the Staff Dashboard (784ms)
+
+  4 passed (13.9s)
+Exit code: 0

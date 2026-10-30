@@ -1,0 +1,9 @@
+Target: exact newly created schema on dedicated test PostgreSQL only.
+Schema: lab4_issue90_e2e_pr100_20261030a1
+Pre-drop fixture users: 0
+Owned upload files: 0
+DROP SCHEMA exit: 0
+NOTICE:  drop cascades to 20 other objects DETAIL:  drop cascades to table lab4_issue90_e2e_pr100_20261030a1._prisma_migrations drop cascades to table lab4_issue90_e2e_pr100_20261030a1."Category" drop cascades to type lab4_issue90_e2e_pr100_20261030a1."Priority" drop cascades to type lab4_issue90_e2e_pr100_20261030a1."TicketStatus" drop cascades to type lab4_issue90_e2e_pr100_20261030a1."Role" drop cascades to table lab4_issue90_e2e_pr100_20261030a1."RelatedSystem" drop cascades to table lab4_issue90_e2e_pr100_20261030a1."User" drop cascades to table lab4_issue90_e2e_pr100_20261030a1."Ticket" drop cascades to table lab4_issue90_e2e_pr100_20261030a1."Attachment" drop cascades to table lab4_issue90_e2e_pr100_20261030a1."TicketCounter" drop cascades to table lab4_issue90_e2e_pr100_20261030a1."AuthSession" drop cascades to table lab4_issue90_e2e_pr100_20261030a1."PublicComment" drop cascades to table lab4_issue90_e2e_pr100_20261030a1."InternalNote" drop cascades to type lab4_issue90_e2e_pr100_20261030a1."ActionStatus" drop cascades to type lab4_issue90_e2e_pr100_20261030a1."ActionRevisionOperation" drop cascades to type lab4_issue90_e2e_pr100_20261030a1."TicketWorkflowEventKind" drop cascades to table lab4_issue90_e2e_pr100_20261030a1."ActionTaken" drop cascades to table lab4_issue90_e2e_pr100_20261030a1."ActionRevision" drop cascades to table lab4_issue90_e2e_pr100_20261030a1."TicketWorkflowEvent" drop cascades to table lab4_issue90_e2e_pr100_20261030a1."IdempotencyRecord" DROP SCHEMA
+Post-drop schema count: 0
+Other previously retained schemas were not touched.
+Logs, screenshots, traces, and the empty task upload directory were preserved.

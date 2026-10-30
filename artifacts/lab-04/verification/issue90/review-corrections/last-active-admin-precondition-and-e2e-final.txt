@@ -1,0 +1,59 @@
+Focused LAST_ACTIVE_ADMINISTRATOR browser verification with read-only exact-pair precondition/postcondition and no demo seed.
+Target: dedicated PostgreSQL test container, 127.0.0.1:55434/lab4test; credentials omitted.
+Guarded schema create exit: 0
+issue61_verify_e333200ebea2495d9fafdd7b
+Task-owned schema: issue61_verify_e333200ebea2495d9fafdd7b
+Migration deploy exit: 0
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+Datasource "db": PostgreSQL database "lab4test", schema "issue61_verify_e333200ebea2495d9fafdd7b" at "127.0.0.1:55434"
+
+8 migrations found in prisma/migrations
+
+Applying migration `20260815105141_init`
+Applying migration `20260904150857_add_active_to_category`
+Applying migration `20260904150907_lab2_core_models`
+Applying migration `20260918120000_lab3_user_workflow`
+Applying migration `20260918130000_auth_session_csrf_ciphertext`
+Applying migration `20260918140000_revoke_legacy_auth_sessions`
+Applying migration `20261024000000_lab4_actions_workflow`
+Applying migration `20261025000000_lab4_restrict_workflow_comment_delete`
+
+The following migration(s) have been applied:
+
+migrations/
+  └─ 20260815105141_init/
+    └─ migration.sql
+  └─ 20260904150857_add_active_to_category/
+    └─ migration.sql
+  └─ 20260904150907_lab2_core_models/
+    └─ migration.sql
+  └─ 20260918120000_lab3_user_workflow/
+    └─ migration.sql
+  └─ 20260918130000_auth_session_csrf_ciphertext/
+    └─ migration.sql
+  └─ 20260918140000_revoke_legacy_auth_sessions/
+    └─ migration.sql
+  └─ 20261024000000_lab4_actions_workflow/
+    └─ migration.sql
+  └─ 20261025000000_lab4_restrict_workflow_comment_delete/
+    └─ migration.sql
+
+All migrations have been successfully applied.
+Reference-data setup exit: 0
+Prepared 4 categories and 7 related systems for isolated E2E.
+Independent pre-browser SQL: SELECT count(*) FROM task_schema."User" WHERE "active"=true AND "role"='ADMIN'; (no parameters)
+Pre-browser active Admin count exit: 0; count=0
+Command: powershell -NoProfile -ExecutionPolicy Bypass -File e2e/run-issue61.ps1 -AdminLastActiveOnly
+Focused Admin browser exit: 0
+
+Running 1 test using 1 worker
+
+(node:12500) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 1 [e2e] › e2e\lab-03\user-administration.spec.ts:189:3 › E2E-U01 — Administrator User Management › Browser proves LAST_ACTIVE_ADMINISTRATOR for an isolated concurrent Admin pair (3.5s)
+
+  1 passed (5.5s)
+Exact task-schema cleanup exit: 0
+issue61_verify_e333200ebea2495d9fafdd7b
+Final result: run=0 cleanup=0
