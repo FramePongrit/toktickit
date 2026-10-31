@@ -34,3 +34,17 @@ Correction source `90b6ec4d2285164cd27a181b88be95c5d28ef6a9` adds GitHub Actions
 | GitHub Actions | [Client checks on source commit](https://github.com/FramePongrit/toktickit/actions/runs/41019937070) passed tests, build and log upload. The PR's current head must have its own passing checks. |
 
 Dashboard captures use a separate opt-in `dashboard-screenshots` project, rather than the existing Lab 2/3 screenshot project named in peer feedback; this retains the older project's selection and prevents unrelated skipped tests. [Correction screenshots](../../screenshots/issue90-review-corrections/) are retained; Reviewer inspected the new mobile captures. The first capture attempt timed out because mobile navigation was already open; [its output](review-corrections/dashboard-screenshots-project.txt) is retained. The [first inherited run](review-corrections/inherited-auth-staff-admin-e2e.txt) mistakenly included a seeded third active Admin; its 200/200 outcome is not evidence of a race defect. The clean unseeded rerun above passed, and exact active fixture IDs are now asserted around the race. [Cleanup](review-corrections/database-cleanup.txt) records removal only of the newly created isolated schema. Existing earlier logs were retained; CI uploads new run logs as a time-limited artifact.
+
+## October 31 follow-up review
+
+Tested source `0a85c992e529ffdd955d69016150176d693821f5` restricts workflow pushes to main/lab4-staging while retaining pull-request checks; adds deterministic 299/300 ms fake-timer coverage for Queue debounce; and captures mobile Staff navigation both closed and open. The two corrected [Staff images](../../screenshots/issue90-review-corrections/) have distinct SHA256 values `e8818e2526590022355d95e8eff01618bae8aa394a4cd226b500cf6a0ca8cabf` (closed) and `e878b2dc3e36f3dfa98bf97e8fede26e7e855280b91e1c0dd180df2428557290` (open). Both were visually inspected by the AI Reviewer and orchestrator. Earlier duplicated screenshots remain recoverable from prior Git history.
+
+| Check | Actual local result |
+|---|---|
+| Full pre-staging harness | [server 28 files / 247 tests; client 20 files / 228 tests; migration/recovery 4 files / 12 tests; inherited browser 7, legacy browser 1, Lab3 screenshots 4; all passed](follow-up-review/issue61-full-verification-rerun.txt) |
+| Dashboard | [Lifecycle 4/4 on final source](follow-up-review/dashboard-lifecycle-final-source.txt) and [capture 1/1](follow-up-review/dashboard-screenshots.txt) passed |
+| Builds | [Client](follow-up-review/client-build.txt) and [server](follow-up-review/server-build.txt) passed |
+| Independent AI Reviewer | [Queue 20/20 passed](reviewer-three-corrections-client.txt), including fake timers |
+| Initial failed harness | [MIG-03 exceeded the former 5-second budget and restored-DB cleanup reported one session](follow-up-review/issue61-full-verification.txt); [focused rerun passed](follow-up-review/recovery-focused-retry.txt) after a scoped timeout and application Prisma teardown fix |
+
+The original eight parallel failures remain unidentified. One fake-timer test does not prove all former failures are fixed; the two-worker cap is an evidence-based execution limit. Client CI alone does not run server or E2E. Before merging this PR into staging, the author runs full server tests/build and relevant isolated browser suites locally on the reviewed source; the full test results above and client build provide the local record. Broader automated server/database/E2E CI and integrated/final-main checks remain Issue #91 and release work.
