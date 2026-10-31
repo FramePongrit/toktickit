@@ -46,7 +46,7 @@ test.describe.serial("E2E-A01 — Lab 3 authentication and direct security", () 
     await loginUi(page, requester);
     await expect(page).toHaveURL(/\/dashboard$/);
     await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
-    await expect(page.getByRole("link", { name: "My Tickets" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "My Tickets", exact: true })).toBeVisible();
     await expect(page.getByRole("link", { name: "Staff Queue" })).toHaveCount(0);
     await page.getByRole("link", { name: "My Tickets", exact: true }).click();
     await expect(page).toHaveURL(/\/tickets$/);

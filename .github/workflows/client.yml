@@ -2,6 +2,9 @@ name: Client checks
 
 on:
   push:
+    branches:
+      - main
+      - lab4-staging
   pull_request:
 
 permissions:

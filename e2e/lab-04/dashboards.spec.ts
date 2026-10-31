@@ -147,6 +147,7 @@ async function captureDashboard(
   height: number
 ) {
   await page.setViewportSize({ width, height });
+  if (width <= 600) await setMobileNavigation(page, false);
   await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
   await assertResponsiveLayout(page, `${role} Dashboard ${width}x${height}`);
   await mkdir(SCREENSHOT_ROOT, { recursive: true });
@@ -162,9 +163,16 @@ async function captureDashboard(
   console.log(`Issue90 ${role} Dashboard geometry ${JSON.stringify(geometry)}; screenshot ${path.join(SCREENSHOT_ROOT, `${role}-dashboard-${width}x${height}.png`)}.`);
 }
 
+async function setMobileNavigation(page: import("@playwright/test").Page, open: boolean) {
+  const toggle = page.locator(".navbar-toggler");
+  await expect(toggle).toBeVisible();
+  const expanded = await toggle.getAttribute("aria-expanded");
+  if ((expanded === "true") !== open) await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", String(open));
+}
+
 async function showMobileIdentity(page: import("@playwright/test").Page, role: "Requester" | "IT Staff") {
-  const openNavigation = page.getByRole("button", { name: "Open navigation menu" });
-  if (await openNavigation.count()) await openNavigation.click();
+  await setMobileNavigation(page, true);
   await expect(page.getByTestId("current-user")).toBeVisible();
   await expect(page.getByTestId("current-role")).toHaveText(role);
 }
@@ -382,6 +390,8 @@ test.describe.serial("E2E-03 — role Dashboards and exact drilldowns", () => {
     await captureDashboard(page, "requester", 1440, 900);
     await captureDashboard(page, "requester", 820, 1024);
     await captureDashboard(page, "requester", 390, 844);
+    await expect(page.locator(".navbar-toggler")).toHaveAttribute("aria-expanded", "false");
+    await expect(page.getByTestId("current-user")).not.toBeVisible();
     await showMobileIdentity(page, "Requester");
     await page.screenshot({ path: path.join(SCREENSHOT_ROOT, "requester-dashboard-390x844-navigation-open.png"), fullPage: true });
     await page.getByRole("button", { name: "Logout" }).click();
@@ -393,6 +403,8 @@ test.describe.serial("E2E-03 — role Dashboards and exact drilldowns", () => {
     await captureDashboard(page, "staff", 1440, 900);
     await captureDashboard(page, "staff", 820, 1024);
     await captureDashboard(page, "staff", 390, 844);
+    await expect(page.locator(".navbar-toggler")).toHaveAttribute("aria-expanded", "false");
+    await expect(page.getByTestId("current-user")).not.toBeVisible();
     await showMobileIdentity(page, "IT Staff");
     await page.screenshot({ path: path.join(SCREENSHOT_ROOT, "staff-dashboard-390x844-navigation-open.png"), fullPage: true });
     await page.getByRole("button", { name: "Logout" }).click();

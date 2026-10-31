@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Link, MemoryRouter, useLocation, useNavigate } from "react-router-dom";
 import { StaffTicketQueuePage } from "../../src/pages/StaffTicketQueuePage.js";
@@ -94,6 +94,7 @@ function mockReadyQueue(result = PAGE) {
 }
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
   setCsrfToken(null);
 });
@@ -188,10 +189,13 @@ describe("Issue 56 Staff Ticket Queue", () => {
     );
     vi.spyOn(ticketsApi, "fetchTicketOwners").mockResolvedValue(OWNER_OPTIONS);
     vi.spyOn(referenceData, "fetchCategories").mockResolvedValue([]);
+    vi.useFakeTimers();
     renderQueue();
 
-    await screen.findAllByRole("link", { name: "TCK-0101" });
+    await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+    expect(screen.getAllByRole("link", { name: "TCK-0101" })).not.toHaveLength(0);
     const search = screen.getByRole("searchbox", { name: "Search" });
+    const initialCalls = queue.mock.calls.length;
     fireEvent.change(search, { target: { value: "vpn" } });
 
     const results = screen.getByTestId("staff-queue-results");
@@ -199,10 +203,13 @@ describe("Issue 56 Staff Ticket Queue", () => {
     expect(screen.getByTestId("staff-queue-search-pending")).toHaveTextContent("Updating ticket results");
     expect(screen.getAllByRole("link", { name: "TCK-0101" })).not.toHaveLength(0);
 
-    await waitFor(() => expect(queue).toHaveBeenLastCalledWith(expect.objectContaining({ q: "vpn" })), { timeout: 1500 });
+    await act(async () => { await vi.advanceTimersByTimeAsync(299); });
+    expect(queue).toHaveBeenCalledTimes(initialCalls);
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(queue).toHaveBeenLastCalledWith(expect.objectContaining({ q: "vpn" }));
     expect(results).toHaveAttribute("aria-busy", "true");
-    resolveSearch(PAGE);
-    await waitFor(() => expect(results).toHaveAttribute("aria-busy", "false"));
+    await act(async () => { resolveSearch(PAGE); await Promise.resolve(); });
+    expect(results).toHaveAttribute("aria-busy", "false");
     expect(screen.queryByTestId("staff-queue-search-pending")).not.toBeInTheDocument();
   });
 
