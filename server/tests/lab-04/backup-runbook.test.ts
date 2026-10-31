@@ -66,7 +66,7 @@ async function pathExists(target: string): Promise<boolean> {
 }
 
 beforeAll(async () => {
-  temporaryRoot = await fs.mkdtemp(path.join(os.tmpdir(), "toktickit-lab4-runbook-"));
+  temporaryRoot = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "toktickit-lab4-runbook-")));
   [backupScript, restoreScript] = await readRunbookScripts();
 });
 

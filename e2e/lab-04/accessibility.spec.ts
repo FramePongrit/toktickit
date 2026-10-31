@@ -102,8 +102,20 @@ test.describe.serial("STYLE-02 — browser keyboard and accessible form behavior
       await page.setViewportSize({ width: 390, height: 844 });
       await page.addStyleTag({ content: "html { font-size: 125%; }" });
       await assertResponsiveLayout(page, "Issue91 Actions form at 125% text, mobile viewport");
+      const createdActionResponse = page.waitForResponse((response) => {
+        const url = new URL(response.url());
+        return url.pathname === `/api/staff/tickets/${ticket.id}/actions`
+          && response.request().method() === "POST"
+          && response.status() === 201;
+      });
       await page.getByRole("button", { name: "Save Planned Action" }).click();
-      await expect(page.getByText("Complete the keyboard accessibility review", { exact: true })).toBeVisible();
+      const createdAction = (await (await createdActionResponse).json()).action as { id: number };
+      const createdActionDetails = page.locator(`[aria-labelledby="action-detail-heading-${createdAction.id}"]`);
+      await expect(createdActionDetails.getByRole("heading", { name: `Action ${createdAction.id} · Planned` })).toBeVisible();
+      const createdActionCard = page.locator(".action-card").filter({
+        has: page.getByRole("heading", { name: new RegExp(`^Action ${createdAction.id} · Cycle \\d+$`) }),
+      });
+      await expect(createdActionCard.getByText("Complete the keyboard accessibility review", { exact: true })).toBeVisible();
 
       await page.getByRole("tab", { name: "Ticket Details" }).click();
       await page.getByLabel("Next status").selectOption("OPEN");
