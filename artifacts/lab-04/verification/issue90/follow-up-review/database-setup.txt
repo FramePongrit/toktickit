@@ -1,0 +1,36 @@
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+Datasource "db": PostgreSQL database "lab4test", schema "lab4_issue90_e2e_pr100_mobilefix_20261031a" at "127.0.0.1:55434"
+
+8 migrations found in prisma/migrations
+
+Applying migration `20260815105141_init`
+Applying migration `20260904150857_add_active_to_category`
+Applying migration `20260904150907_lab2_core_models`
+Applying migration `20260918120000_lab3_user_workflow`
+Applying migration `20260918130000_auth_session_csrf_ciphertext`
+Applying migration `20260918140000_revoke_legacy_auth_sessions`
+Applying migration `20261024000000_lab4_actions_workflow`
+Applying migration `20261025000000_lab4_restrict_workflow_comment_delete`
+
+The following migration(s) have been applied:
+
+migrations/
+  └─ 20260815105141_init/
+    └─ migration.sql
+  └─ 20260904150857_add_active_to_category/
+    └─ migration.sql
+  └─ 20260904150907_lab2_core_models/
+    └─ migration.sql
+  └─ 20260918120000_lab3_user_workflow/
+    └─ migration.sql
+  └─ 20260918130000_auth_session_csrf_ciphertext/
+    └─ migration.sql
+  └─ 20260918140000_revoke_legacy_auth_sessions/
+    └─ migration.sql
+  └─ 20261024000000_lab4_actions_workflow/
+    └─ migration.sql
+  └─ 20261025000000_lab4_restrict_workflow_comment_delete/
+    └─ migration.sql
+
+All migrations have been successfully applied.

@@ -1,0 +1,91 @@
+Command: npm --prefix client test
+Configured Vitest worker cap: maxWorkers=2, minWorkers=1; unchanged assertions/timeouts.
+
+> toktickit-client@1.0.0 test
+> vitest run
+
+
+ RUN  v2.1.9 D:/Software Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/client
+
+ ✓ tests/lab-03/StaffTicketDetail.test.tsx (25 tests) 6981ms
+   ✓ Issue #58 Staff Ticket Detail > requires a Public Comment for Waiting for Requester and submits it with the status mutation 520ms
+   ✓ Issue #58 Staff Ticket Detail > requires a reason before cancellation and explains the unfinished Action effect 733ms
+   ✓ Issue #58 Staff Ticket Detail > clears a cancellation reason when navigating to another Ticket 673ms
+   ✓ Issue #58 Staff Ticket Detail > ignores a stale Action-parent refresh after navigating away and back to the same Ticket 841ms
+   ✓ Issue #58 Staff Ticket Detail > keeps Public Comments and Internal Notes available while a Ticket is Resolved 857ms
+   ✓ Issue #58 Staff Ticket Detail > posts Public Comments and Internal Notes through separate forms and clears each draft 640ms
+ ✓ tests/lab-03/StaffTicketQueue.test.tsx (20 tests) 4302ms
+   ✓ Issue 56 Staff Ticket Queue > syncs the mounted page from external URL changes and restores state on Back 799ms
+   ✓ Issue 56 Staff Ticket Queue > trims only outer search whitespace before URL/API serialization and preserves spaces between words 667ms
+   ✓ Issue 56 Staff Ticket Queue > marks old results busy while search is debouncing and while the new request is pending 360ms
+   ✓ Issue 56 Staff Ticket Queue > restores URL-backed search across Back and Forward while replacing intermediate Queue states 773ms
+   ✓ Issue 56 Staff Ticket Queue > treats whitespace-only search input as empty and rejects overflow query links 505ms
+ ✓ tests/lab-04/ActionsTaken.test.tsx (30 tests) 15321ms
+   ✓ Issue #88 Actions Taken > creates a Planned Action with an untouched date omitted and sends a scoped idempotency key 646ms
+   ✓ Issue #88 Actions Taken > keeps the exact create body and key for an ambiguous server failure retry 788ms
+   ✓ Issue #88 Actions Taken > starts a new create intent after the user edits a field following an ambiguous failure 836ms
+   ✓ Issue #88 Actions Taken > parses a user-edited datetime-local value as Bangkok +07 and validates against server time 539ms
+   ✓ Issue #88 Actions Taken > starts and completes current-cycle Actions with the captured versions and completion actor kept distinct 538ms
+   ✓ Issue #88 Actions Taken > retries an ambiguous completion with the exact saved body and idempotency key 453ms
+   ✓ Issue #88 Actions Taken > preserves Action timestamp precision for a description-only terminal correction 1027ms
+   ✓ Issue #88 Actions Taken > requires a nonempty Result when correcting a Completed Action 593ms
+   ✓ Issue #88 Actions Taken > completes an Action created in the Ticket's first minute without truncating its timestamp 413ms
+   ✓ Issue #88 Actions Taken > keeps edit versions captured when a background parent/list refresh advances versions 757ms
+   ✓ Issue #88 Actions Taken > retains an inactive assignee label while allowing a descriptive edit without changing assignment 778ms
+   ✓ Issue #88 Actions Taken > cancels an Action with an explicit reason without presenting it as completed work 592ms
+   ✓ Issue #88 Actions Taken > preserves an edit draft through conflict reload and submits only after explicit review 744ms
+   ✓ Issue #88 Actions Taken > focuses the first invalid date and completion Result fields 729ms
+   ✓ Issue #88 Actions Taken > confirms discarding a nonempty create draft and returns focus to its opener 920ms
+   ✓ Issue #88 Actions Taken > returns focus to the Edit control when changes are discarded 494ms
+   ✓ Issue #88 Actions Taken > keeps editor controls from replacing a form while its save is pending 677ms
+   ✓ Issue #88 Actions Taken > preserves but disables an Action edit draft when the parent is finalized or its cycle advances 650ms
+   ✓ Issue #88 Actions Taken > preserves but blocks an open transition after the Ticket enters a final status 564ms
+   ✓ Issue #88 Actions Taken > keeps transition versions captured while a completion form stays open across refresh 404ms
+   ✓ Issue #88 Actions Taken > refreshes an off-page deep-linked Action after its successful transition 354ms
+   ✓ Issue #88 Actions Taken > does not apply an old create response after in-place navigation to another Ticket 805ms
+ ✓ tests/lab-04/StaffDashboard.test.tsx (13 tests) 963ms
+ ✓ tests/lab-02/MyTickets.test.tsx (24 tests) 1361ms
+   ✓ My Tickets — list > round-trips Dashboard filters, page size, search, sort, and page through the URL 444ms
+   ✓ My Tickets — search, filters and sorting > UI-13: sends the search term after debouncing 330ms
+ ✓ tests/lab-03/UserManagement.test.tsx (13 tests) 7260ms
+   ✓ Issue #60 Administrator User Management > UI-U01/UI-U02: renders deterministic table/cards, badges, search, Role, and active-status filters 676ms
+   ✓ Issue #60 Administrator User Management > UI-U01: creates a User, validates fields, clears sensitive values, refreshes, and announces success 1407ms
+   ✓ Issue #60 Administrator User Management > UI-U01: keeps the Create dialog open for duplicate email and shows a safe field conflict 1199ms
+   ✓ Issue #60 Administrator User Management > UI-U01: edits another User and resets their Initial Password as a distinct confirmed action 1172ms
+   ✓ Issue #60 Administrator User Management > UI-U01: allows own name/email edits while disabling self Role, active, and reset controls 374ms
+   ✓ Issue #60 Administrator User Management > UI-U02: returns Reset Initial Password focus after both Cancel and Escape 311ms
+   ✓ Issue #60 Administrator User Management > UI-U02: focuses the dialog fallback and blocks Tab while a mutation disables every control 1172ms
+ ✓ tests/lab-03/RequesterTicketDetail.test.tsx (16 tests) 506ms
+ ✓ tests/lab-02/CreateTicket.test.tsx (16 tests) 555ms
+ ✓ tests/lab-04/RequesterDashboard.test.tsx (6 tests) 555ms
+ ✓ tests/lab-02/AttachmentSection.test.tsx (17 tests) 289ms
+ ✓ tests/lab-03/Login.test.tsx (9 tests) 5693ms
+   ✓ Issue 50 Login > UI-L01: prevents duplicate submissions and disables the form while signing in 808ms
+   ✓ Issue 50 Login > UI-L01: renders safe INVALID_CREDENTIALS feedback without account details 646ms
+   ✓ Issue 50 Login > UI-L01: renders safe USER_INACTIVE feedback without account details 688ms
+   ✓ Issue 50 Login > UI-L01: renders safe LOGIN_THROTTLED feedback without account details 676ms
+   ✓ Issue 50 Login > UI-L01/UI-H01: normalizes email, sends credentials, and lands Staff at Dashboard 747ms
+   ✓ Issue 50 Login > UI-L01: sends a must-change-password user directly to Change Password 603ms
+   ✓ Issue 50 Login > UI-05: restores a permitted direct destination after Login 678ms
+   ✓ Issue 50 Login > UI-L01: gives a generic retryable message for network/server failures 713ms
+ ✓ tests/lab-03/ChangePassword.test.tsx (6 tests) 5446ms
+   ✓ Issue 50 Change Password > UI-L02: validates rules, confirmation, and reuse before making a mutation 921ms
+   ✓ Issue 50 Change Password > UI-L02: supports self-service mode and clears password fields during save 974ms
+   ✓ Issue 50 Change Password > UI-L02: sends the current CSRF token, prevents duplicate password changes, and replaces it after success 1206ms
+   ✓ Issue 50 Change Password > UI-05: restores a permitted destination after the mandatory password change 1400ms
+   ✓ Issue 50 Change Password > UI-L02: gives safe current-password failure feedback and does not expose server details 854ms
+ ✓ tests/lab-03/AppShell.test.tsx (11 tests) 494ms
+ ✓ tests/lab-02/RequesterTicketDetail.test.tsx (6 tests) 224ms
+ ✓ tests/lab-03/http.test.ts (6 tests) 10ms
+ ✓ tests/lab-02/AppShell.test.tsx (2 tests) 214ms
+ ✓ tests/lab-03/RequesterRegression.test.ts (2 tests) 17ms
+ ✓ tests/lab-04/TicketDetailTabs.test.tsx (1 test) 190ms
+ ✓ tests/lab-01/App.test.tsx (3 tests) 227ms
+ ✓ tests/lab-04/bangkokDateTime.test.ts (2 tests) 6ms
+
+ Test Files  20 passed (20)
+      Tests  228 passed (228)
+   Start at  14:20:55
+   Duration  43.29s (transform 959ms, setup 3.29s, collect 5.60s, tests 50.61s, environment 16.89s, prepare 2.53s)
+
+Exit code: 0

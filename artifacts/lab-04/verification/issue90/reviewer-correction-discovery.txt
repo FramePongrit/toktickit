@@ -1,0 +1,55 @@
+PR100 independent Playwright discovery verification
+List-only: no browser/server/DB executed
+Started: 2026-10-30T14:24:58.5910168+07:00
+
+Command: npx playwright test --list (opt-in unset)
+Listing tests:
+  [e2e] › lab-02\requester-ticket-flow.spec.ts:62:1 › E2E-01: select a requester, create a ticket, and keep the selection across a reload
+  [e2e] › lab-02\requester-ticket-flow.spec.ts:76:1 › E2E-02: find the new ticket in My Tickets through search and filters
+  [e2e] › lab-02\requester-ticket-flow.spec.ts:105:1 › E2E-03: upload, download and soft-remove an attachment
+  [e2e] › lab-02\requester-ticket-flow.spec.ts:152:1 › E2E-04: another requester cannot see or open the ticket
+  [e2e] › lab-02\requester-ticket-flow.spec.ts:178:1 › E2E-06: the Zen Green tokens are actually applied
+  [e2e] › lab-02\requester-ticket-flow.spec.ts:220:1 › E2E-05 / E2E-07: every screen is usable at desktop, tablet and mobile
+  [e2e] › lab-03\authentication.spec.ts:36:3 › E2E-A01 — Lab 3 authentication and direct security › valid login lands by Role and direct API guards reject unauthenticated/forged mutations
+  [e2e] › lab-03\authentication.spec.ts:85:3 › E2E-A01 — Lab 3 authentication and direct security › invalid and inactive credentials expose safe, distinct browser feedback
+  [e2e] › lab-03\authentication.spec.ts:111:3 › E2E-A01 — Lab 3 authentication and direct security › mandatory password change gates normal routes and invalidates the Initial Password
+  [e2e] › lab-03\legacy-regression.spec.ts:33:3 › Legacy requester journey under Lab 3 authentication › creates a ticket and finds it through the legacy list/search/filter journey
+  [e2e] › lab-03\staff-ticket-flow.spec.ts:61:3 › E2E-S01 — real Staff Queue and Ticket workflow › queue filters, ownership actions, communications, resolution lifecycle, attachments, and direct guards
+  [e2e] › lab-03\staff-ticket-flow.spec.ts:257:3 › E2E-S01 — real Staff Queue and Ticket workflow › Requester can upload, download, and remove an attachment through the browser
+  [e2e] › lab-03\user-administration.spec.ts:40:3 › E2E-U01 — Administrator User Management › Admin manages a User while direct non-Admin and CSRF boundaries remain enforced
+  [e2e] › lab-03\user-administration.spec.ts:189:3 › E2E-U01 — Administrator User Management › Browser proves LAST_ACTIVE_ADMINISTRATOR for an isolated concurrent Admin pair
+  [e2e] › lab-04\actions-taken-flow.spec.ts:43:3 › E2E-88 — Actions Taken Staff and Requester journey › creates, edits, completes, corrects and cancels Actions; resolves/reopens; keeps Requester reads safe
+  [screenshots] › lab-02\capture.screens.ts:42:1 › capture: development requester selection
+  [screenshots] › lab-02\capture.screens.ts:58:1 › capture: create ticket states
+  [screenshots] › lab-02\capture.screens.ts:84:1 › capture: create ticket API failure
+  [screenshots] › lab-02\capture.screens.ts:103:1 › capture: my tickets states
+  [screenshots] › lab-02\capture.screens.ts:135:1 › capture: my tickets empty state for a requester with no tickets
+  [screenshots] › lab-02\capture.screens.ts:148:1 › capture: ticket detail and attachment states
+  [screenshots] › lab-02\capture.screens.ts:196:1 › capture: responsive evidence at three viewports
+  [screenshots] › lab-03\capture.screens.ts:59:3 › E2E-R01 — Lab 3 responsive screenshot evidence › captures login evidence at every required viewport
+  [screenshots] › lab-03\capture.screens.ts:69:3 › E2E-R01 — Lab 3 responsive screenshot evidence › captures Staff Queue evidence at every required viewport
+  [screenshots] › lab-03\capture.screens.ts:80:3 › E2E-R01 — Lab 3 responsive screenshot evidence › captures Staff and Requester Ticket Detail evidence without overflow
+  [screenshots] › lab-03\capture.screens.ts:103:3 › E2E-R01 — Lab 3 responsive screenshot evidence › captures User Management evidence and checks dialog semantics
+Total: 26 tests in 8 files
+Default discovery exit code: 0
+Command: PW_RUN_ISSUE90_E2E=true; npx playwright test e2e/lab-04/dashboards.spec.ts --project=e2e --list
+Listing tests:
+  [e2e] › lab-04\dashboards.spec.ts:263:3 › E2E-03 — role Dashboards and exact drilldowns › Requester Dashboard shows fixture counts and owned Ticket drilldowns
+  [e2e] › lab-04\dashboards.spec.ts:289:3 › E2E-03 — role Dashboards and exact drilldowns › Staff Dashboard drilldowns refresh after Action completion
+  [e2e] › lab-04\dashboards.spec.ts:335:3 › E2E-03 — role Dashboards and exact drilldowns › Staff Queue search trims, reloads and restores its latest URL query
+  [e2e] › lab-04\dashboards.spec.ts:363:3 › E2E-03 — role Dashboards and exact drilldowns › Admin login lands on the Staff Dashboard
+Total: 4 tests in 1 file
+Lifecycle discovery exit code: 0
+Command: PW_RUN_ISSUE90_E2E=true; npx playwright test e2e/lab-04/dashboards.spec.ts --project=dashboard-screenshots --list
+Listing tests:
+  [dashboard-screenshots] › lab-04\dashboards.spec.ts:374:3 › E2E-03 — role Dashboards and exact drilldowns › Requester and Staff Dashboard responsive screenshots @screenshots
+Total: 1 test in 1 file
+Capture discovery exit code: 0
+
+Exact reviewed source: 90b6ec4d2285164cd27a181b88be95c5d28ef6a9
+Confirmed no client/server/e2e/playwright/.github workingdiff after source commit.
+PR-head CI independently verified: pull_request run41019937070 and push run41019937047 both SUCCESS for this source.
+PR run https://github.com/FramePongrit/toktickit/actions/runs/41019937070 ran20files/228client tests and build with exit0; client-check-logs artifact uploaded.
+No remaining actionable source finding; separate opt-in dashboard-screenshots project is an equivalent capture separation, not a claim it uses the older screenshots project.
+Observed same-session401 clears auth; old-session/auth-body/download responses cannot clear a newer session. Native abort before any response is observed remains an unknown server outcome.
+Human peer approval and CI on any later documentation head remain separate gates.

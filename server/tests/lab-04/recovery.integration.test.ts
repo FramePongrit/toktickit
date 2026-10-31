@@ -207,6 +207,7 @@ beforeAll(async () => {
 afterAll(async () => {
   await sourcePrisma?.$disconnect();
   await restoredPrisma?.$disconnect();
+  await applicationPrisma?.$disconnect();
   await cleanupDatabase(sourceDatabase);
   await cleanupDatabase(restoredDatabase);
   if (storedFilename) await fs.rm(originalUploadPath(storedFilename), { force: true });
@@ -328,6 +329,5 @@ describe("MIG-03 — isolated database and attachment recovery", () => {
     }
 
     expect(await inventory(sourcePrisma!)).toEqual(sourceBefore);
-
-  });
+  }, 60_000);
 });

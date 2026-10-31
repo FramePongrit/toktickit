@@ -1,0 +1,72 @@
+Command: npm run e2e -- --project=screenshots e2e/lab-04/dashboards.spec.ts
+Task schema: lab4_issue90_e2e_pr100_20261030a1 (dedicated PostgreSQL test container; credentials omitted)
+Upload and screenshot roots are task-owned beneath test-results/issue90/pr100-run-20261030a1.
+
+> toktickit-e2e@1.0.0 e2e
+> playwright test --project=screenshots e2e/lab-04/dashboards.spec.ts
+
+[WebServer] (node:24928) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] TokTickIT API listening on http://localhost:3000
+[WebServer] (node:40900) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer]
+[WebServer]   VITE v6.4.3  ready in 345 ms
+[WebServer]
+[WebServer]   ➜  Local:   http://localhost:5173/
+
+Running 5 tests using 1 worker
+
+(node:25668) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  -  1 [screenshots] › e2e\lab-04\dashboards.spec.ts:256:3 › E2E-03 — role Dashboards and exact drilldowns › Requester Dashboard shows fixture counts and owned Ticket drilldowns
+  -  2 [screenshots] › e2e\lab-04\dashboards.spec.ts:283:3 › E2E-03 — role Dashboards and exact drilldowns › Staff Dashboard drilldowns refresh after Action completion
+  -  3 [screenshots] › e2e\lab-04\dashboards.spec.ts:330:3 › E2E-03 — role Dashboards and exact drilldowns › Staff Queue search trims, reloads and restores its latest URL query
+  -  4 [screenshots] › e2e\lab-04\dashboards.spec.ts:359:3 › E2E-03 — role Dashboards and exact drilldowns › Admin login lands on the Staff Dashboard
+Issue90 requester Dashboard geometry {"viewport":"1440x900","document":"1440x1235","horizontalOverflow":0}; screenshot D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\test-results\issue90\pr100-run-20261030a1\screenshots\requester-dashboard-1440x900.png.
+Issue90 requester Dashboard geometry {"viewport":"820x1024","document":"820x1676","horizontalOverflow":0}; screenshot D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\test-results\issue90\pr100-run-20261030a1\screenshots\requester-dashboard-820x1024.png.
+Issue90 requester Dashboard geometry {"viewport":"390x844","document":"390x2282","horizontalOverflow":0}; screenshot D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\test-results\issue90\pr100-run-20261030a1\screenshots\requester-dashboard-390x844.png.
+Issue90 staff Dashboard geometry {"viewport":"1440x900","document":"1440x1643","horizontalOverflow":0}; screenshot D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\test-results\issue90\pr100-run-20261030a1\screenshots\staff-dashboard-1440x900.png.
+Issue90 staff Dashboard geometry {"viewport":"820x1024","document":"820x2118","horizontalOverflow":0}; screenshot D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\test-results\issue90\pr100-run-20261030a1\screenshots\staff-dashboard-820x1024.png.
+Issue90 staff Dashboard geometry {"viewport":"390x844","document":"390x3143","horizontalOverflow":0}; screenshot D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\test-results\issue90\pr100-run-20261030a1\screenshots\staff-dashboard-390x844.png.
+  x  5 [screenshots] › e2e\lab-04\dashboards.spec.ts:371:3 › E2E-03 — role Dashboards and exact drilldowns › Requester and Staff Dashboard responsive screenshots @screenshots (2.0m)
+
+
+  1) [screenshots] › e2e\lab-04\dashboards.spec.ts:371:3 › E2E-03 — role Dashboards and exact drilldowns › Requester and Staff Dashboard responsive screenshots @screenshots
+
+    Test timeout of 120000ms exceeded.
+
+    Error: locator.click: Test timeout of 120000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: 'Open navigation menu' })
+
+
+      393 |     await captureDashboard(page, "staff", 820, 1024);
+      394 |     await captureDashboard(page, "staff", 390, 844);
+    > 395 |     await page.getByRole("button", { name: "Open navigation menu" }).click();
+          |                                                                      ^
+      396 |     await expect(page.getByTestId("current-user")).toBeVisible();
+      397 |     await expect(page.getByTestId("current-role")).toHaveText("IT Staff");
+      398 |     await page.screenshot({ path: path.join(SCREENSHOT_ROOT, "staff-dashboard-390x844-navigation-open.png"), fullPage: true });
+        at D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\e2e\lab-04\dashboards.spec.ts:395:70
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\playwright\lab-04-dashboards-E2E-03-—-f7771-ive-screenshots-screenshots-screenshots\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\playwright\lab-04-dashboards-E2E-03-—-f7771-ive-screenshots-screenshots-screenshots\error-context.md
+
+    Error Context: test-results\playwright\lab-04-dashboards-E2E-03-—-f7771-ive-screenshots-screenshots-screenshots\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\playwright\lab-04-dashboards-E2E-03-—-f7771-ive-screenshots-screenshots-screenshots\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\playwright\lab-04-dashboards-E2E-03-—-f7771-ive-screenshots-screenshots-screenshots\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [screenshots] › e2e\lab-04\dashboards.spec.ts:371:3 › E2E-03 — role Dashboards and exact drilldowns › Requester and Staff Dashboard responsive screenshots @screenshots
+  4 skipped
+Exit code: 1

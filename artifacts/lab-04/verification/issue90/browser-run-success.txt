@@ -1,0 +1,88 @@
+2026-10-30T02:25:05.388Z pw:webserver HTTP GET: http://localhost:3000/api/health
+2026-10-30T02:25:05.709Z pw:webserver Error while checking if http://localhost:3000/api/health is available: connect ECONNREFUSED ::1:3000
+2026-10-30T02:25:05.709Z pw:webserver Starting WebServer process node --import tsx/esm src/index.ts...
+2026-10-30T02:25:05.734Z pw:webserver Process started
+2026-10-30T02:25:05.734Z pw:webserver Waiting for availability...
+2026-10-30T02:25:05.734Z pw:webserver HTTP GET: http://localhost:3000/api/health
+[WebServer] (node:15248) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+2026-10-30T02:25:06.049Z pw:webserver Error while checking if http://localhost:3000/api/health is available: connect ECONNREFUSED ::1:3000
+2026-10-30T02:25:06.049Z pw:webserver Waiting 100ms
+2026-10-30T02:25:06.161Z pw:webserver HTTP GET: http://localhost:3000/api/health
+[WebServer] TokTickIT API listening on http://localhost:3000
+2026-10-30T02:25:06.476Z pw:webserver HTTP Status: 200
+2026-10-30T02:25:06.477Z pw:webserver WebServer available
+2026-10-30T02:25:06.477Z pw:webserver HTTP GET: http://localhost:5173/
+2026-10-30T02:25:06.780Z pw:webserver Error while checking if http://localhost:5173/ is available: connect ECONNREFUSED ::1:5173
+2026-10-30T02:25:06.780Z pw:webserver Starting WebServer process node node_modules/vite/bin/vite.js --host localhost --port 5173...
+2026-10-30T02:25:06.800Z pw:webserver Process started
+2026-10-30T02:25:06.800Z pw:webserver Waiting for availability...
+2026-10-30T02:25:06.800Z pw:webserver HTTP GET: http://localhost:5173/
+[WebServer] (node:20400) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+2026-10-30T02:25:07.106Z pw:webserver Error while checking if http://localhost:5173/ is available: connect ECONNREFUSED ::1:5173
+2026-10-30T02:25:07.106Z pw:webserver Waiting 100ms
+[WebServer]
+[WebServer]   VITE v6.4.3  ready in 317 ms
+[WebServer]
+[WebServer]   ➜  Local:   http://localhost:5173/
+2026-10-30T02:25:07.211Z pw:webserver HTTP GET: http://localhost:5173/
+2026-10-30T02:25:07.235Z pw:webserver HTTP Status: 200
+2026-10-30T02:25:07.235Z pw:webserver WebServer available
+
+Running 1 test using 1 worker
+
+(node:19524) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Issue90 requester Dashboard geometry {"viewport":"1440x900","document":"1440x1235","horizontalOverflow":0}; screenshot D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\test-results\issue90\screenshots-final\requester-dashboard-1440x900.png.
+Issue90 requester Dashboard geometry {"viewport":"820x1024","document":"820x1676","horizontalOverflow":0}; screenshot D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\test-results\issue90\screenshots-final\requester-dashboard-820x1024.png.
+Issue90 requester Dashboard geometry {"viewport":"390x844","document":"390x2282","horizontalOverflow":0}; screenshot D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\test-results\issue90\screenshots-final\requester-dashboard-390x844.png.
+  x  1 [e2e] › e2e\lab-04\dashboards.spec.ts:174:3 › E2E-03 — role Dashboards and exact drilldowns › renders role snapshots, follows links, refreshes after Action work and preserves Queue search URL (14.5s)
+2026-10-30T02:25:24.460Z pw:webserver Terminating the WebServer
+2026-10-30T02:25:24.965Z pw:webserver Terminated the WebServer
+2026-10-30T02:25:24.965Z pw:webserver Terminating the WebServer
+2026-10-30T02:25:25.414Z pw:webserver Terminated the WebServer
+
+
+  1) [e2e] › e2e\lab-04\dashboards.spec.ts:174:3 › E2E-03 — role Dashboards and exact drilldowns › renders role snapshots, follows links, refreshes after Action work and preserves Queue search URL
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('heading', { name: 'Dashboard' })
+    Expected: visible
+    Error: strict mode violation: getByRole('heading', { name: 'Dashboard' }) resolved to 2 elements:
+        1) <h1 tabindex="-1" class="h3 mb-1" data-page-heading="true">Dashboard</h1> aka getByRole('heading', { name: 'Dashboard', exact: true })
+        2) <h2 class="h5 fw-semibold mt-3 mb-1">Loading your dashboard…</h2> aka getByRole('heading', { name: 'Loading your dashboard…' })
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByRole('heading', { name: 'Dashboard' })
+
+
+      264 |       await loginUi(page, staff);
+      265 |       await page.goto("/staff/dashboard");
+    > 266 |       await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+          |                                                                      ^
+      267 |       await setMetric(page, "My Active Actions", staffDashboard.metrics.myActiveActions.value, "actions");
+      268 |       await expect(page.getByText("Assigned to: ", { exact: false })).toBeVisible();
+      269 |       await expect(page.getByText(`Completed by: ${staff.fullName}`)).toBeVisible();
+        at D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\e2e\lab-04\dashboards.spec.ts:266:70
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\issue90\pw-output-run2\lab-04-dashboards-E2E-03-—-43890--preserves-Queue-search-URL-e2e\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\issue90\pw-output-run2\lab-04-dashboards-E2E-03-—-43890--preserves-Queue-search-URL-e2e\error-context.md
+
+    Error Context: test-results\issue90\pw-output-run2\lab-04-dashboards-E2E-03-—-43890--preserves-Queue-search-URL-e2e\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\issue90\pw-output-run2\lab-04-dashboards-E2E-03-—-43890--preserves-Queue-search-URL-e2e\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\issue90\pw-output-run2\lab-04-dashboards-E2E-03-—-43890--preserves-Queue-search-URL-e2e\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [e2e] › e2e\lab-04\dashboards.spec.ts:174:3 › E2E-03 — role Dashboards and exact drilldowns › renders role snapshots, follows links, refreshes after Action work and preserves Queue search URL

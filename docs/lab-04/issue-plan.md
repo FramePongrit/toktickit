@@ -90,7 +90,7 @@ Tests: UI-03/04/06, initial STYLE-01/02; E2E-01/02 preparation. Keep component/A
 
 ### L4-06 - Role Dashboard APIs and exact drill-down queries
 
-Branch: feature/lab4-dashboard-api. Depends on: L4-03/04. Original target: October26; started October29 from reviewed integration `6b1277d`. [Issue #89](https://github.com/FramePongrit/toktickit/issues/89): PR Review, [PR #99](https://github.com/FramePongrit/toktickit/pull/99) into lab4-staging. Source `6f08f4e` independently reviewed; server247/client196/browser3/builds and guarded1000/5000PERF passed. Human approval/merge pending. Dashboard UI remains L4-07.
+Branch: feature/lab4-dashboard-api. [Issue #89](https://github.com/FramePongrit/toktickit/issues/89) is Done; [PR #99](https://github.com/FramePongrit/toktickit/pull/99) was approved and merged into lab4-staging as `171d8bc`. Peer requested a Staff Queue search correction, carried into L4-07.
 
 Tasks: backend role-owned snapshots/counts/previews and Bangkok boundaries; all-eight-status counts; assigned vs performed Action semantics; database-limited queries/shared filter predicates. Extend Ticket status/priority sets/date sorting and inline My Actions endpoint. Advance updatedAt for agreed prospective public activity, not Internal Notes/replays; preserve legacy timestamps. Add independent SQL comparisons and query-plan/performance fixtures.
 
@@ -100,7 +100,7 @@ Tests: UNIT-04/05, API-D01-04, PERF-01 initial run. At least selected Requester/
 
 ### L4-07 - Role Dashboard UI, landing and URL-backed navigation
 
-Branch: feature/lab4-dashboard-ui. Depends on: L4-06 (and shared Action rendering from L4-05). Target: October 26.
+Branch: feature/lab4-dashboard-ui, based on `171d8bc`. [Issue #90](https://github.com/FramePongrit/toktickit/issues/90) is PR Review; [PR #100](https://github.com/FramePongrit/toktickit/pull/100) awaits human review. Tested source `5236ef5`.
 
 Tasks: role Dashboard landing/nav, four cards per role, status counts/previews/as-of, refresh/error/zero states, inline paginated My Actions. Implement My Tickets URL parser/serializer and Staff Queue additions with visible active filters, back/forward/refresh and exact Action anchors. Clear scoped caches on logout/identity change; preserve existing direct routes/forced password flow.
 

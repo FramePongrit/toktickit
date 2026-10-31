@@ -15,5 +15,9 @@ export default defineConfig({
     // between tests and produce order-dependent failures that look like
     // component bugs.
     restoreMocks: true,
+    // The unrestricted worker pool produced scheduling-sensitive DOM timeouts;
+    // two workers pass the same suite and assertions without longer timeouts.
+    maxWorkers: 2,
+    minWorkers: 1,
   },
 });

@@ -22,11 +22,12 @@ function pageItems(page: number, totalPages: number): PageItem[] {
 export function Pagination({ page, pageSize, total, totalPages, onPageChange, itemLabel = "tickets" }: PaginationProps) {
   const first = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const last = Math.min(page * pageSize, total);
+  const pageOutOfRange = totalPages > 0 && page > totalPages;
 
   return (
     <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mt-3">
       <p className="zen-muted mb-0" data-testid="pagination-summary">
-        Showing {first} to {last} of {total} {itemLabel}
+        {pageOutOfRange ? `No ${itemLabel} on page ${page}. ${total} total; return to page ${totalPages}.` : `Showing ${first} to ${last} of ${total} ${itemLabel}`}
       </p>
 
       <nav aria-label={itemLabel === "tickets" ? "Ticket list pages" : `${itemLabel} pages`} className="zen-pagination-nav" data-pagination-windowed="true">

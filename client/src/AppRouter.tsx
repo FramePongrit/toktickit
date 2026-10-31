@@ -2,7 +2,7 @@ import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation, useNavigat
 import App from "./App.js";
 import { AppShell } from "./components/AppShell.js";
 import { StateBlock } from "./components/StateBlock.js";
-import { AuthProvider, landingPath, useAuth } from "./context/AuthContext.js";
+import { AuthProvider, destinationAfterAuth, landingPath, useAuth } from "./context/AuthContext.js";
 import { ChangePasswordPage } from "./pages/ChangePasswordPage.js";
 import { CreateTicketPage } from "./pages/CreateTicketPage.js";
 import { ForbiddenPage } from "./pages/RolePlaceholderPage.js";
@@ -13,6 +13,8 @@ import { RequesterTicketDetailPage } from "./pages/RequesterTicketDetailPage.js"
 import { StaffTicketQueuePage } from "./pages/StaffTicketQueuePage.js";
 import { StaffTicketDetailPage } from "./pages/StaffTicketDetailPage.js";
 import { UserManagementPage } from "./pages/UserManagementPage.js";
+import { RequesterDashboardPage } from "./pages/RequesterDashboardPage.js";
+import { StaffDashboardPage } from "./pages/StaffDashboardPage.js";
 
 function BootstrapFailure() {
   const { refresh } = useAuth();
@@ -31,13 +33,13 @@ function RequireAuth() {
   const location = useLocation();
 
   if (status === "loading") return <StateBlock kind="loading" title="Loading your workspace..." />;
-  if (status === "unauthenticated") return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  if (status === "unauthenticated") return <Navigate to="/login" replace state={{ from: location }} />;
   if (status === "error") return <BootstrapFailure />;
   if (status === "forbidden") {
     return <StateBlock kind="error" title="Your account cannot access TokTickIT" description="Contact an administrator if you believe this is incorrect." />;
   }
   if (status === "password-change-required" && location.pathname !== "/change-password") {
-    return <Navigate to="/change-password" replace />;
+    return <Navigate to="/change-password" replace state={{ from: location }} />;
   }
   return <Outlet />;
 }
@@ -49,10 +51,14 @@ function RequireRole({ roles }: { roles: string[] }) {
 }
 
 function LoginRoute() {
+  const location = useLocation();
   const { status, user } = useAuth();
   if (status === "loading") return <StateBlock kind="loading" title="Loading TokTickIT..." />;
   if (status === "error") return <BootstrapFailure />;
-  if (user && status !== "unauthenticated") return <Navigate to={landingPath(user)} replace />;
+  if (user && status !== "unauthenticated") {
+    const destination = destinationAfterAuth(user, (location.state as { from?: unknown } | null)?.from);
+    return <Navigate to={destination.path} replace state={destination.state} />;
+  }
   return <LoginPage />;
 }
 
@@ -74,11 +80,13 @@ export function AppRoutes() {
         <Route element={<AppShell />}>
           <Route path="/change-password" element={<ChangePasswordPage />} />
           <Route element={<RequireRole roles={["REQUESTER"]} />}>
+            <Route path="/dashboard" element={<RequesterDashboardPage />} />
             <Route path="/tickets" element={<MyTicketsPage />} />
             <Route path="/tickets/new" element={<CreateTicketPage />} />
             <Route path="/tickets/:id" element={<RequesterTicketDetailPage />} />
           </Route>
           <Route element={<RequireRole roles={["STAFF", "ADMIN"]} />}>
+            <Route path="/staff/dashboard" element={<StaffDashboardPage />} />
             <Route path="/staff/tickets" element={<StaffTicketQueuePage />} />
             <Route path="/staff/tickets/:id" element={<StaffTicketDetailPage />} />
           </Route>

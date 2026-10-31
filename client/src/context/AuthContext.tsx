@@ -30,9 +30,38 @@ function safeFailure(error: unknown): ApiError {
 
 export function landingPath(user: Pick<SafeUser, "role" | "mustChangePassword">): string {
   if (user.mustChangePassword) return "/change-password";
-  if (user.role === "REQUESTER") return "/tickets";
-  if (user.role === "STAFF") return "/staff/tickets";
-  return "/admin/users";
+  if (user.role === "REQUESTER") return "/dashboard";
+  return "/staff/dashboard";
+}
+
+function routePath(value: unknown): string | null {
+  if (typeof value === "string") return value;
+  if (!value || typeof value !== "object") return null;
+  const location = value as { pathname?: unknown; search?: unknown; hash?: unknown };
+  if (typeof location.pathname !== "string") return null;
+  return `${location.pathname}${typeof location.search === "string" ? location.search : ""}${typeof location.hash === "string" ? location.hash : ""}`;
+}
+
+export function permittedReturnPath(user: Pick<SafeUser, "role">, requested: unknown): string | null {
+  const path = routePath(requested);
+  if (!path || !path.startsWith("/") || path.startsWith("//") || path.includes("\\")) return null;
+  const pathname = path.split(/[?#]/, 1)[0];
+  const under = (base: string) => pathname === base || pathname.startsWith(`${base}/`);
+  if (pathname === "/dashboard" && user.role === "REQUESTER") return path;
+  if (pathname === "/staff/dashboard" && (user.role === "STAFF" || user.role === "ADMIN")) return path;
+  if (under("/tickets") && user.role === "REQUESTER") return path;
+  if (under("/staff/tickets") && (user.role === "STAFF" || user.role === "ADMIN")) return path;
+  if (under("/admin/users") && user.role === "ADMIN") return path;
+  return null;
+}
+
+export function destinationAfterAuth(
+  user: Pick<SafeUser, "role" | "mustChangePassword">,
+  requested?: unknown
+): { path: string; state?: { from: string } } {
+  const permitted = permittedReturnPath(user, requested);
+  if (user.mustChangePassword) return { path: "/change-password", ...(permitted ? { state: { from: permitted } } : {}) };
+  return { path: permitted ?? landingPath(user) };
 }
 
 export function roleLabel(role: Role): string {

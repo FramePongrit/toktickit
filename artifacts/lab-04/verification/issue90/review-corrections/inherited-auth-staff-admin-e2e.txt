@@ -1,0 +1,120 @@
+Command sequence: create exact-owned issue61_verify schema; prisma migrate deploy; seed; prepare isolated E2E reference rows; run e2e/run-issue61.ps1; drop only returned schema.
+Target: dedicated PostgreSQL test container, 127.0.0.1:55434/lab4test; credentials omitted.
+Scope: e2e/lab-03/authentication.spec.ts, staff-ticket-flow.spec.ts, user-administration.spec.ts only.
+Command: tsx tests/support/issue61-isolated-schema.ts create
+Create exit: 0
+issue61_verify_4624ca7344d542caaea21c33
+Task-owned E2E schema: issue61_verify_4624ca7344d542caaea21c33
+Command: prisma migrate deploy --schema prisma/schema.prisma
+Migration exit: 0
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+Datasource "db": PostgreSQL database "lab4test", schema "issue61_verify_4624ca7344d542caaea21c33" at "127.0.0.1:55434"
+
+8 migrations found in prisma/migrations
+
+Applying migration `20260815105141_init`
+Applying migration `20260904150857_add_active_to_category`
+Applying migration `20260904150907_lab2_core_models`
+Applying migration `20260918120000_lab3_user_workflow`
+Applying migration `20260918130000_auth_session_csrf_ciphertext`
+Applying migration `20260918140000_revoke_legacy_auth_sessions`
+Applying migration `20261024000000_lab4_actions_workflow`
+Applying migration `20261025000000_lab4_restrict_workflow_comment_delete`
+
+The following migration(s) have been applied:
+
+migrations/
+  └─ 20260815105141_init/
+    └─ migration.sql
+  └─ 20260904150857_add_active_to_category/
+    └─ migration.sql
+  └─ 20260904150907_lab2_core_models/
+    └─ migration.sql
+  └─ 20260918120000_lab3_user_workflow/
+    └─ migration.sql
+  └─ 20260918130000_auth_session_csrf_ciphertext/
+    └─ migration.sql
+  └─ 20260918140000_revoke_legacy_auth_sessions/
+    └─ migration.sql
+  └─ 20261024000000_lab4_actions_workflow/
+    └─ migration.sql
+  └─ 20261025000000_lab4_restrict_workflow_comment_delete/
+    └─ migration.sql
+
+All migrations have been successfully applied.
+Command: npm run prisma:seed
+Seed exit: 0
+
+> toktickit-server@1.0.0 prisma:seed
+> tsx prisma/seed.ts
+
+Seeded 4 categories, 7 related systems, 5 active requesters, 3 active IT staff, and 1 active administrator.
+Command: tsx tests/support/issue61-e2e-reference.ts
+E2E reference setup exit: 0
+Prepared 4 categories and 7 related systems for isolated E2E.
+Command: powershell -NoProfile -ExecutionPolicy Bypass -File e2e/run-issue61.ps1
+Inherited browser E2E exit: 1
+
+Running 7 tests using 1 worker
+
+(node:37504) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 1 [e2e] › e2e\lab-03\authentication.spec.ts:36:3 › E2E-A01 — Lab 3 authentication and direct security › valid login lands by Role and direct API guards reject unauthenticated/forged mutations (2.8s)
+  ok 2 [e2e] › e2e\lab-03\authentication.spec.ts:85:3 › E2E-A01 — Lab 3 authentication and direct security › invalid and inactive credentials expose safe, distinct browser feedback (1.3s)
+  ok 3 [e2e] › e2e\lab-03\authentication.spec.ts:111:3 › E2E-A01 — Lab 3 authentication and direct security › mandatory password change gates normal routes and invalidates the Initial Password (2.8s)
+  ok 4 [e2e] › e2e\lab-03\staff-ticket-flow.spec.ts:61:3 › E2E-S01 — real Staff Queue and Ticket workflow › queue filters, ownership actions, communications, resolution lifecycle, attachments, and direct guards (9.2s)
+  ok 5 [e2e] › e2e\lab-03\staff-ticket-flow.spec.ts:257:3 › E2E-S01 — real Staff Queue and Ticket workflow › Requester can upload, download, and remove an attachment through the browser (1.6s)
+  ok 6 [e2e] › e2e\lab-03\user-administration.spec.ts:39:3 › E2E-U01 — Administrator User Management › Admin manages a User while direct non-Admin and CSRF boundaries remain enforced (5.4s)
+  x  7 [e2e] › e2e\lab-03\user-administration.spec.ts:188:3 › E2E-U01 — Administrator User Management › Browser proves LAST_ACTIVE_ADMINISTRATOR for an isolated concurrent Admin pair (2.3s)
+
+
+  1) [e2e] › e2e\lab-03\user-administration.spec.ts:188:3 › E2E-U01 — Administrator User Management › Browser proves LAST_ACTIVE_ADMINISTRATOR for an isolated concurrent Admin pair
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+      Array [
+        200,
+    -   409,
+    +   200,
+      ]
+
+      236 |       const [firstBody, secondBody] = await Promise.all([firstResponse.json(), secondResponse.json()]);
+      237 |       const responses = [firstResponse, secondResponse];
+    > 238 |       expect(responses.map((response) => response.status()).sort()).toEqual([200, 409]);
+          |                                                                     ^
+      239 |       const rejectedIndex = firstResponse.status() === 409 ? 0 : 1;
+      240 |       const rejectedBody = rejectedIndex === 0 ? firstBody : secondBody;
+      241 |       expect(rejectedBody.error.code).toBe("LAST_ACTIVE_ADMINISTRATOR");
+        at D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\e2e\lab-03\user-administration.spec.ts:238:69
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\playwright\lab-03-user-administration-33d17-lated-concurrent-Admin-pair-e2e\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\playwright\lab-03-user-administration-33d17-lated-concurrent-Admin-pair-e2e\test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\playwright\lab-03-user-administration-33d17-lated-concurrent-Admin-pair-e2e\error-context.md
+
+    Error Context: test-results\playwright\lab-03-user-administration-33d17-lated-concurrent-Admin-pair-e2e\error-context.md
+
+    attachment #5: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\playwright\lab-03-user-administration-33d17-lated-concurrent-Admin-pair-e2e\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\playwright\lab-03-user-administration-33d17-lated-concurrent-Admin-pair-e2e\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [e2e] › e2e\lab-03\user-administration.spec.ts:188:3 › E2E-U01 — Administrator User Management › Browser proves LAST_ACTIVE_ADMINISTRATOR for an isolated concurrent Admin pair
+  6 passed (30.9s)
+Command: tsx tests/support/issue61-isolated-schema.ts drop issue61_verify_4624ca7344d542caaea21c33
+Exact task-schema cleanup exit: 0
+issue61_verify_4624ca7344d542caaea21c33
+Final result: run=1 cleanup=0

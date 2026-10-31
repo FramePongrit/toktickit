@@ -1,0 +1,63 @@
+PR100 corrections: independent Reviewer focused client verification; Ponytail FULL
+Started: 2026-10-30T14:24:11.0149326+07:00
+HEAD before source correction commit: 2cc3ce0be89c6f8ffbfb4a171e25e354b823e265
+Source: reviewed working correction; exact final source commit pending
+Command: npm --prefix client test -- tests/lab-03/StaffTicketQueue.test.tsx tests/lab-03/http.test.ts tests/lab-04/RequesterDashboard.test.tsx tests/lab-04/StaffDashboard.test.tsx tests/lab-03/AppShell.test.tsx tests/lab-03/Login.test.tsx tests/lab-03/ChangePassword.test.tsx
+Environment: Windows, DB-free, default configured2worker budget, existing assertions/timeouts unchanged
+Local independent execution; not CI or human approval
+
+
+> toktickit-client@1.0.0 test
+> vitest run tests/lab-03/StaffTicketQueue.test.tsx tests/lab-03/http.test.ts tests/lab-04/RequesterDashboard.test.tsx tests/lab-04/StaffDashboard.test.tsx tests/lab-03/AppShell.test.tsx tests/lab-03/Login.test.tsx tests/lab-03/ChangePassword.test.tsx
+
+
+ RUN  v2.1.9 D:/Software Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/client
+
+ ✓ tests/lab-04/StaffDashboard.test.tsx (13 tests) 2917ms
+   ✓ Issue 90 Staff/Admin Dashboard > UI-01: renders four ticket/action metrics, all eight status links, and truthful previews 403ms
+   ✓ Issue 90 Staff/Admin Dashboard > preserves the completed snapshot window while paging and changing page size 757ms
+   ✓ Issue 90 Staff/Admin Dashboard > distinguishes a first Action failure from a failed refresh of a retained Action result 427ms
+ ✓ tests/lab-04/RequesterDashboard.test.tsx (6 tests) 632ms
+ ✓ tests/lab-03/StaffTicketQueue.test.tsx (20 tests) 6957ms
+   ✓ Issue 56 Staff Ticket Queue > loads Staff Dashboard priority-set and priority-recent drilldowns from the URL 375ms
+   ✓ Issue 56 Staff Ticket Queue > syncs the mounted page from external URL changes and restores state on Back 1168ms
+   ✓ Issue 56 Staff Ticket Queue > trims only outer search whitespace before URL/API serialization and preserves spaces between words 817ms
+   ✓ Issue 56 Staff Ticket Queue > marks old results busy while search is debouncing and while the new request is pending 463ms
+   ✓ Issue 56 Staff Ticket Queue > restores URL-backed search across Back and Forward while replacing intermediate Queue states 1243ms
+   ✓ Issue 56 Staff Ticket Queue > treats whitespace-only search input as empty and rejects overflow query links 535ms
+   ✓ Issue 56 Staff Ticket Queue > UI-Q02: uses bounded pagination at the first, middle, and last page without an overflow strip 551ms
+ ✓ tests/lab-03/Login.test.tsx (9 tests) 6238ms
+   ✓ Issue 50 Login > UI-L01: prevents duplicate submissions and disables the form while signing in 668ms
+   ✓ Issue 50 Login > UI-L01: renders safe INVALID_CREDENTIALS feedback without account details 836ms
+   ✓ Issue 50 Login > UI-L01: renders safe USER_INACTIVE feedback without account details 796ms
+   ✓ Issue 50 Login > UI-L01: renders safe LOGIN_THROTTLED feedback without account details 651ms
+   ✓ Issue 50 Login > UI-L01/UI-H01: normalizes email, sends credentials, and lands Staff at Dashboard 760ms
+   ✓ Issue 50 Login > UI-L01: sends a must-change-password user directly to Change Password 744ms
+   ✓ Issue 50 Login > UI-05: restores a permitted direct destination after Login 938ms
+   ✓ Issue 50 Login > UI-L01: gives a generic retryable message for network/server failures 684ms
+ ✓ tests/lab-03/AppShell.test.tsx (11 tests) 612ms
+ ✓ tests/lab-03/ChangePassword.test.tsx (6 tests) 6750ms
+   ✓ Issue 50 Change Password > UI-L02: validates rules, confirmation, and reuse before making a mutation 1005ms
+   ✓ Issue 50 Change Password > UI-L02: supports self-service mode and clears password fields during save 1015ms
+   ✓ Issue 50 Change Password > UI-L02: sends the current CSRF token, prevents duplicate password changes, and replaces it after success 1310ms
+   ✓ Issue 50 Change Password > UI-05: restores a permitted destination after the mandatory password change 2224ms
+   ✓ Issue 50 Change Password > UI-L02: gives safe current-password failure feedback and does not expose server details 1026ms
+ ✓ tests/lab-03/http.test.ts (6 tests) 11ms
+
+ Test Files  7 passed (7)
+      Tests  71 passed (71)
+   Start at  14:24:13
+   Duration  22.46s (transform 2.32s, setup 1.35s, collect 6.01s, tests 24.12s, environment 6.86s, prepare 1.13s)
+
+
+Exit code: 0
+Finished: 2026-10-30T14:24:37.1389683+07:00
+No DB/browser execution or private persistent cache used.
+
+Exact reviewed source: 90b6ec4d2285164cd27a181b88be95c5d28ef6a9
+Confirmed no client/server/e2e/playwright/.github workingdiff after source commit.
+PR-head CI independently verified: pull_request run41019937070 and push run41019937047 both SUCCESS for this source.
+PR run https://github.com/FramePongrit/toktickit/actions/runs/41019937070 ran20files/228client tests and build with exit0; client-check-logs artifact uploaded.
+No remaining actionable source finding; separate opt-in dashboard-screenshots project is an equivalent capture separation, not a claim it uses the older screenshots project.
+Observed same-session401 clears auth; old-session/auth-body/download responses cannot clear a newer session. Native abort before any response is observed remains an unknown server outcome.
+Human peer approval and CI on any later documentation head remain separate gates.

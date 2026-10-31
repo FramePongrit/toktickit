@@ -57,6 +57,9 @@ export function AppShell() {
               {!mandatoryChange && canRequester && (
                 <>
                   <li className="nav-item">
+                    <NavLink className={navClass} to="/dashboard" end>Dashboard</NavLink>
+                  </li>
+                  <li className="nav-item">
                     <NavLink className={navClass} to="/tickets" end>My Tickets</NavLink>
                   </li>
                   <li className="nav-item">
@@ -65,9 +68,14 @@ export function AppShell() {
                 </>
               )}
               {!mandatoryChange && canStaff && (
-                <li className="nav-item">
-                  <NavLink className={navClass} to="/staff/tickets">Staff Queue</NavLink>
-                </li>
+                <>
+                  <li className="nav-item">
+                    <NavLink className={navClass} to="/staff/dashboard" end>Dashboard</NavLink>
+                  </li>
+                  <li className="nav-item">
+                    <NavLink className={navClass} to="/staff/tickets">Staff Queue</NavLink>
+                  </li>
+                </>
               )}
               {!mandatoryChange && canAdmin && (
                 <li className="nav-item">

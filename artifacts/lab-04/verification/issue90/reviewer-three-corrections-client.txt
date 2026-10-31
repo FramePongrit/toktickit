@@ -1,0 +1,28 @@
+Independent PR100 three-correction Queue verification
+Started: 2026-10-31T15:53:15.1134247+07:00
+Base: 120a580 plus working changes to Queue test, screenshot harness and CI triggers.
+Command: npm --prefix client test -- tests/lab-03/StaffTicketQueue.test.tsx
+DB-free; default configured two workers; no product edits.
+
+> toktickit-client@1.0.0 test
+> vitest run tests/lab-03/StaffTicketQueue.test.tsx
+
+
+ RUN  v2.1.9 D:/Software Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/client
+
+ ✓ tests/lab-03/StaffTicketQueue.test.tsx (20 tests) 6441ms
+   ✓ Issue 56 Staff Ticket Queue > loads Staff Dashboard priority-set and priority-recent drilldowns from the URL 346ms
+   ✓ Issue 56 Staff Ticket Queue > syncs the mounted page from external URL changes and restores state on Back 1048ms
+   ✓ Issue 56 Staff Ticket Queue > replaces a Dashboard status/priority set with the selected single value and keeps date bounds 345ms
+   ✓ Issue 56 Staff Ticket Queue > trims only outer search whitespace before URL/API serialization and preserves spaces between words 760ms
+   ✓ Issue 56 Staff Ticket Queue > restores URL-backed search across Back and Forward while replacing intermediate Queue states 961ms
+   ✓ Issue 56 Staff Ticket Queue > treats whitespace-only search input as empty and rejects overflow query links 601ms
+   ✓ Issue 56 Staff Ticket Queue > UI-Q01: sends owner ids from the safe directory and keeps the built-in owner modes available 336ms
+   ✓ Issue 56 Staff Ticket Queue > UI-Q02: uses bounded pagination at the first, middle, and last page without an overflow strip 587ms
+
+ Test Files  1 passed (1)
+      Tests  20 passed (20)
+   Start at  15:53:20
+   Duration  13.62s (transform 1.09s, setup 644ms, collect 2.38s, tests 6.44s, environment 3.09s, prepare 394ms)
+
+Exit code: 0
