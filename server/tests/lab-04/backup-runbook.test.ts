@@ -50,6 +50,12 @@ async function runPowerShell(label: string, script: string, variables: NodeJS.Pr
   }
 }
 
+function sanitizedPowerShellOutput(output: string): string {
+  return output
+    .replace(/postgres(?:ql)?:\/\/[^\s@]+@/gi, "postgresql://[redacted]@")
+    .replace(/((?:DATABASE_URL|PGPASSWORD|PASSWORD|JWT(?:_SECRET)?|TOKEN|COOKIE|SECRET)\s*[=:]\s*)[^\s,;]+/gi, "$1[redacted]");
+}
+
 async function pathExists(target: string): Promise<boolean> {
   try {
     await fs.access(target);
@@ -208,7 +214,7 @@ function pg_restore { $global:LASTEXITCODE = 0 }
       UPLOAD_DIR: path.join(temporaryRoot, "empty-restore"),
       CREATEDB_MARKER: emptyMarker,
     });
-    expect(acceptedEmpty.exitCode).toBe(0);
+    expect(acceptedEmpty.exitCode, sanitizedPowerShellOutput(acceptedEmpty.output)).toBe(0);
     expect(await pathExists(emptyMarker)).toBe(true);
   });
 });
