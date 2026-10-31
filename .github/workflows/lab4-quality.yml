@@ -1,0 +1,272 @@
+name: Lab 4 integrated quality
+
+on:
+  push:
+    branches: [main, lab4-staging]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  linux-postgres-e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: lab4test
+          POSTGRES_USER: lab4test
+          POSTGRES_PASSWORD: lab4test
+        ports:
+          - 55434:5432
+        options: >-
+          --health-cmd "pg_isready -U lab4test -d lab4test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://lab4test:lab4test@127.0.0.1:55434/lab4test?schema=public
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - name: Install locked dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci --prefix server
+          npm ci --prefix client
+          npm ci
+      - name: Prepare isolated run paths and schema
+        working-directory: server
+        env:
+          LAB4_PG_CONTAINER: ${{ job.services.postgres.id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "LAB4_PG_CONTAINER=$LAB4_PG_CONTAINER" >> "$GITHUB_ENV"
+          run_id="$(openssl rand -hex 16)"
+          run_root="$GITHUB_WORKSPACE/test-results/lab-04/run-$run_id"
+          mkdir -p "$run_root/uploads" "$run_root/screenshots"
+          echo "ISSUE91_RUN_ROOT=$run_root" >> "$GITHUB_ENV"
+          echo "UPLOAD_DIR=$run_root/uploads" >> "$GITHUB_ENV"
+          echo "PW_SCREENSHOT_ROOT=$run_root/screenshots" >> "$GITHUB_ENV"
+          echo "PW_OUTPUT_DIR=$run_root/playwright-results" >> "$GITHUB_ENV"
+          echo "PW_HTML_REPORT_DIR=$run_root/playwright-report" >> "$GITHUB_ENV"
+          echo "PW_API_URL=http://127.0.0.1:3001" >> "$GITHUB_ENV"
+          echo "PW_CLIENT_URL=http://127.0.0.1:5174" >> "$GITHUB_ENV"
+          echo "PW_CLIENT_PORT=5174" >> "$GITHUB_ENV"
+          echo "PW_RUN_ISSUE90_E2E=true" >> "$GITHUB_ENV"
+          schema="$(node --import tsx/esm tests/support/issue91-isolated-schema.ts create)"
+          [[ "$schema" =~ ^issue91_verify_[a-f0-9]{24}$ ]]
+          echo "ISSUE91_SERVER_SCHEMA=$schema" >> "$GITHUB_ENV"
+          echo "DATABASE_URL=postgresql://lab4test:lab4test@127.0.0.1:55434/lab4test?schema=$schema" >> "$GITHUB_ENV"
+          echo "Created task-owned server schema label: $schema"
+      - name: Validate, migrate, test and build server
+        working-directory: server
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_logged() {
+            local name="$1"; shift
+            local log="$RUNNER_TEMP/lab4-issue91-$name.log"
+            set +e
+            "$@" 2>&1 | tee "$log"
+            local statuses=("${PIPESTATUS[@]}")
+            local status="${statuses[0]}"
+            if [[ "$status" -eq 0 ]]; then status="${statuses[1]}"; fi
+            set -e
+            printf '\nExit code: %s\n' "$status" | tee -a "$log"
+            return "$status"
+          }
+          docker exec "$LAB4_PG_CONTAINER" pg_isready --username lab4test --dbname lab4test
+          run_logged prisma-validate npx prisma validate --schema prisma/schema.prisma
+          run_logged prisma-generate npx prisma generate --schema prisma/schema.prisma
+          run_logged server-migrate npx prisma migrate deploy --schema prisma/schema.prisma
+          run_logged server-tests npm test
+          run_logged server-security npm run test:security
+          run_logged server-migration npm run test:migration
+          run_logged server-build npm run build
+      - name: Prepare isolated browser schema
+        working-directory: server
+        shell: bash
+        run: |
+          set -euo pipefail
+          schema="$(node --import tsx/esm tests/support/issue91-isolated-schema.ts create)"
+          [[ "$schema" =~ ^issue91_verify_[a-f0-9]{24}$ ]]
+          echo "ISSUE91_E2E_SCHEMA=$schema" >> "$GITHUB_ENV"
+          export DATABASE_URL="postgresql://lab4test:lab4test@127.0.0.1:55434/lab4test?schema=$schema"
+          echo "DATABASE_URL=$DATABASE_URL" >> "$GITHUB_ENV"
+          echo "Created task-owned browser schema label: $schema"
+          run_logged() {
+            local name="$1"; shift
+            local log="$RUNNER_TEMP/lab4-issue91-$name.log"
+            set +e
+            "$@" 2>&1 | tee "$log"
+            local statuses=("${PIPESTATUS[@]}")
+            local status="${statuses[0]}"
+            if [[ "$status" -eq 0 ]]; then status="${statuses[1]}"; fi
+            set -e
+            printf '\nExit code: %s\n' "$status" | tee -a "$log"
+            return "$status"
+          }
+          run_logged e2e-migrate npx prisma migrate deploy --schema prisma/schema.prisma
+          run_logged e2e-reference node --import tsx/esm tests/support/issue61-e2e-reference.ts
+      - name: Install Chromium
+        working-directory: .
+        shell: bash
+        run: npx playwright install --with-deps chromium
+      - name: Run integrated lifecycle and regression browser tests
+        working-directory: .
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_logged() {
+            local log="$RUNNER_TEMP/$1.log"; shift
+            set +e
+            "$@" 2>&1 | tee "$log"
+            local statuses=("${PIPESTATUS[@]}")
+            local status="${statuses[0]}"
+            if [[ "$status" -eq 0 ]]; then status="${statuses[1]}"; fi
+            set -e
+            printf '\nExit code: %s\n' "$status" | tee -a "$log"
+            return "$status"
+          }
+          run_logged lab4-issue91-e2e npm run e2e -- --project=e2e
+      - name: Seed after pairwise-admin lifecycle tests and capture dashboards
+        working-directory: .
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_logged() {
+            local log="$RUNNER_TEMP/$1.log"; shift
+            set +e
+            "$@" 2>&1 | tee "$log"
+            local statuses=("${PIPESTATUS[@]}")
+            local status="${statuses[0]}"
+            if [[ "$status" -eq 0 ]]; then status="${statuses[1]}"; fi
+            set -e
+            printf '\nExit code: %s\n' "$status" | tee -a "$log"
+            return "$status"
+          }
+          run_logged lab4-issue91-seed npm --prefix server run prisma:seed
+          run_logged lab4-issue91-dashboard-captures npm run e2e -- --project=dashboard-screenshots
+      - name: Run screenshot regression project
+        working-directory: .
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_logged() {
+            local log="$RUNNER_TEMP/$1.log"; shift
+            set +e
+            "$@" 2>&1 | tee "$log"
+            local statuses=("${PIPESTATUS[@]}")
+            local status="${statuses[0]}"
+            if [[ "$status" -eq 0 ]]; then status="${statuses[1]}"; fi
+            set -e
+            printf '\nExit code: %s\n' "$status" | tee -a "$log"
+            return "$status"
+          }
+          run_logged lab4-issue91-screenshots npm run screenshots
+      - name: Prepare isolated performance schema
+        working-directory: server
+        shell: bash
+        run: |
+          set -euo pipefail
+          export DATABASE_URL="postgresql://lab4test:lab4test@127.0.0.1:55434/lab4test?schema=public"
+          echo "DATABASE_URL=$DATABASE_URL" >> "$GITHUB_ENV"
+          schema="$(node --import tsx/esm tests/support/issue91-isolated-schema.ts create-perf)"
+          [[ "$schema" =~ ^lab4_issue91_perf_[a-f0-9]{12}$ ]]
+          echo "ISSUE91_PERF_SCHEMA=$schema" >> "$GITHUB_ENV"
+          export DATABASE_URL="postgresql://lab4test:lab4test@127.0.0.1:55434/lab4test?schema=$schema"
+          echo "DATABASE_URL=$DATABASE_URL" >> "$GITHUB_ENV"
+          echo "Created task-owned performance schema label: $schema"
+          npx prisma migrate deploy --schema prisma/schema.prisma
+      - name: Run exact-cardinality performance smoke
+        working-directory: server
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_logged() {
+            local log="$RUNNER_TEMP/lab4-issue91-performance.log"
+            set +e
+            "$@" 2>&1 | tee "$log"
+            local statuses=("${PIPESTATUS[@]}")
+            local status="${statuses[0]}"
+            if [[ "$status" -eq 0 ]]; then status="${statuses[1]}"; fi
+            set -e
+            printf '\nExit code: %s\n' "$status" | tee -a "$log"
+            return "$status"
+          }
+          run_logged npm run test:performance
+      - name: Drop only schemas created by this run
+        if: always()
+        working-directory: server
+        shell: bash
+        run: |
+          set -euo pipefail
+          export DATABASE_URL="postgresql://lab4test:lab4test@127.0.0.1:55434/lab4test?schema=public"
+          echo "DATABASE_URL=$DATABASE_URL" >> "$GITHUB_ENV"
+          for schema in "${ISSUE91_PERF_SCHEMA:-}" "${ISSUE91_E2E_SCHEMA:-}" "${ISSUE91_SERVER_SCHEMA:-}"; do
+            if [[ "$schema" =~ ^issue91_verify_[a-f0-9]{24}$ || "$schema" =~ ^lab4_issue91_perf_[a-f0-9]{12}$ ]]; then
+              node --import tsx/esm tests/support/issue91-isolated-schema.ts drop "$schema"
+            fi
+          done
+          if [[ -n "${UPLOAD_DIR:-}" ]]; then
+            if [[ "$UPLOAD_DIR" == "$ISSUE91_RUN_ROOT/uploads" ]]; then
+              rm -rf -- "$UPLOAD_DIR"
+            else
+              echo "Refusing to remove an upload path outside this run's exact task-owned directory." >&2
+              exit 1
+            fi
+          fi
+      - name: Upload sanitized server, browser and visual evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lab4-integrated-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/lab4-issue91-*.log
+            ${{ github.workspace }}/test-results/lab-04/run-*/playwright-results
+            ${{ github.workspace }}/test-results/lab-04/run-*/playwright-report
+            ${{ github.workspace }}/test-results/lab-04/run-*/screenshots
+          if-no-files-found: warn
+          retention-days: 14
+
+  windows-runbook:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - name: Install locked server dependencies
+        shell: pwsh
+        run: npm ci --prefix server
+      - name: Run Windows-only backup and restore runbook checks
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Set-Location server
+          npm run test:runbook 2>&1 | Tee-Object -FilePath "$env:RUNNER_TEMP\lab4-runbook.log"
+          $teeSucceeded = $?
+          $status = $LASTEXITCODE
+          if (-not $teeSucceeded -and $status -eq 0) { $status = 1 }
+          "`nExit code: $status" | Tee-Object -FilePath "$env:RUNNER_TEMP\lab4-runbook.log" -Append
+          if ($status -ne 0) { exit $status }
+      - name: Upload Windows runbook log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lab4-windows-runbook-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/lab4-runbook.log
+          if-no-files-found: warn
+          retention-days: 14

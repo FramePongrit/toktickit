@@ -13,10 +13,18 @@ export const E2E_TAG = `e2e-${Date.now()}-${process.pid}-${randomUUID().slice(0,
 
 export function assertIsolatedE2EDatabase() {
   const configured = process.env.DATABASE_URL;
-  if (!configured) throw new Error("Issue #61 E2E requires an explicit isolated DATABASE_URL.");
-  const schema = new URL(configured).searchParams.get("schema");
-  if (!schema || !/^issue61_verify_[a-f0-9]{24}$/.test(schema)) {
-    throw new Error(`Issue #61 E2E refuses non-isolated database schema: ${schema ?? "missing"}`);
+  if (!configured) throw new Error("Lab 4 E2E requires an explicit isolated DATABASE_URL.");
+  const database = new URL(configured);
+  const schema = database.searchParams.get("schema");
+  if (!schema || !/^issue(?:61|91)_verify_[a-f0-9]{24}$/.test(schema)) {
+    throw new Error(`Lab 4 E2E refuses non-isolated database schema: ${schema ?? "missing"}`);
+  }
+  if (/^issue91_/.test(schema) && (
+    database.hostname !== "127.0.0.1" || database.port !== "55434" || database.pathname !== "/lab4test"
+    || decodeURIComponent(database.username) !== "lab4test" || decodeURIComponent(database.password) !== "lab4test"
+    || (process.env.LAB4_PG_CONTAINER !== "toktickit-lab4-issue85-test" && !/^[a-f0-9]{64}$/.test(process.env.LAB4_PG_CONTAINER ?? ""))
+  )) {
+    throw new Error("Issue 91 E2E refuses anything except its dedicated loopback lab4test PostgreSQL target.");
   }
 }
 

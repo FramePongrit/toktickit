@@ -1,4 +1,12 @@
 import { test, expect, type Page } from "@playwright/test";
+import {
+  assertIsolatedE2EDatabase,
+  cleanupE2EUsers,
+  closeE2EPrisma,
+  createE2EUser,
+  loginUi,
+  type E2EUser,
+} from "../support/fixtures.js";
 
 /**
  * The full Requester journey against a real client, a real API and a real
@@ -7,6 +15,25 @@ import { test, expect, type Page } from "@playwright/test";
  */
 
 const SUMMARY_PREFIX = "E2E laptop battery";
+let requester: E2EUser;
+let otherRequester: E2EUser;
+const createdUserIds: number[] = [];
+
+test.beforeAll(async () => {
+  assertIsolatedE2EDatabase();
+  requester = await createE2EUser("REQUESTER", "lab2-requester");
+  createdUserIds.push(requester.id);
+  otherRequester = await createE2EUser("REQUESTER", "lab2-other-requester");
+  createdUserIds.push(otherRequester.id);
+});
+
+test.afterAll(async () => {
+  try {
+    await cleanupE2EUsers(createdUserIds);
+  } finally {
+    await closeE2EPrisma();
+  }
+});
 
 /**
  * "Create Ticket" and "My Tickets" appear in the header, as page actions, and
@@ -16,23 +43,9 @@ function nav(page: Page, name: string) {
   return page.getByLabel("Main").getByRole("link", { name });
 }
 
-/** Picks a requester by name on the selection screen and continues. */
-async function selectRequester(page: Page, fullName: string) {
-  await page.goto("/select-requester");
-  await expect(page.getByRole("heading", { name: "Select Development Requester" })).toBeVisible();
-
-  // Option labels carry the department too ("Jennifer Anderson — Library"), and
-  // selectOption's label matcher takes an exact string, so the option is found
-  // by its text and selected by its value.
-  const select = page.getByLabel("Development Requester");
-  const value = await select
-    .locator("option", { hasText: fullName })
-    .first()
-    .getAttribute("value");
-  await select.selectOption(value!);
-  await page.getByRole("button", { name: "Continue" }).click();
-
-  await expect(page.getByTestId("current-requester")).toHaveText(fullName);
+async function signInRequester(page: Page, user: E2EUser) {
+  await loginUi(page, user);
+  await expect(page.getByTestId("current-user")).toHaveText(user.fullName);
 }
 
 async function createTicket(page: Page, summary: string): Promise<string> {
@@ -59,22 +72,22 @@ async function createTicket(page: Page, summary: string): Promise<string> {
   return match![0];
 }
 
-test("E2E-01: select a requester, create a ticket, and keep the selection across a reload", async ({
+test("E2E-01: authenticate a requester, create a ticket, and keep the session across a reload", async ({
   page,
 }) => {
-  await selectRequester(page, "Jennifer Anderson");
+  await signInRequester(page, requester);
 
   const summary = `${SUMMARY_PREFIX} ${Date.now()}`;
   const ticketNumber = await createTicket(page, summary);
   expect(ticketNumber).toMatch(/^TKT-\d{4}-\d{6}$/);
 
-  // The selection is persisted, so a reload does not return to the selector.
+  // The authenticated session is persisted across a reload.
   await page.reload();
-  await expect(page.getByTestId("current-requester")).toHaveText("Jennifer Anderson");
+  await expect(page.getByTestId("current-user")).toHaveText(requester.fullName);
 });
 
 test("E2E-02: find the new ticket in My Tickets through search and filters", async ({ page }) => {
-  await selectRequester(page, "Jennifer Anderson");
+  await signInRequester(page, requester);
 
   const summary = `${SUMMARY_PREFIX} ${Date.now()}`;
   const ticketNumber = await createTicket(page, summary);
@@ -103,7 +116,7 @@ test("E2E-02: find the new ticket in My Tickets through search and filters", asy
 });
 
 test("E2E-03: upload, download and soft-remove an attachment", async ({ page }) => {
-  await selectRequester(page, "Jennifer Anderson");
+  await signInRequester(page, requester);
 
   const summary = `${SUMMARY_PREFIX} ${Date.now()}`;
   const ticketNumber = await createTicket(page, summary);
@@ -150,7 +163,7 @@ test("E2E-03: upload, download and soft-remove an attachment", async ({ page }) 
 });
 
 test("E2E-04: another requester cannot see or open the ticket", async ({ page }) => {
-  await selectRequester(page, "Jennifer Anderson");
+  await signInRequester(page, requester);
 
   const summary = `${SUMMARY_PREFIX} ${Date.now()}`;
   const ticketNumber = await createTicket(page, summary);
@@ -159,11 +172,14 @@ test("E2E-04: another requester cannot see or open the ticket", async ({ page })
   await expect(page.getByRole("heading", { name: ticketNumber })).toBeVisible();
   const ticketUrl = page.url();
 
-  // Switch identity.
-  await page.getByRole("button", { name: "Change Requester" }).click();
-  await selectRequester(page, "Michael Brown");
+  // Switch through separate authenticated sessions; the current app has no
+  // development identity picker.
+  await page.getByRole("button", { name: "Logout" }).click();
+  await signInRequester(page, otherRequester);
 
   // The other requester's ticket is absent from the list …
+  await nav(page, "My Tickets").click();
+  await expect(page.getByRole("heading", { name: "My Tickets" })).toBeVisible();
   await page.getByLabel("Search").fill(ticketNumber);
   await expect(page.getByRole("link", { name: ticketNumber })).toHaveCount(0);
 
@@ -176,7 +192,12 @@ test("E2E-04: another requester cannot see or open the ticket", async ({ page })
 });
 
 test("E2E-06: the Zen Green tokens are actually applied", async ({ page }) => {
-  await selectRequester(page, "Jennifer Anderson");
+  await signInRequester(page, requester);
+  const ticketNumber = await createTicket(page, `${SUMMARY_PREFIX} Zen theme ${Date.now()}`);
+
+  await nav(page, "My Tickets").click();
+  await expect(page.getByRole("heading", { name: "My Tickets" })).toBeVisible();
+  await expect(page.getByRole("link", { name: ticketNumber })).toBeVisible();
 
   // Verified against the rendered page rather than the stylesheet, because
   // Bootstrap is loaded precompiled and bakes button colours in at build time
@@ -188,9 +209,8 @@ test("E2E-06: the Zen Green tokens are actually applied", async ({ page }) => {
   // to its own blue, and nothing else in the app uses that component, so it is
   // easy to leave un-themed.
   const activePage = page.locator(".page-item.active .page-link").first();
-  if (await activePage.count()) {
-    await expect(activePage).toHaveCSS("background-color", "rgb(0, 107, 60)");
-  }
+  await expect(activePage).toBeVisible();
+  await expect(activePage).toHaveCSS("background-color", "rgb(0, 107, 60)");
 
   await nav(page, "Create Ticket").click();
   const submit = page.getByRole("button", { name: "Submit Ticket" });
@@ -218,7 +238,7 @@ test("E2E-06: the Zen Green tokens are actually applied", async ({ page }) => {
 });
 
 test("E2E-05 / E2E-07: every screen is usable at desktop, tablet and mobile", async ({ page }) => {
-  await selectRequester(page, "Jennifer Anderson");
+  await signInRequester(page, requester);
   const summary = `${SUMMARY_PREFIX} ${Date.now()}`;
   await createTicket(page, summary);
   await page.getByRole("link", { name: "View ticket" }).click();

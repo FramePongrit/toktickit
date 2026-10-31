@@ -6,6 +6,7 @@ import {
   API_URL,
   E2E_TAG,
   type E2EUser,
+  assertIsolatedE2EDatabase,
   assertResponsiveLayout,
   cleanupE2EUsers,
   closeE2EPrisma,
@@ -15,7 +16,10 @@ import {
   loginUi,
 } from "../support/fixtures.js";
 
-const SCREENSHOT_ROOT = path.resolve(process.env.PW_SCREENSHOT_ROOT ?? "artifacts/lab-04/screenshots/actions-taken");
+const SCREENSHOT_ROOT = path.resolve(path.join(
+  process.env.PW_SCREENSHOT_ROOT ?? path.join("test-results", "lab-04", "screenshots"),
+  "actions-taken",
+));
 
 async function capture(page: import("@playwright/test").Page, name: string, options: { fullPage?: boolean } = {}) {
   await mkdir(SCREENSHOT_ROOT, { recursive: true });
@@ -29,6 +33,7 @@ test.describe.serial("E2E-88 — Actions Taken Staff and Requester journey", () 
   const createdUserIds: number[] = [];
 
   test.beforeAll(async () => {
+    assertIsolatedE2EDatabase();
     requester = await createE2EUser("REQUESTER", "issue88-requester");
     staff = await createE2EUser("STAFF", "issue88-staff");
     otherStaff = await createE2EUser("STAFF", "issue88-assignee");
