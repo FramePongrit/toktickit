@@ -122,10 +122,11 @@ test.describe.serial("E2E-88 — Actions Taken Staff and Requester journey", () 
       console.log(`E2E-88 disabled outline color ${disabledOutline.color}; border ${disabledOutline.borderColor}: matches Zen green.`);
       await capture(page, "action-edit-pending-disabled-outline");
       releaseEditResponse();
-      await editUiResponse;
-      await page.unroute(editUrl);
-      await expect(page.getByText(/revision was recorded/i)).toBeVisible();
+      const editedActionResponse = await editUiResponse;
+      expect(editedActionResponse.status()).toBe(200);
+      await expect(page.getByText(/Latest Ticket, Actions, and workflow loaded/)).toBeVisible();
       await expect(page.getByRole("button", { name: "Edit Action" })).toBeEnabled();
+      await page.unroute(editUrl);
       await expect(page.getByText("Inspect the VPN account configuration").first()).toBeVisible();
       await expect(page.getByRole("button", { name: "Hide history" })).toBeVisible();
       await expect(page.getByText("Description:")).toBeVisible();

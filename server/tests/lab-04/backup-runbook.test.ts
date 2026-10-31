@@ -24,16 +24,10 @@ async function readRunbookScripts(): Promise<[string, string]> {
 function safePowerShellEnvironment(values: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   const environment = { ...process.env };
   for (const name of Object.keys(environment)) {
-    if (/DATABASE_URL|PASSWORD|JWT|TOKEN|COOKIE|SECRET|^PG/i.test(name)) delete environment[name];
+    if (/DATABASE_URL|PASSWORD|JWT|TOKEN|COOKIE|SECRET|^PG/i.test(name) || /^PSModulePath$/i.test(name)) {
+      delete environment[name];
+    }
   }
-  const windowsPowerShellModules = path.join(
-    process.env.SystemRoot ?? "C:\\Windows",
-    "System32",
-    "WindowsPowerShell",
-    "v1.0",
-    "Modules"
-  );
-  environment.PSModulePath = [windowsPowerShellModules, environment.PSModulePath].filter(Boolean).join(path.delimiter);
   return { ...environment, ...values };
 }
 
@@ -75,6 +69,36 @@ afterAll(async () => {
 });
 
 describe("Lab 4 backup and restore runbook", () => {
+  windowsIt("uses Windows PowerShell defaults when the parent has a PowerShell 7 module path", async () => {
+    const file = path.join(temporaryRoot, "module-path-hash.txt");
+    const contents = Buffer.from("hash through the real Windows PowerShell utility module\n");
+    await fs.writeFile(file, contents);
+
+    const inheritedModulePaths = Object.entries(process.env).filter(([name]) => /^PSModulePath$/i.test(name));
+    try {
+      for (const [name] of inheritedModulePaths) delete process.env[name];
+      process.env.pSmOdUlEpAtH = "C:\\Program Files\\PowerShell\\7\\Modules";
+
+      const result = await runPowerShell(
+        "poisoned-module-path",
+        String.raw`
+if ($env:PSModulePath -match 'PowerShell\\7\\Modules') { throw 'PSMODULEPATH_POISONED' }
+(Get-FileHash -LiteralPath $env:HASH_FILE -Algorithm SHA256 -ErrorAction Stop).Hash.ToLowerInvariant()
+`,
+        { HASH_FILE: file }
+      );
+
+      expect(result.exitCode).toBe(0);
+      expect(result.output).toContain(createHash("sha256").update(contents).digest("hex"));
+      expect(result.output).not.toContain("PSMODULEPATH_POISONED");
+    } finally {
+      for (const name of Object.keys(process.env)) {
+        if (/^PSModulePath$/i.test(name)) delete process.env[name];
+      }
+      for (const [name, value] of inheritedModulePaths) process.env[name] = value;
+    }
+  });
+
   windowsIt("hashes source uploads before copying and rejects a corrupted backup copy", async () => {
     const backupParent = path.join(temporaryRoot, "backup-parent");
     const sourceRoot = path.join(temporaryRoot, "source-uploads");

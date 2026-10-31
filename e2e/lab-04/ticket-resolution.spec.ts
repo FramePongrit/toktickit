@@ -96,8 +96,40 @@ test.describe.serial("E2E-02 — resolution gate, reopened cycle, close and canc
       await page.getByRole("button", { name: "Edit Action" }).click();
       await page.getByLabel("Follow-Up Required?").uncheck();
       await page.getByLabel("Correction Reason").fill("Follow-up was completed and verified");
+      const correctionResponsePromise = page.waitForResponse((response) =>
+        response.url().endsWith(`/api/staff/tickets/${ticket.id}/actions/${firstActionId}`)
+        && response.request().method() === "PATCH"
+        && response.status() === 200
+      );
       await page.getByRole("button", { name: "Save revision" }).click();
-      await expect(page.getByText(/revision was recorded/i)).toBeVisible();
+      const correctionResponse = await correctionResponsePromise;
+      const correctionBody = await correctionResponse.json() as {
+        action: { followUpRequired: boolean; followUpNote: string | null };
+      };
+      expect(correctionBody.action).toMatchObject({
+        followUpRequired: false,
+        followUpNote: "Confirm the fix with the requester",
+      });
+      const historyResponse = await staffApi.get(
+        `${API_URL}/api/staff/tickets/${ticket.id}/actions/${firstActionId}/history?page=1&pageSize=10`
+      );
+      expect(historyResponse.status()).toBe(200);
+      const historyBody = await historyResponse.json() as {
+        data: Array<{ operation: string; actor: { id: number }; reason: string | null; after: Record<string, unknown> | null }>;
+      };
+      expect(historyBody.data).toContainEqual(expect.objectContaining({
+        operation: "EDIT",
+        actor: expect.objectContaining({ id: staff.id }),
+        reason: "Follow-up was completed and verified",
+        after: expect.objectContaining({
+          followUpRequired: false,
+          followUpNote: "Confirm the fix with the requester",
+        }),
+      }));
+      await expect(page.getByText(/Latest Ticket, Actions, and workflow loaded/)).toBeVisible();
+      await expect(page.getByRole("heading", { name: `Change history for Action ${firstActionId}` })).toBeVisible();
+      await expect(page.getByText(/Reason: Follow-up was completed and verified/)).toBeVisible();
+      await expect(page.getByText(/Follow-up required: Yes.*No/)).toBeVisible();
       await page.getByRole("tab", { name: "Ticket Details" }).click();
       await expect(resolutionGate).toContainText("Cycle 1: 1 completed, 0 unfinished, 0 requiring follow-up.");
       await selectAndConfirmStatus(page, "RESOLVED");
