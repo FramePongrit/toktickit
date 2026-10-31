@@ -13,6 +13,7 @@ import { loginAs, TEST_PASSWORD, withAuth, type AuthSessionFixture } from "../su
 const prisma = getPrisma();
 const SCHEMA = process.env.DATABASE_URL?.match(/[?&]schema=([^&]+)/)?.[1] ?? "unknown";
 const DATABASE_CONTAINER = process.env.LAB4_PG_CONTAINER ?? "unspecified";
+const ALLOWED_PERF_CONTAINERS = (value: string | undefined) => value === "toktickit-lab4-issue85-test" || /^[a-f0-9]{64}$/.test(value ?? "");
 const fixtureTag = randomUUID().slice(0, 8);
 const userIds: number[] = [];
 const queryEvents: number[] = [];
@@ -47,8 +48,9 @@ function assertPerformanceTarget(): void {
   const url = new URL(connection);
   const schema = url.searchParams.get("schema");
   if (url.hostname !== "127.0.0.1" || url.port !== "55434" || url.pathname !== "/lab4test"
-    || schema !== "lab4_issue89_perf" || process.env.LAB4_PG_CONTAINER !== "toktickit-lab4-issue85-test") {
-    throw new Error("PERF-01 is restricted to the dedicated loopback PostgreSQL test container and lab4_issue89_perf schema.");
+    || !/^(?:lab4_issue89_perf|lab4_issue91_perf_[a-f0-9]{12})$/.test(schema ?? "")
+    || !ALLOWED_PERF_CONTAINERS(process.env.LAB4_PG_CONTAINER)) {
+    throw new Error("PERF-01 is restricted to the dedicated loopback PostgreSQL test container and task-owned performance schema.");
   }
   targetValidated = true;
 }

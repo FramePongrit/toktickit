@@ -227,6 +227,34 @@ describe("Issue #86 — Action API and audit", () => {
     expect(xss.body.action).toMatchObject({ description: "<script>alert(1)</script>", followUpNote: null, attachmentNotes: null });
   });
 
+  it("rejects an oversized completed-result correction without changing Action, audit, or Ticket versions", async () => {
+    const ticket = await makeTicket();
+    const created = await staffPost(ticket.id).send({ ...createBody(1), assigneeId: staffBId });
+    expect(created.status).toBe(201);
+    const actionId = created.body.action.id as number;
+    const completed = await withAuth(request(app).post(`/api/staff/tickets/${ticket.id}/actions/${actionId}/transitions`), staffAAuth)
+      .set("Idempotency-Key", randomUUID())
+      .send({ expectedTicketVersion: 2, expectedActionVersion: 1, status: "COMPLETED", result: "Completed evidence" });
+    expect(completed.status).toBe(200);
+
+    const beforeAction = await prisma.actionTaken.findUniqueOrThrow({ where: { id: actionId } });
+    const beforeRevisionCount = await prisma.actionRevision.count({ where: { actionId } });
+    const beforeTicket = await prisma.ticket.findUniqueOrThrow({ where: { id: ticket.id }, select: { version: true } });
+    const rejected = await withAuth(request(app).patch(`/api/staff/tickets/${ticket.id}/actions/${actionId}`), staffAAuth)
+      .send({
+        expectedTicketVersion: beforeTicket.version,
+        expectedActionVersion: beforeAction.version,
+        result: "x".repeat(2001),
+        correctionReason: "Preserve the valid completed record",
+      });
+
+    expect(rejected.status).toBe(400);
+    expect(rejected.body.error.details).toEqual(expect.arrayContaining([expect.objectContaining({ field: "result" })]));
+    expect(await prisma.actionTaken.findUniqueOrThrow({ where: { id: actionId } })).toEqual(beforeAction);
+    expect(await prisma.actionRevision.count({ where: { actionId } })).toBe(beforeRevisionCount);
+    expect(await prisma.ticket.findUniqueOrThrow({ where: { id: ticket.id }, select: { version: true } })).toEqual(beforeTicket);
+  });
+
   it("audits edits, enforces expected versions and completes with the actual collaborating performer", async () => {
     const ticket = await makeTicket();
     const created = await staffPost(ticket.id).send({ ...createBody(1), assigneeId: staffBId, followUpRequired: true, followUpNote: "Verify with requester" });

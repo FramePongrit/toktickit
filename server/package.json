@@ -11,7 +11,9 @@
     "prisma:seed": "tsx prisma/seed.ts",
     "test": "vitest run",
     "test:security": "vitest run --config vitest.security.config.ts",
-    "test:migration": "vitest run --config vitest.migration.config.ts"
+    "test:migration": "vitest run --config vitest.migration.config.ts",
+    "test:performance": "vitest run --config vitest.dashboard-perf.config.ts",
+    "test:runbook": "vitest run --config vitest.runbook.config.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

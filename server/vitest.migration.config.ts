@@ -7,7 +7,6 @@ export default defineConfig({
       "tests/lab-03/migration-seed.regression.test.ts",
       "tests/lab-04/migration.regression.test.ts",
       "tests/lab-04/recovery.integration.test.ts",
-      "tests/lab-04/backup-runbook.test.ts",
     ],
     fileParallelism: false,
     hookTimeout: 120_000,

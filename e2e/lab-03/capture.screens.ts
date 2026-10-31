@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import path from "node:path";
 import { test, expect, request as playwrightRequest, type Page } from "@playwright/test";
 import {
   API_URL,
@@ -16,7 +17,10 @@ import {
 // Release verification supplies an ignored temporary root so a verification
 // run can never overwrite committed evidence. Direct screenshot refreshes may
 // still opt into the committed artifact root explicitly.
-const ROOT = process.env.PW_SCREENSHOT_ROOT ?? "artifacts/lab-03/screenshots";
+const ROOT = path.resolve(path.join(
+  process.env.PW_SCREENSHOT_ROOT ?? path.join("test-results", "lab-04", "screenshots"),
+  "lab-03",
+));
 const VIEWPORTS = [
   { name: "desktop", width: 1440, height: 900 },
   { name: "tablet", width: 820, height: 1024 },

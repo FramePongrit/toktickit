@@ -1,32 +1,64 @@
 import { test, expect, type Page } from "@playwright/test";
+import path from "node:path";
+import fs from "node:fs/promises";
+import {
+  assertIsolatedE2EDatabase,
+  cleanupE2EUsers,
+  closeE2EPrisma,
+  createE2EUser,
+  loginUi,
+  type E2EUser,
+} from "../support/fixtures.js";
 
 /**
- * Captures the evidence for submission Parts 6 to 9 into
- * artifacts/lab-02/screenshots/. Run with `npm run screenshots`.
+ * Captures the Lab 2 journey with authenticated Requesters into the configured
+ * task-owned screenshot root. Run with `npm run screenshots`.
  *
  * Kept in its own Playwright project so an ordinary `npm run e2e` does not
  * rewrite the committed images.
  */
 
-const ROOT = "artifacts/lab-02/screenshots";
+const ROOT = path.resolve(path.join(
+  process.env.PW_SCREENSHOT_ROOT ?? path.join("test-results", "lab-04", "screenshots"),
+  "lab-02",
+));
 
 const VIEWPORTS = [
   { name: "desktop", width: 1440, height: 900 },
   { name: "tablet", width: 820, height: 1024 },
   { name: "mobile", width: 390, height: 844 },
 ];
+let requester: E2EUser;
+let otherRequester: E2EUser;
+let emptyRequester: E2EUser;
+const createdUserIds: number[] = [];
 
-function shot(page: Page, folder: string, name: string) {
-  return page.screenshot({ path: `${ROOT}/${folder}/${name}.png`, fullPage: true });
+test.beforeAll(async () => {
+  assertIsolatedE2EDatabase();
+  requester = await createE2EUser("REQUESTER", "lab2-capture-requester");
+  createdUserIds.push(requester.id);
+  otherRequester = await createE2EUser("REQUESTER", "lab2-capture-other-requester");
+  createdUserIds.push(otherRequester.id);
+  emptyRequester = await createE2EUser("REQUESTER", "lab2-capture-empty-requester");
+  createdUserIds.push(emptyRequester.id);
+});
+
+test.afterAll(async () => {
+  try {
+    await cleanupE2EUsers(createdUserIds);
+  } finally {
+    await closeE2EPrisma();
+  }
+});
+
+async function shot(page: Page, folder: string, name: string) {
+  await fs.mkdir(path.join(ROOT, folder), { recursive: true });
+  await page.screenshot({ path: path.join(ROOT, folder, `${name}.png`), fullPage: true });
 }
 
-async function selectRequester(page: Page, fullName: string) {
-  await page.goto("/select-requester");
-  const select = page.getByLabel("Development Requester");
-  const value = await select.locator("option", { hasText: fullName }).first().getAttribute("value");
-  await select.selectOption(value!);
-  await page.getByRole("button", { name: "Continue" }).click();
-  await expect(page.getByTestId("current-requester")).toHaveText(fullName);
+async function signInRequester(page: Page, user: E2EUser) {
+  await loginUi(page, user);
+  await expect(page.getByTestId("current-user")).toHaveText(user.fullName);
 }
 
 async function fillCreateForm(page: Page, summary: string) {
@@ -39,30 +71,25 @@ async function fillCreateForm(page: Page, summary: string) {
     .fill("The battery drains much faster than usual even when the system is idle.");
 }
 
-test("capture: development requester selection", async ({ page }) => {
+test("capture: requester login and authenticated landing", async ({ page }) => {
   await page.setViewportSize(VIEWPORTS[0]);
 
-  await page.goto("/select-requester");
-  await expect(page.getByRole("heading", { name: "Select Development Requester" })).toBeVisible();
-  await shot(page, "create-ticket", "00-requester-selection");
-
-  const select = page.getByLabel("Development Requester");
-  const value = await select
-    .locator("option", { hasText: "Jennifer Anderson" })
-    .first()
-    .getAttribute("value");
-  await select.selectOption(value!);
-  await shot(page, "create-ticket", "01-requester-selected-dropdown");
+  await page.goto("/login");
+  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
+  await shot(page, "create-ticket", "00-requester-login");
+  await signInRequester(page, requester);
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await shot(page, "create-ticket", "01-requester-dashboard");
 });
 
 test("capture: create ticket states", async ({ page }) => {
   await page.setViewportSize(VIEWPORTS[0]);
-  await selectRequester(page, "Jennifer Anderson");
+  await signInRequester(page, requester);
 
   await page.goto("/tickets/new");
   await expect(page.getByRole("heading", { name: "Create Ticket" })).toBeVisible();
-  // The Requester field is populated from the selection made before entering
-  // the application, and the reference data comes from the database.
+  // Requester identity comes from the authenticated session, and the reference
+  // data comes from the database.
   await shot(page, "create-ticket", "02-initial-desktop");
 
   // Validation failure: field-level messages, no request sent.
@@ -83,7 +110,7 @@ test("capture: create ticket states", async ({ page }) => {
 
 test("capture: create ticket API failure", async ({ page }) => {
   await page.setViewportSize(VIEWPORTS[0]);
-  await selectRequester(page, "Jennifer Anderson");
+  await signInRequester(page, requester);
 
   await page.goto("/tickets/new");
   await fillCreateForm(page, "This submission will fail");
@@ -102,7 +129,7 @@ test("capture: create ticket API failure", async ({ page }) => {
 
 test("capture: my tickets states", async ({ page }) => {
   await page.setViewportSize(VIEWPORTS[0]);
-  await selectRequester(page, "Jennifer Anderson");
+  await signInRequester(page, requester);
 
   await page.goto("/tickets");
   await expect(page.getByRole("heading", { name: "My Tickets" })).toBeVisible();
@@ -136,7 +163,7 @@ test("capture: my tickets empty state for a requester with no tickets", async ({
   await page.setViewportSize(VIEWPORTS[0]);
   // A requester who has created nothing shows the empty state, which reads
   // differently from the no-results state above.
-  await selectRequester(page, "David Lee");
+  await signInRequester(page, emptyRequester);
 
   await page.goto("/tickets");
   const empty = page.getByText(/have not created any tickets yet/);
@@ -147,7 +174,7 @@ test("capture: my tickets empty state for a requester with no tickets", async ({
 
 test("capture: ticket detail and attachment states", async ({ page }) => {
   await page.setViewportSize(VIEWPORTS[0]);
-  await selectRequester(page, "Jennifer Anderson");
+  await signInRequester(page, requester);
 
   await page.goto("/tickets/new");
   await fillCreateForm(page, `Attachment capture ${Date.now()}`);
@@ -186,15 +213,15 @@ test("capture: ticket detail and attachment states", async ({ page }) => {
 
   // Unauthorised access to the same ticket from another requester.
   const ticketUrl = page.url();
-  await page.getByRole("button", { name: "Change Requester" }).click();
-  await selectRequester(page, "Michael Brown");
+  await page.getByRole("button", { name: "Logout" }).click();
+  await signInRequester(page, otherRequester);
   await page.goto(ticketUrl);
   await expect(page.getByText("Ticket not found")).toBeVisible();
   await shot(page, "ticket-detail", "05-cross-requester-rejected");
 });
 
 test("capture: responsive evidence at three viewports", async ({ page }) => {
-  await selectRequester(page, "Jennifer Anderson");
+  await signInRequester(page, requester);
 
   await page.goto("/tickets/new");
   await fillCreateForm(page, `Responsive capture ${Date.now()}`);

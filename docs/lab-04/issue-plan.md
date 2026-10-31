@@ -100,7 +100,7 @@ Tests: UNIT-04/05, API-D01-04, PERF-01 initial run. At least selected Requester/
 
 ### L4-07 - Role Dashboard UI, landing and URL-backed navigation
 
-Branch: feature/lab4-dashboard-ui, based on `171d8bc`. [Issue #90](https://github.com/FramePongrit/toktickit/issues/90) is PR Review; [PR #100](https://github.com/FramePongrit/toktickit/pull/100) awaits human review. Tested source `5236ef5`.
+Branch: feature/lab4-dashboard-ui, based on `171d8bc`. [Issue #90](https://github.com/FramePongrit/toktickit/issues/90) is Done; [PR #100](https://github.com/FramePongrit/toktickit/pull/100) was approved and merged as `b35e76c`.
 
 Tasks: role Dashboard landing/nav, four cards per role, status counts/previews/as-of, refresh/error/zero states, inline paginated My Actions. Implement My Tickets URL parser/serializer and Staff Queue additions with visible active filters, back/forward/refresh and exact Action anchors. Clear scoped caches on logout/identity change; preserve existing direct routes/forced password flow.
 
@@ -109,6 +109,8 @@ Acceptance: AC-14-17,20/21; units and recent periods clear, no forbidden data fl
 Tests: UI-01/02/05, STYLE-01, E2E-03 preparation; keep all earlier component/navigation assertions except specifically changed landing destinations.
 
 ### L4-08 - Integrated regression, E2E, accessibility and performance evidence
+
+[Issue #91](https://github.com/FramePongrit/toktickit/issues/91) is Started on feature/lab4-quality-evidence, based on reviewed integration `b35e76c`; [PR #101](https://github.com/FramePongrit/toktickit/pull/101) is draft while human visual and keyboard checks remain pending.
 
 Branch: feature/lab4-quality-evidence. Depends on: L4-05/07 and underlying APIs/data. Target: October 27.
 
