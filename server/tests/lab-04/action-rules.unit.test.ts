@@ -42,6 +42,26 @@ describe("UNIT-01 / UNIT-03 — Action rules", () => {
     expect(normalized).toMatchObject({ description: "Inspect", followUpRequired: false, followUpNote: null, attachmentNotes: null });
     expect(actionCreateSchema.safeParse({ expectedTicketVersion: 1, description: "x".repeat(2000) }).success).toBe(true);
     expect(actionCreateSchema.safeParse({ expectedTicketVersion: 1, description: "x".repeat(2001) }).success).toBe(false);
+    const maxText = "x".repeat(2000);
+    const overText = "x".repeat(2001);
+    const maxAttachmentNotes = "x".repeat(1000);
+    const overAttachmentNotes = "x".repeat(1001);
+    expect(actionCreateSchema.safeParse({ expectedTicketVersion: 1, description: "Inspect", result: maxText, followUpRequired: true, followUpNote: maxText, attachmentNotes: maxAttachmentNotes }).success).toBe(true);
+    expect(actionCreateSchema.safeParse({ expectedTicketVersion: 1, description: "Inspect", result: overText }).success).toBe(false);
+    expect(actionCreateSchema.safeParse({ expectedTicketVersion: 1, description: "Inspect", followUpNote: overText }).success).toBe(false);
+    expect(actionCreateSchema.safeParse({ expectedTicketVersion: 1, description: "Inspect", attachmentNotes: overAttachmentNotes }).success).toBe(false);
+    const patchBase = { expectedTicketVersion: 1, expectedActionVersion: 1, description: "Corrected" };
+    expect(actionPatchSchema.safeParse({ ...patchBase, correctionReason: maxAttachmentNotes }).success).toBe(true);
+    expect(actionPatchSchema.safeParse({ ...patchBase, correctionReason: overAttachmentNotes }).success).toBe(false);
+    expect(actionPatchSchema.safeParse({ ...patchBase, attachmentNotes: maxAttachmentNotes }).success).toBe(true);
+    expect(actionPatchSchema.safeParse({ ...patchBase, attachmentNotes: overAttachmentNotes }).success).toBe(false);
+    expect(actionPatchSchema.safeParse({ ...patchBase, result: maxText }).success).toBe(true);
+    expect(actionPatchSchema.safeParse({ ...patchBase, result: overText }).success).toBe(false);
+    expect(actionPatchSchema.safeParse({ ...patchBase, followUpNote: maxText }).success).toBe(true);
+    expect(actionPatchSchema.safeParse({ ...patchBase, followUpNote: overText }).success).toBe(false);
+    expect(actionTransitionSchema.safeParse({ expectedTicketVersion: 1, expectedActionVersion: 1, status: "COMPLETED", result: maxText, followUpNote: maxText }).success).toBe(true);
+    expect(actionTransitionSchema.safeParse({ expectedTicketVersion: 1, expectedActionVersion: 1, status: "COMPLETED", result: overText }).success).toBe(false);
+    expect(actionTransitionSchema.safeParse({ expectedTicketVersion: 1, expectedActionVersion: 1, status: "COMPLETED", followUpNote: overText }).success).toBe(false);
     expect(actionCreateSchema.safeParse({
       expectedTicketVersion: 1,
       description: "Inspect",
@@ -55,6 +75,12 @@ describe("UNIT-01 / UNIT-03 — Action rules", () => {
       performedById: 99,
     }).success).toBe(false);
     expect(actionTransitionSchema.safeParse({ expectedTicketVersion: 1, expectedActionVersion: 1, status: "CANCELLED" }).success).toBe(false);
+    expect(actionTransitionSchema.safeParse({
+      expectedTicketVersion: 1,
+      expectedActionVersion: 1,
+      status: "CANCELLED",
+      cancelReason: maxAttachmentNotes,
+    }).success).toBe(true);
     expect(actionTransitionSchema.safeParse({
       expectedTicketVersion: 1,
       expectedActionVersion: 1,

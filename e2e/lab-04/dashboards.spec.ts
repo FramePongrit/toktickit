@@ -18,7 +18,7 @@ import {
 const DATABASE_URL = process.env.DATABASE_URL;
 const UPLOAD_ROOT = process.env.UPLOAD_DIR?.trim();
 const SCREENSHOT_ROOT = path.resolve(
-  process.env.PW_SCREENSHOT_ROOT ?? path.join("test-results", "issue90", `dashboard-${Date.now()}`)
+  process.env.PW_SCREENSHOT_ROOT ?? path.join("test-results", "lab-04", "screenshots")
 );
 
 function assertIssue90Isolation() {
@@ -29,21 +29,28 @@ function assertIssue90Isolation() {
     !["127.0.0.1", "localhost"].includes(database.hostname) ||
     database.port !== "55434" ||
     database.pathname !== "/lab4test" ||
-    !schema?.startsWith("lab4_issue90_e2e")
+    decodeURIComponent(database.username) !== "lab4test" ||
+    decodeURIComponent(database.password) !== "lab4test" ||
+    (process.env.LAB4_PG_CONTAINER !== "toktickit-lab4-issue85-test" && !/^[a-f0-9]{64}$/.test(process.env.LAB4_PG_CONTAINER ?? "")) ||
+    !/^issue91_verify_[a-f0-9]{24}$/.test(schema ?? "") && !/^lab4_issue90_e2e/.test(schema ?? "")
   ) {
-    throw new Error("Issue 90 browser verification refuses a database outside the dedicated loopback lab4_issue90_e2e schema.");
+    throw new Error("Dashboard browser verification refuses a database outside a task-owned Lab 4 E2E schema.");
   }
   const resolvedUploads = path.resolve(UPLOAD_ROOT);
-  if (!resolvedUploads.toLowerCase().includes(`${path.sep}test-results${path.sep}issue90`.toLowerCase())) {
-    throw new Error("Issue 90 browser verification requires an upload directory under its task-owned test-results/issue90 root.");
+  const testResultsRoot = path.resolve("test-results", "lab-04").toLowerCase();
+  if (!resolvedUploads.toLowerCase().startsWith(`${testResultsRoot}${path.sep}`.toLowerCase())) {
+    throw new Error("Dashboard browser verification requires an upload directory under its task-owned test-results/lab-04 root.");
   }
-  const screenshotRunRoot = path.resolve("test-results", "issue90").toLowerCase();
-  if (!SCREENSHOT_ROOT.toLowerCase().startsWith(`${screenshotRunRoot}${path.sep}`.toLowerCase())) {
-    throw new Error("Issue 90 screenshots must stay under the task-owned test-results/issue90 directory.");
-  }
-  const artifactsRoot = path.resolve("artifacts");
-  if (SCREENSHOT_ROOT === artifactsRoot || SCREENSHOT_ROOT.startsWith(`${artifactsRoot}${path.sep}`)) {
-    throw new Error("Issue 90 screenshots must stay outside the committed artifacts directory.");
+  const ignoredScreenshotRoot = path.resolve("test-results", "lab-04", "screenshots").toLowerCase();
+  const runScreenshotRoot = path.resolve("test-results", "lab-04").toLowerCase();
+  const curatedScreenshotRoot = path.resolve("artifacts", "lab-04", "screenshots").toLowerCase();
+  const underRoot = (candidate: string, root: string) => candidate === root || candidate.startsWith(`${root}${path.sep}`);
+  const runRelative = path.relative(runScreenshotRoot, SCREENSHOT_ROOT).split(path.sep);
+  const ownedRunScreenshotRoot = /^run-[a-f0-9]{32}$/i.test(runRelative[0] ?? "")
+    && runRelative[1]?.toLowerCase() === "screenshots";
+  if (!underRoot(SCREENSHOT_ROOT.toLowerCase(), ignoredScreenshotRoot) &&
+      !underRoot(SCREENSHOT_ROOT.toLowerCase(), curatedScreenshotRoot) && !ownedRunScreenshotRoot) {
+    throw new Error("Dashboard screenshots must stay under ignored test-results or the explicit Lab 4 screenshot root.");
   }
 }
 
@@ -150,9 +157,10 @@ async function captureDashboard(
   if (width <= 600) await setMobileNavigation(page, false);
   await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
   await assertResponsiveLayout(page, `${role} Dashboard ${width}x${height}`);
-  await mkdir(SCREENSHOT_ROOT, { recursive: true });
+  const roleRoot = path.join(SCREENSHOT_ROOT, `${role}-dashboard`);
+  await mkdir(roleRoot, { recursive: true });
   await page.screenshot({
-    path: path.join(SCREENSHOT_ROOT, `${role}-dashboard-${width}x${height}.png`),
+    path: path.join(roleRoot, `${role}-dashboard-${width}x${height}.png`),
     fullPage: true,
   });
   const geometry = await page.evaluate(() => ({
@@ -160,7 +168,7 @@ async function captureDashboard(
     document: `${document.documentElement.scrollWidth}x${document.documentElement.scrollHeight}`,
     horizontalOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
   }));
-  console.log(`Issue90 ${role} Dashboard geometry ${JSON.stringify(geometry)}; screenshot ${path.join(SCREENSHOT_ROOT, `${role}-dashboard-${width}x${height}.png`)}.`);
+  console.log(`Dashboard ${role} geometry ${JSON.stringify(geometry)}; screenshot ${path.join(roleRoot, `${role}-dashboard-${width}x${height}.png`)}.`);
 }
 
 async function setMobileNavigation(page: import("@playwright/test").Page, open: boolean) {
@@ -393,7 +401,7 @@ test.describe.serial("E2E-03 — role Dashboards and exact drilldowns", () => {
     await expect(page.locator(".navbar-toggler")).toHaveAttribute("aria-expanded", "false");
     await expect(page.getByTestId("current-user")).not.toBeVisible();
     await showMobileIdentity(page, "Requester");
-    await page.screenshot({ path: path.join(SCREENSHOT_ROOT, "requester-dashboard-390x844-navigation-open.png"), fullPage: true });
+    await page.screenshot({ path: path.join(SCREENSHOT_ROOT, "requester-dashboard", "requester-dashboard-390x844-navigation-open.png"), fullPage: true });
     await page.getByRole("button", { name: "Logout" }).click();
 
     await loginUi(page, staff);
@@ -406,7 +414,7 @@ test.describe.serial("E2E-03 — role Dashboards and exact drilldowns", () => {
     await expect(page.locator(".navbar-toggler")).toHaveAttribute("aria-expanded", "false");
     await expect(page.getByTestId("current-user")).not.toBeVisible();
     await showMobileIdentity(page, "IT Staff");
-    await page.screenshot({ path: path.join(SCREENSHOT_ROOT, "staff-dashboard-390x844-navigation-open.png"), fullPage: true });
+    await page.screenshot({ path: path.join(SCREENSHOT_ROOT, "staff-dashboard", "staff-dashboard-390x844-navigation-open.png"), fullPage: true });
     await page.getByRole("button", { name: "Logout" }).click();
   });
 });

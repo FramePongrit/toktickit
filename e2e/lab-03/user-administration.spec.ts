@@ -230,17 +230,81 @@ test.describe.serial("E2E-U01 — Administrator User Management", () => {
       });
       expect(activeAdminIdsBefore.map(({ id }) => id)).toEqual([admin.id, lastActiveAdmin.id].sort((left, right) => left - right));
 
-      const firstResponsePromise = firstPage.waitForResponse((response) =>
-        response.url().endsWith(userPath(lastActiveAdmin.id)) && response.request().method() === "PATCH"
-      );
-      const secondResponsePromise = secondPage.waitForResponse((response) =>
-        response.url().endsWith(userPath(admin.id)) && response.request().method() === "PATCH"
-      );
-      await Promise.all([
-        firstDialog.getByRole("button", { name: "Save changes" }).click(),
-        secondDialog.getByRole("button", { name: "Save changes" }).click(),
-      ]);
-      const [firstResponse, secondResponse] = await Promise.all([firstResponsePromise, secondResponsePromise]);
+      let releaseRosterLock!: () => void;
+      let signalHolderReady!: (pid: number) => void;
+      let rejectHolderReady!: (error: unknown) => void;
+      const holderReady = new Promise<number>((resolve, reject) => {
+        signalHolderReady = resolve;
+        rejectHolderReady = reject;
+      });
+      const rosterLockReleased = new Promise<void>((resolve) => { releaseRosterLock = resolve; });
+      let firstResponsePromise: Promise<import("@playwright/test").Response> | undefined;
+      let secondResponsePromise: Promise<import("@playwright/test").Response> | undefined;
+      let observedWaiterPids: number[] = [];
+      const rosterLockHolder = getPrisma().$transaction(async (tx) => {
+        const [{ backendPid }] = await tx.$queryRaw<{ backendPid: number }[]>`SELECT pg_backend_pid()::int AS "backendPid"`;
+        await tx.$queryRaw`
+          SELECT "id"
+          FROM "User"
+          WHERE "id" IN (${admin.id}, ${lastActiveAdmin.id})
+          ORDER BY "id" ASC
+          FOR UPDATE
+        `;
+        signalHolderReady(backendPid);
+        await rosterLockReleased;
+      }, { timeout: 30_000 }).catch((error: unknown) => {
+        rejectHolderReady(error);
+        throw error;
+      });
+
+      try {
+        const holderBackendPid = await holderReady;
+        firstResponsePromise = firstPage.waitForResponse((response) =>
+          response.url().endsWith(userPath(lastActiveAdmin.id)) && response.request().method() === "PATCH"
+        , { timeout: 15_000 });
+        secondResponsePromise = secondPage.waitForResponse((response) =>
+          response.url().endsWith(userPath(admin.id)) && response.request().method() === "PATCH"
+        , { timeout: 15_000 });
+        await Promise.all([
+          firstDialog.getByRole("button", { name: "Save changes" }).click(),
+          secondDialog.getByRole("button", { name: "Save changes" }).click(),
+        ]);
+        await expect.poll(async () => {
+          const blocked = await getPrisma().$queryRaw<{ pid: number }[]>`
+            WITH RECURSIVE wait_chain(waiter_pid, blocker_pid, path) AS (
+              SELECT activity.pid, blocker.pid, ARRAY[activity.pid, blocker.pid]
+              FROM pg_stat_activity activity
+              CROSS JOIN LATERAL unnest(pg_blocking_pids(activity.pid)) AS blocker(pid)
+              WHERE activity.datname = current_database()
+                AND activity.pid <> ${holderBackendPid}
+                AND activity.wait_event_type = 'Lock'
+                AND activity.query ILIKE '%FROM "User"%'
+                AND activity.query ILIKE '%FOR UPDATE%'
+              UNION ALL
+              SELECT chain.waiter_pid, next_blocker.pid, chain.path || next_blocker.pid
+              FROM wait_chain chain
+              CROSS JOIN LATERAL unnest(pg_blocking_pids(chain.blocker_pid)) AS next_blocker(pid)
+              WHERE chain.blocker_pid <> ${holderBackendPid}
+                AND NOT next_blocker.pid = ANY(chain.path)
+            )
+            SELECT DISTINCT waiter_pid::int AS "pid"
+            FROM wait_chain
+            WHERE blocker_pid = ${holderBackendPid}
+          `;
+          observedWaiterPids = [...new Set(blocked.map(({ pid }) => pid))].sort((left, right) => left - right);
+          return observedWaiterPids.length;
+        }, { timeout: 10_000, intervals: [50, 100, 200, 500] }).toBe(2);
+        console.log(`[Admin concurrency barrier] holderPid=${holderBackendPid}; distinct blocked service PIDs=${observedWaiterPids.join(",")}`);
+      } finally {
+        releaseRosterLock();
+        try {
+          await rosterLockHolder;
+        } finally {
+          await Promise.allSettled([firstResponsePromise, secondResponsePromise].filter(Boolean) as Promise<unknown>[]);
+        }
+      }
+
+      const [firstResponse, secondResponse] = await Promise.all([firstResponsePromise!, secondResponsePromise!]);
       const [firstBody, secondBody] = await Promise.all([firstResponse.json(), secondResponse.json()]);
       const responses = [firstResponse, secondResponse];
       expect(responses.map((response) => response.status()).sort()).toEqual([200, 409]);

@@ -1,6 +1,6 @@
 # Lab 4 Peer Review and Evidence Record
 
-Status: **contract and PRs #95–#99 peer-reviewed and merged; Issue #90 / PR #100 awaiting human review; release pending**. Prepared 2026-10-23; review ledger updated 2026-10-30. This file distinguishes actual events from pending review and test evidence.
+Status: **contract and PRs #95–#100 peer-reviewed and merged; Issue #91 in progress; release pending**. Prepared 2026-10-23; review ledger updated 2026-10-31. This file distinguishes actual events from pending review and test evidence.
 
 Repository: [FramePongrit/toktickit](https://github.com/FramePongrit/toktickit). Baseline: main 1a20e3465922a2c1dacc5a9eb18e55b0840284b8, [Lab 3 release PR 83](https://github.com/FramePongrit/toktickit/pull/83). Integration branch: lab4-staging. Current contract branch: feature/lab4-engineering-contract.
 
@@ -34,8 +34,8 @@ Plan IDs come from [issue-plan.md](issue-plan.md). Published Issues are linked b
 | L4-04 | [#87](https://github.com/FramePongrit/toktickit/issues/87) | feature/lab4-ticket-workflow / [#97](https://github.com/FramePongrit/toktickit/pull/97) | Sxr1n; AI Reviewer confirmed99f9e45 | APPROVED05ec455; four nonblocking notes recorded below | APPROVED October28 16:49:09; merged030f5da October29 13:21:23 Asia/Bangkok | Done |
 | L4-05 | [#88](https://github.com/FramePongrit/toktickit/issues/88) | feature/lab4-actions-ui / [#98](https://github.com/FramePongrit/toktickit/pull/98) | Sxr1n; AI Reviewer confirmed60e9d9d | APPROVED93c108e, no blocker; four follow-ups below | APPROVED October29 18:29:24; merged6b1277d at18:32:30 Asia/Bangkok | Done |
 | L4-06 | [#89](https://github.com/FramePongrit/toktickit/issues/89) | feature/lab4-dashboard-api / [#99](https://github.com/FramePongrit/toktickit/pull/99) | Sxr1n; AI Reviewer confirmed 6f08f4e | Approved with Staff search fix requested; correction carried into #90 | Merged 171d8bc | Done |
-| L4-07 | [#90](https://github.com/FramePongrit/toktickit/issues/90) | feature/lab4-dashboard-ui / [#100](https://github.com/FramePongrit/toktickit/pull/100) | AI Reviewer confirmed 5236ef5; human pending | Dashboard, navigation, PR99 Staff search correction; evidence below | Pending | PR Review |
-| L4-08 | [#91](https://github.com/FramePongrit/toktickit/issues/91) | feature/lab4-quality-evidence / Pending | Pending | Pending | Pending | Backlog |
+| L4-07 | [#90](https://github.com/FramePongrit/toktickit/issues/90) | feature/lab4-dashboard-ui / [#100](https://github.com/FramePongrit/toktickit/pull/100) | Sxr1n; AI Reviewer | Dashboard, navigation, PR99 Staff search correction; evidence below | Approved 31 Oct 16:53:10; merged b35e76c 16:53:26 Bangkok | Done |
+| L4-08 | [#91](https://github.com/FramePongrit/toktickit/issues/91) | feature/lab4-quality-evidence / [#101](https://github.com/FramePongrit/toktickit/pull/101) | AI Reviewer; human pending | CI and evidence below; manual checks pending | Pending | Started |
 | L4-09 | [#92](https://github.com/FramePongrit/toktickit/issues/92) | feature/lab4-final-evidence / Pending | Pending | Pending | Pending | Backlog |
 | L4-10 | [#93](https://github.com/FramePongrit/toktickit/issues/93) | lab4-staging -> main / Pending | Pending | Pending | Pending | Backlog |
 
@@ -195,3 +195,26 @@ Sxr1n's [follow-up review](https://github.com/FramePongrit/toktickit/pull/100#pu
 The local pre-staging gate uses the dedicated PostgreSQL test container and task-owned schemas: full server tests and build, client tests/build, migration/recovery, and relevant isolated Auth/Staff/Admin and Dashboard E2E. The [evidence index](../../artifacts/lab-04/verification/issue90/README.md#october-31-follow-up-review) records actual command results and earlier failed attempts; client-only GitHub CI does not substitute for server/E2E execution. Broader CI and final-main regression remain Issue #91/release work. Human re-review and approval remain pending.
 
 Sxr1n's [subsequent review](https://github.com/FramePongrit/toktickit/pull/100#pullrequestreview-5722166005) asks for the current-head CI link and notes remaining real timers in Queue tests. The [known limitation](../../artifacts/lab-04/verification/issue90/README.md#october-31-follow-up-review) now explicitly states that several tests still wait for the real 300 ms debounce with a 1500 ms `waitFor` maximum, and the two-worker cap does not establish the original failures' cause. Current-head client CI is linked from the PR description. The feedback described this as non-blocking; human approval remains pending.
+
+Sxr1n [approved PR #100](https://github.com/FramePongrit/toktickit/pull/100#pullrequestreview-5722248533) on October 31 at 16:53:10 Bangkok; it merged at 16:53:26 as `b35e76cdf0923ac9d6266e2a2714e8adf036532b`. Issue #90 was closed and moved to Done after verification. Issue #91 starts from this reviewed integration. The remaining real-timer limitation remains documented; approval does not establish the cause of earlier failures.
+
+
+## Issue #91 integrated verification
+
+[PR #101](https://github.com/FramePongrit/toktickit/pull/101) remains draft while human visual and keyboard inspection is outstanding. AI review and automated accessibility checks do not constitute human approval.
+
+On 31 October, the [integrated Linux/PostgreSQL and Windows runbook workflow](https://github.com/FramePongrit/toktickit/actions/runs/41212274335) and the [client workflow](https://github.com/FramePongrit/toktickit/actions/runs/41212274328) passed on source commit `0366209d2f56a4d0983ae5961e3a41e9b97a9c3f`. The integrated workflow uploads logs, browser output and screenshots as GitHub Actions artifacts (14-day retention). Consult current PR checks for later commits.
+
+A separate local integrated run passed server 243 tests, security 21, migration/recovery 7, client 228, browser 23, builds and screenshot capture. It ran on a dedicated PostgreSQL 16 test container and isolated schemas, with a dirty worktree based on `b35e76c`, before subsequent test-only CI fixes; it is not evidence for the final commit. Its performance fixture contained 1,000 Tickets and 5,000 Actions: seven endpoints, three warmups and 20 sequential HTTP measurements each, with maximum observed p95 29.5 ms against the 2,000 ms threshold. This result describes that local environment and is not a production load test. The CI run also exercises the exact-cardinality performance test.
+
+Earlier CI runs exposed Windows PowerShell path handling and timing-sensitive E2E assertions. The current tests retain the restore path guard, and the Admin concurrency scenario requires the two authenticated service queries to wait on fixture rows before asserting HTTP 200/409 and the last-admin invariant. Focused local E2E passed 3/3 after these corrections.
+
+**Human checklist: pending.** A reviewer must inspect the captured major screens at the specified viewports and perform the agreed keyboard/focus checks, including error and draft-preservation flows, before recording completion. Automated screenshots and keyboard assertions are supporting evidence only. Human approval and merge remain pending.
+
+Human inspection record (reviewer name, date, result and any issue links must be filled from the actual review):
+
+- [ ] Inspect major Requester, Staff and Admin screens using the desktop, tablet and mobile captures in the integrated workflow artifact; check text, field states, validation, clipping, overlap and overflow.
+- [ ] On the running application, navigate the key flows by keyboard and verify focus order and visible focus, including dialogs and error states.
+- [ ] Exercise validation and error recovery, and confirm an in-progress draft is preserved where specified.
+- [ ] Check browser console and relevant network requests during the inspected flows; record failures or linked issues.
+- [ ] Record the reviewer, date, tested commit, viewport/browser and results here or in the PR review.
