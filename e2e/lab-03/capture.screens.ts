@@ -131,6 +131,14 @@ test.describe.serial("E2E-R01 — Lab 3 responsive screenshot evidence", () => {
         expect(editGeometry.flexShrink).toBe("0");
         await capture(page, "user-management", "user-management-mobile");
 
+        await page.getByRole("button", { name: "Open navigation menu" }).click();
+        await expect(page.getByTestId("current-user")).toContainText(admin.fullName);
+        await expect(page.getByTestId("current-role")).toHaveText("Administrator");
+        await expect(editButton).toBeVisible();
+        await assertResponsiveLayout(page, "User Management mobile navigation with Admin identity");
+        await capture(page, "user-management", "user-management-mobile-navigation-open");
+        await page.getByRole("button", { name: "Close navigation menu" }).click();
+
         await editButton.focus();
         await expect(editButton).toBeFocused();
         await page.keyboard.press("Enter");
