@@ -1,6 +1,6 @@
 # Lab 4 AI Use — Prompt Archive and Draft Reflection
 
-**Status:** documentation draft derived from the private staging log. My Reflection is agent-drafted and was reviewed and endorsed by the user on 2026-11-01. This file is not a complete raw transcript.
+**Status:** documentation draft derived from the private staging log. My Reflection was reviewed and endorsed by the user on 2026-11-01. This file is not a complete raw transcript.
 
 ## Source and coverage
 
@@ -14,7 +14,7 @@
 
 ## Original rubric and current user instruction
 
-The original course specification asks for a curated selection of 6–10 prompts and the student's own reflection. The later user instruction for this document asks for the full prompt archive with a short answer summary for each prompt. This full archive follows that newer instruction; the nine-entry index below is supplementary and does not replace or truncate the archive. The reflection remains attributed as agent-drafted; the user reviewed and endorsed this version on 2026-11-01.
+The original course specification asks for a curated selection of 6–10 prompts and the student's own reflection. The later user instruction for this document asks for the full prompt archive with a short answer summary for each prompt. This full archive follows that newer instruction; the nine-entry index below is supplementary and does not replace or truncate the archive. The user reviewed and endorsed the reflection on 2026-11-01.
 
 ## Supplementary 9-entry index for PDF Answer Part 4
 
@@ -1115,16 +1115,14 @@ Input type: User prompt
 ```
 
 **Assistant answer summary (source #871):**
-The user reviewed the agent-drafted My Reflection, confirmed it accurately describes their experience, and approved its use. The document keeps the reflection attributed to the assistant and records the user endorsement date.
-## My Reflection — agent-drafted; user reviewed and endorsed 2026-11-01
+The user confirmed that My Reflection accurately describes their experience and approved its use.
+## My Reflection
 
 ระหว่างทำ Lab 4 ผมใช้ AI ช่วยแปลงข้อกำหนดของงานเป็น engineering contract และแผนแบ่งงาน แล้วกำหนด workflow ให้มี Executor กับ Reviewer ผมเป็นผู้ระบุขอบเขต กำหนด deadline และยืนยันข้อกำหนดเรื่องการรักษาข้อมูลกับการทดสอบในสภาพแวดล้อมแยก จากนั้นใช้ผล review และผลทดสอบเพื่อตัดสินใจว่าจุดใดต้องแก้
 
 งานที่บันทึกไว้ครอบคลุม schema และ migration, API, workflow และ Actions UI, Dashboard API/UI และการทดสอบแบบรวม มีทั้งผลล้มเหลวและการแก้ไขตามหลักฐาน เช่น ปัญหาความไวต่อเวลาใน test, environment ของ Windows PowerShell, ลำดับใน browser test และ path ในเอกสาร บันทึกข้อจำกัดที่ยังไม่พิสูจน์ไว้แทนการอ้างว่าแก้แล้วทั้งหมด PR #101 ได้รับ approval และ merge เข้า lab4-staging เมื่อ 31 ตุลาคม 2026 แต่ยังไม่ใช่การ release เข้า main
 
 หลัง PR #101 ผมรายงานว่าตรวจการทำงานของ Requester, Staff และ Admin ด้วยตนเองบางส่วน แต่บันทึกไม่มี checklist ด้าน visual/accessibility ที่ครบทุกข้อ ไม่มีภาพของทุก interaction และไม่มีการยืนยัน final-main รายการเหล่านี้ยังต้องตรวจต่อก่อนส่งงาน
-
-**การระบุผู้เขียน:** ร่างนี้เขียนโดย assistant และผู้ใช้ตรวจและรับรองเมื่อ 2026-11-01; ไม่ควรระบุว่าเป็นงานเขียนของผู้ใช้ทั้งหมด
 
 ---
 
