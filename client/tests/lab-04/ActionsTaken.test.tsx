@@ -488,7 +488,7 @@ describe("Issue #88 Actions Taken", () => {
     await user.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
     expect(description).toHaveValue("A draft that must not vanish");
-    expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
+    await waitFor(() => expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus());
     expect(create).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "Cancel" }));
