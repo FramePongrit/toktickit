@@ -202,6 +202,8 @@ function ConfirmationDialog({
           ? "Closing this Ticket is final. Closed Tickets are read-only and cannot be reopened."
           : status === "CANCELLED"
             ? "This is final. All unfinished Actions in the current work cycle will be cancelled with the reason entered above."
+            : status === "REOPENED"
+              ? "Reopening starts a fresh work cycle. Earlier-cycle Actions and history remain available as locked, read-only history."
             : `Update this Ticket to ${titleCase(status)}?`}
       </p>
       <div className="d-flex flex-wrap justify-content-end gap-2">

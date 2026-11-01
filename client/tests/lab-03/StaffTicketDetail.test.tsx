@@ -369,9 +369,9 @@ describe("Issue #58 Staff Ticket Detail", () => {
   });
 
   it.each([
-    ["RESOLVED", "Confirm Resolved"],
-    ["REOPENED", "Confirm Reopened"],
-  ] as const)("requires explicit confirmation before %s", async (status, confirmationLabel) => {
+    ["RESOLVED", "Confirm Resolved", ""],
+    ["REOPENED", "Confirm Reopened", "Reopening starts a fresh work cycle. Earlier-cycle Actions and history remain available as locked, read-only history."],
+  ] as const)("requires explicit confirmation before %s", async (status, confirmationLabel, explanation) => {
     const user = userEvent.setup();
     const update = vi.spyOn(ticketsApi, "updateStaffTicketStatus").mockResolvedValue({
       currentStatus: status,
@@ -385,7 +385,9 @@ describe("Issue #58 Staff Ticket Detail", () => {
     renderDetail([{ ...DETAIL, allowedTransitions: [status] }, { ...DETAIL, currentStatus: status, allowedTransitions: [] }]);
     await user.selectOptions(await screen.findByRole("combobox", { name: "Next status" }), status);
     await user.click(screen.getByRole("button", { name: "Update status" }));
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toBeInTheDocument();
+    if (explanation) expect(dialog).toHaveTextContent(explanation);
     expect(update).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: confirmationLabel }));
     expect(update).toHaveBeenCalledWith(DETAIL.id, status, 1, undefined, expect.any(String));
