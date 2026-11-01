@@ -252,7 +252,11 @@ test.describe.serial("E2E-88 — Actions Taken Staff and Requester journey", () 
       await expect(page.getByTestId("status-feedback")).toContainText("Resolved");
       await page.getByLabel("Next status").selectOption("REOPENED");
       await page.getByRole("button", { name: "Update status" }).click();
-      await page.getByRole("dialog").getByRole("button", { name: "Confirm Reopened" }).click();
+      const reopenConfirmation = page.getByRole("dialog", { name: "Confirm Reopened status" });
+      await expect(reopenConfirmation).toContainText("Reopening starts a fresh work cycle.");
+      await expect(reopenConfirmation).toContainText("Earlier-cycle Actions and history remain available as locked, read-only history.");
+      await capture(page, "reopen-confirmation", { fullPage: true });
+      await reopenConfirmation.getByRole("button", { name: "Confirm Reopened" }).click();
       await expect(page.getByTestId("ticket-work-cycle")).toContainText("Work cycle 2");
       await expect(page.getByTestId("ticket-work-cycle")).toContainText("Not resolved in this cycle");
 
