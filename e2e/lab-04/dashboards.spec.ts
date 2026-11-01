@@ -149,13 +149,18 @@ async function expectMetric(page: import("@playwright/test").Page, name: string,
 
 async function captureDashboard(
   page: import("@playwright/test").Page,
-  role: "requester" | "staff",
+  role: "requester" | "staff" | "admin",
   width: number,
-  height: number
+  height: number,
+  identity?: { fullName: string; role: "Requester" | "IT Staff" | "Administrator" }
 ) {
   await page.setViewportSize({ width, height });
   if (width <= 600) await setMobileNavigation(page, false);
   await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
+  if (identity && width > 600) {
+    await expect(page.getByTestId("current-user")).toContainText(identity.fullName);
+    await expect(page.getByTestId("current-role")).toHaveText(identity.role);
+  }
   await assertResponsiveLayout(page, `${role} Dashboard ${width}x${height}`);
   const roleRoot = path.join(SCREENSHOT_ROOT, `${role}-dashboard`);
   await mkdir(roleRoot, { recursive: true });
@@ -179,7 +184,7 @@ async function setMobileNavigation(page: import("@playwright/test").Page, open: 
   await expect(toggle).toHaveAttribute("aria-expanded", String(open));
 }
 
-async function showMobileIdentity(page: import("@playwright/test").Page, role: "Requester" | "IT Staff") {
+async function showMobileIdentity(page: import("@playwright/test").Page, role: "Requester" | "IT Staff" | "Administrator") {
   await setMobileNavigation(page, true);
   await expect(page.getByTestId("current-user")).toBeVisible();
   await expect(page.getByTestId("current-role")).toHaveText(role);
@@ -387,7 +392,7 @@ test.describe.serial("E2E-03 — role Dashboards and exact drilldowns", () => {
     console.log(`Issue90 browser screenshots saved under ${SCREENSHOT_ROOT}; E2E fixtures are scoped to the task-owned schema and cleaned up by created user IDs.`);
   });
 
-  test("Requester and Staff Dashboard responsive screenshots @screenshots", async ({ page }) => {
+  test("Requester, Staff, and Admin Dashboard responsive screenshots @screenshots", async ({ page }) => {
     test.skip(test.info().project.name !== "dashboard-screenshots", "Dashboard screenshots run only in their opt-in project.");
     test.setTimeout(120_000);
 
@@ -395,8 +400,8 @@ test.describe.serial("E2E-03 — role Dashboards and exact drilldowns", () => {
     await expect(page).toHaveURL(/\/dashboard$/);
     await expectMetric(page, "Open Tickets", 3, "tickets");
     await expectMetric(page, "Waiting for Me", 1, "tickets");
-    await captureDashboard(page, "requester", 1440, 900);
-    await captureDashboard(page, "requester", 820, 1024);
+    await captureDashboard(page, "requester", 1440, 900, { fullName: requester.fullName, role: "Requester" });
+    await captureDashboard(page, "requester", 820, 1024, { fullName: requester.fullName, role: "Requester" });
     await captureDashboard(page, "requester", 390, 844);
     await expect(page.locator(".navbar-toggler")).toHaveAttribute("aria-expanded", "false");
     await expect(page.getByTestId("current-user")).not.toBeVisible();
@@ -408,13 +413,29 @@ test.describe.serial("E2E-03 — role Dashboards and exact drilldowns", () => {
     await expect(page).toHaveURL(/\/staff\/dashboard$/);
     await expectMetric(page, "My Active Actions", 1, "actions");
     await expect(page.getByText(`Completed by: ${staff.fullName}`)).toBeVisible();
-    await captureDashboard(page, "staff", 1440, 900);
-    await captureDashboard(page, "staff", 820, 1024);
+    await captureDashboard(page, "staff", 1440, 900, { fullName: staff.fullName, role: "IT Staff" });
+    await captureDashboard(page, "staff", 820, 1024, { fullName: staff.fullName, role: "IT Staff" });
     await captureDashboard(page, "staff", 390, 844);
     await expect(page.locator(".navbar-toggler")).toHaveAttribute("aria-expanded", "false");
     await expect(page.getByTestId("current-user")).not.toBeVisible();
     await showMobileIdentity(page, "IT Staff");
     await page.screenshot({ path: path.join(SCREENSHOT_ROOT, "staff-dashboard", "staff-dashboard-390x844-navigation-open.png"), fullPage: true });
+    await page.getByRole("button", { name: "Logout" }).click();
+
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await loginUi(page, admin);
+    await expect(page).toHaveURL(/\/staff\/dashboard$/);
+    await expect(page.getByRole("heading", { name: "Tickets by status" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Users" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "User Management" })).toBeVisible();
+    await captureDashboard(page, "admin", 1440, 900, { fullName: admin.fullName, role: "Administrator" });
+    await captureDashboard(page, "admin", 820, 1024, { fullName: admin.fullName, role: "Administrator" });
+    await captureDashboard(page, "admin", 390, 844);
+    await expect(page.locator(".navbar-toggler")).toHaveAttribute("aria-expanded", "false");
+    await expect(page.getByTestId("current-user")).not.toBeVisible();
+    await showMobileIdentity(page, "Administrator");
+    await expect(page.getByTestId("current-user")).toContainText(admin.fullName);
+    await page.screenshot({ path: path.join(SCREENSHOT_ROOT, "admin-dashboard", "admin-dashboard-390x844-navigation-open.png"), fullPage: true });
     await page.getByRole("button", { name: "Logout" }).click();
   });
 });

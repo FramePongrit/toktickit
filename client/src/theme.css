@@ -532,6 +532,10 @@ body {
   overflow-wrap: anywhere;
 }
 
+.admin-user-card .btn {
+  flex-shrink: 0;
+}
+
 .admin-user-card .zen-badge {
   white-space: normal;
 }

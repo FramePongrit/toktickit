@@ -112,6 +112,43 @@ test.describe.serial("E2E-R01 — Lab 3 responsive screenshot evidence", () => {
       await expect(page.getByRole("heading", { name: "User Management" })).toBeVisible();
       await assertResponsiveLayout(page, `User Management ${viewport.name}`);
       if (viewport.name === "mobile") {
+        const adminCard = page.getByTestId(`admin-user-card-${admin.id}`);
+        const editButton = adminCard.getByRole("button", { name: `Edit ${admin.fullName}` });
+        await expect(editButton).toHaveText("Edit");
+        const editGeometry = await editButton.evaluate((button) => {
+          const rect = button.getBoundingClientRect();
+          const range = document.createRange();
+          range.selectNodeContents(button);
+          return {
+            width: rect.width,
+            height: rect.height,
+            textLineCount: range.getClientRects().length,
+            flexShrink: getComputedStyle(button).flexShrink,
+          };
+        });
+        expect(editGeometry.width, "mobile Edit button should keep a usable width").toBeGreaterThanOrEqual(40);
+        expect(editGeometry.textLineCount, "mobile Edit label should stay on one line").toBe(1);
+        expect(editGeometry.flexShrink).toBe("0");
+        await capture(page, "user-management", "user-management-mobile");
+
+        await page.getByRole("button", { name: "Open navigation menu" }).click();
+        await expect(page.getByTestId("current-user")).toContainText(admin.fullName);
+        await expect(page.getByTestId("current-role")).toHaveText("Administrator");
+        await expect(editButton).toBeVisible();
+        await assertResponsiveLayout(page, "User Management mobile navigation with Admin identity");
+        await capture(page, "user-management", "user-management-mobile-navigation-open");
+        await page.getByRole("button", { name: "Close navigation menu" }).click();
+
+        await editButton.focus();
+        await expect(editButton).toBeFocused();
+        await page.keyboard.press("Enter");
+        const editDialog = page.getByTestId("edit-user-dialog");
+        await expect(editDialog).toBeVisible();
+        await assertDialogsAccessible(page);
+        await page.keyboard.press("Escape");
+        await expect(editDialog).toHaveCount(0);
+        await expect(editButton).toBeFocused();
+
         await page.getByRole("button", { name: "Create User" }).click();
         await expect(page.getByRole("dialog")).toBeVisible();
         await assertDialogsAccessible(page);
