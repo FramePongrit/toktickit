@@ -109,8 +109,8 @@ merge และ review แล้ว ทำ issue ต่อไปได้เล�
 
 ## My Reflection
 
-ใน Lab 4 ผมใช้ AI ช่วยทำความเข้าใจโจทย์ วาง specification และแบ่งงานออกเป็นส่วน ๆ ก่อนเริ่มเขียนโค้ด ผมกำหนดขอบเขตและ workflow เอง โดยให้ Executor ลงมือทำและ Reviewer ช่วยตรวจอีกชั้น วิธีนี้ช่วยให้เห็นสิ่งที่ต้องทำและติดตามงานได้ง่ายขึ้น แต่ผมก็ยังต้องอ่านผล review และตัดสินใจว่าจะให้แก้อะไรต่อ
+During Lab 4, I used AI to help me understand the assignment, develop the specification, and break the work into smaller tasks before implementation. I defined the scope and workflow, with an Executor to implement changes and a Reviewer to check them. This made the work easier to organize and track, but I still had to read the feedback and decide what to fix next.
 
-ระหว่างทำงานมีทั้ง test ที่ไม่ผ่านและปัญหาสภาพแวดล้อม เช่น test ที่ขึ้นอยู่กับจังหวะเวลาและปัญหา PowerShell บน Windows ทำให้เห็นว่าการที่ AI บอกว่างานเสร็จหรือ test ผ่านยังไม่พอ ต้องดูผลที่รันจริง ตรวจสาเหตุ และแยกสิ่งที่พิสูจน์แล้วออกจากสิ่งที่ยังไม่แน่ใจ รวมถึงให้เพื่อนช่วย review PR ด้วย
+Some tests failed and we encountered environment issues, including timing-sensitive tests and a Windows PowerShell problem. This showed me that an AI saying a task is complete or tests pass is not enough: I need to look at the actual results, investigate the cause, and distinguish verified findings from things that remain uncertain. I also had a teammate review the PRs.
 
-ผมได้ลองตรวจการใช้งานของ Requester, Staff และ Admin ด้วยตัวเองบางส่วน ทั้งการใช้คีย์บอร์ด ฟอร์ม และการแสดงผล งานตรวจ visual/accessibility ยังมีส่วนที่ต้องทำให้ครบ และหลัง release ยังต้องรันทดสอบบน main เพื่อเก็บหลักฐานสำหรับส่งงาน
+I personally checked parts of the Requester, Staff, and Admin experiences, including keyboard navigation, forms, and layouts. Some visual and accessibility checks still need to be completed. After the release, we also need to run the tests on main and collect the evidence for submission.
