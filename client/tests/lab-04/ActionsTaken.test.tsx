@@ -474,15 +474,26 @@ describe("Issue #88 Actions Taken", () => {
 
   it("confirms discarding a nonempty create draft and returns focus to its opener", async () => {
     const user = userEvent.setup();
+    const create = vi.spyOn(actionsApi, "createStaffAction");
     mount();
     await waitFor(() => expect(screen.getByRole("button", { name: "New Action" })).toBeEnabled());
     const opener = screen.getByRole("button", { name: "New Action" });
     await user.click(opener);
-    await user.type(screen.getByLabelText(/^Action Description/), "A draft that must not vanish");
+    const description = await screen.findByLabelText(/^Action Description/);
+    await user.type(description, "A draft that must not vanish");
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     const keepEditing = await screen.findByRole("button", { name: "Keep editing" });
     expect(keepEditing).toHaveFocus();
-    await user.click(keepEditing);
+
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
+    expect(description).toHaveValue("A draft that must not vanish");
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
+    expect(create).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    const keepEditingAgain = await screen.findByRole("button", { name: "Keep editing" });
+    await user.click(keepEditingAgain);
     await waitFor(() => expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus());
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     await user.click(await screen.findByRole("button", { name: "Discard draft" }));

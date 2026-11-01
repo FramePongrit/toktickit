@@ -1010,7 +1010,14 @@ export function ActionsTakenPanel({
             <button type="button" className="btn btn-outline-primary" disabled={editorBusy} onClick={requestCloseCreate}>Cancel</button>
           </div>
         </form>
-        {discardCreateConfirm && <div className="zen-warning-panel mt-3" role="alertdialog" aria-labelledby="discard-action-heading">
+        {discardCreateConfirm && <div className="zen-warning-panel mt-3" role="alertdialog" aria-labelledby="discard-action-heading" onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            event.stopPropagation();
+            setDiscardCreateConfirm(false);
+            returnFocusToTrigger();
+          }
+        }}>
           <h4 id="discard-action-heading" className="h6">Discard this Action draft?</h4>
           <p>Unsaved field values will be cleared.</p>
           <div className="d-flex flex-wrap gap-2"><button id="keep-create-action-editing" type="button" className="btn btn-outline-primary" onClick={() => { setDiscardCreateConfirm(false); returnFocusToTrigger(); }}>Keep editing</button><button type="button" className="btn btn-danger" onClick={() => { setCreateDraft(emptyDraft(ticket, user?.id ?? 0, currentTicketVersion)); setCreateOpen(false); setDiscardCreateConfirm(false); setFieldErrors({}); requestAnimationFrame(() => newActionButton.current?.focus()); }}>Discard draft</button></div>
