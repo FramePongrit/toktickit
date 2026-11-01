@@ -110,6 +110,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  await prisma.ticketWorkflowEvent.deleteMany({ where: { ticket: { requesterId: { in: [requesterA, requesterB] } } } });
   await prisma.ticket.deleteMany({ where: { requesterId: { in: [requesterA, requesterB] } } });
   await prisma.authSession.deleteMany({ where: { userId: { in: [requesterA, requesterB] } } });
   await prisma.user.deleteMany({ where: { id: { in: [requesterA, requesterB] } } });
@@ -129,13 +130,14 @@ describe("GET /api/tickets — ownership", () => {
     expect(other.body.data[0].summary).toBe("Belongs to requester B only");
   });
 
-  it("API-17: ignores a requesterId supplied as a query parameter", async () => {
-    // Ownership comes from the authenticated User. Supplying requesterId must
-    // not widen the result set to another requester's data (BR-16).
+  it("API-17: rejects a requesterId supplied as an unsupported query parameter", async () => {
+    // Ownership comes from the authenticated User; the strict list contract
+    // rejects identity hints rather than treating them as filter input (BR-16).
     const res = await list(requesterB, { requesterId: requesterA, pageSize: 50 });
 
-    expect(res.status).toBe(200);
-    expect(res.body.total).toBe(1);
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("VALIDATION_FAILED");
+    expect(res.body).not.toHaveProperty("data");
   });
 });
 
@@ -335,6 +337,7 @@ describe("GET /api/tickets — attachment count", () => {
     expect(res.body.data[0].attachmentCount).toBe(1);
 
     await prisma.attachment.deleteMany({ where: { ticketId: ticket.id } });
+    await prisma.ticketWorkflowEvent.deleteMany({ where: { ticketId: ticket.id } });
     await prisma.ticket.delete({ where: { id: ticket.id } });
   });
 });

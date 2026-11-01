@@ -32,6 +32,26 @@ enum TicketStatus {
   CANCELLED
 }
 
+enum ActionStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ActionRevisionOperation {
+  CREATE
+  EDIT
+  TRANSITION
+  TICKET_CANCEL
+}
+
+enum TicketWorkflowEventKind {
+  CREATED
+  BASELINE
+  TRANSITION
+}
+
 enum Role {
   REQUESTER
   STAFF
@@ -82,6 +102,13 @@ model User {
   internalNotes         InternalNote[]
   uploadedAttachments   Attachment[]    @relation("AttachmentUploader")
   removedAttachments    Attachment[]    @relation("AttachmentRemover")
+  assignedActions       ActionTaken[]   @relation("ActionAssignee")
+  createdActions        ActionTaken[]   @relation("ActionCreator")
+  performedActions      ActionTaken[]   @relation("ActionPerformer")
+  cancelledActions      ActionTaken[]   @relation("ActionCanceller")
+  actionRevisions       ActionRevision[]
+  workflowEvents        TicketWorkflowEvent[]
+  idempotencyRecords    IdempotencyRecord[]
 
   @@index([active, role])
   @@index([role, active, fullName])
@@ -117,6 +144,9 @@ model Ticket {
   summary                 String       @db.VarChar(200)
   description             String       @db.Text
   currentStatus           TicketStatus @default(NEW)
+  workCycle               Int          @default(1)
+  version                 Int          @default(1)
+  resolvedAt              DateTime?
   resolutionIndicatedAt   DateTime?
   resolutionIndicatedById Int?
   createdAt               DateTime     @default(now())
@@ -132,13 +162,106 @@ model Ticket {
   attachments           Attachment[]
   publicComments        PublicComment[]
   internalNotes         InternalNote[]
+  actions               ActionTaken[]
+  workflowEvents        TicketWorkflowEvent[]
 
   @@index([requesterId, createdAt])
+  @@index([requesterId, updatedAt, id])
+  @@index([requesterId, currentStatus, resolvedAt, id])
   @@index([requesterId, categoryId])
   @@index([requesterId, relatedSystemId])
   @@index([ownerId, currentStatus])
   @@index([currentStatus, itPriority, createdAt, id])
+  @@index([currentStatus, itPriority, updatedAt, id])
   @@index([resolutionIndicatedById])
+}
+
+model ActionTaken {
+  id                 Int         @id @default(autoincrement())
+  ticketId           Int
+  workCycle          Int
+  status             ActionStatus @default(PLANNED)
+  description        String      @db.Text
+  result             String?     @db.Text
+  actionAt           DateTime
+  assigneeId         Int
+  createdById        Int
+  performedById      Int?
+  followUpRequired   Boolean     @default(false)
+  followUpNote       String?     @db.Text
+  attachmentNotes    String?     @db.Text
+  version            Int         @default(1)
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  completedAt        DateTime?
+  cancelledAt        DateTime?
+  cancelledById      Int?
+  cancelReason       String?     @db.Text
+
+  ticket      Ticket  @relation(fields: [ticketId], references: [id], onDelete: Restrict)
+  assignee    User    @relation("ActionAssignee", fields: [assigneeId], references: [id], onDelete: Restrict)
+  createdBy   User    @relation("ActionCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  performedBy User?   @relation("ActionPerformer", fields: [performedById], references: [id], onDelete: Restrict)
+  cancelledBy User?   @relation("ActionCanceller", fields: [cancelledById], references: [id], onDelete: Restrict)
+  revisions   ActionRevision[]
+
+  @@index([ticketId, createdAt, id])
+  @@index([ticketId, workCycle, status])
+  @@index([assigneeId, status, ticketId])
+  @@index([performedById, completedAt, id])
+}
+
+model ActionRevision {
+  id         Int                     @id @default(autoincrement())
+  actionId   Int
+  sequence   Int
+  operation  ActionRevisionOperation
+  actorId    Int
+  occurredAt DateTime                @default(now())
+  reason     String?                 @db.Text
+  before     Json?
+  after      Json
+
+  action ActionTaken @relation(fields: [actionId], references: [id], onDelete: Restrict)
+  actor  User        @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@unique([actionId, sequence])
+}
+
+model TicketWorkflowEvent {
+  id              Int                     @id @default(autoincrement())
+  ticketId        Int
+  workCycle       Int
+  kind            TicketWorkflowEventKind
+  fromStatus      TicketStatus?
+  toStatus        TicketStatus
+  actorId         Int?
+  occurredAt      DateTime                @default(now())
+  publicCommentId Int?
+  reason          String?                 @db.Text
+  ticketVersion   Int                     @default(1)
+
+  ticket        Ticket         @relation(fields: [ticketId], references: [id], onDelete: Restrict)
+  actor         User?          @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  publicComment PublicComment? @relation(fields: [publicCommentId], references: [id], onDelete: Restrict)
+
+  @@index([ticketId, occurredAt, id])
+}
+
+model IdempotencyRecord {
+  id             Int      @id @default(autoincrement())
+  userId         Int
+  method         String   @db.VarChar(6)
+  canonicalPath  String   @db.VarChar(500)
+  key            String   @db.Uuid
+  payloadDigest  String   @db.Char(64)
+  httpStatus     Int
+  response       Json
+  createdAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, method, canonicalPath, key])
 }
 
 // An Attachment is active if and only if `removedAt` is null. That single
@@ -173,6 +296,7 @@ model PublicComment {
 
   ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   author User   @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  workflowEvents TicketWorkflowEvent[]
 
   @@index([ticketId, createdAt, id])
   @@index([authorId, createdAt])

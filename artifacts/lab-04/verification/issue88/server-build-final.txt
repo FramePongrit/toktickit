@@ -1,0 +1,6 @@
+COMMAND: npm --prefix server run build
+
+> toktickit-server@1.0.0 build
+> tsc
+
+EXIT_CODE=0

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, useLocation } from "react-router-dom";
+import { Link, MemoryRouter, useLocation, useNavigate } from "react-router-dom";
 import { StaffTicketQueuePage } from "../../src/pages/StaffTicketQueuePage.js";
 import { AppRoutes } from "../../src/AppRouter.js";
 import { AuthProvider } from "../../src/context/AuthContext.js";
@@ -66,16 +66,20 @@ const PAGE = {
   totalPages: 1,
 };
 
-function LocationProbe() {
+function LocationProbe({ showNavigation = false }: { showNavigation?: boolean }) {
   const location = useLocation();
-  return <output data-testid="location">{location.pathname}{location.search}</output>;
+  const navigate = useNavigate();
+  return <>
+    <output data-testid="location">{location.pathname}{location.search}</output>
+    {showNavigation && <><Link to="/staff/tickets?scope=all&status=WAITING_FOR_REQUESTER&page=2&pageSize=20&sort=updatedAt&order=desc&updatedFrom=2026-10-23T17%3A00%3A00.000Z">Next dashboard query</Link><button type="button" onClick={() => navigate(-1)}>Back to first query</button><button type="button" onClick={() => navigate(1)}>Forward to latest query</button></>}
+  </>;
 }
 
-function renderQueue(initialEntry = "/staff/tickets") {
+function renderQueue(initialEntry = "/staff/tickets", showNavigation = false) {
   return render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <StaffTicketQueuePage />
-      <LocationProbe />
+      <LocationProbe showNavigation={showNavigation} />
     </MemoryRouter>
   );
 }
@@ -90,11 +94,197 @@ function mockReadyQueue(result = PAGE) {
 }
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
   setCsrfToken(null);
 });
 
 describe("Issue 56 Staff Ticket Queue", () => {
+  it("loads Staff Dashboard priority-set and priority-recent drilldowns from the URL", async () => {
+    const queue = vi.spyOn(ticketsApi, "fetchStaffQueue").mockResolvedValue(PAGE);
+    vi.spyOn(ticketsApi, "fetchTicketOwners").mockResolvedValue(OWNER_OPTIONS);
+    vi.spyOn(referenceData, "fetchCategories").mockResolvedValue([]);
+
+    renderQueue("/staff/tickets?scope=active&itPriorities=HIGH%2CURGENT&sort=priorityRecent");
+
+    await waitFor(() => expect(queue).toHaveBeenCalledWith(expect.objectContaining({
+      scope: "active",
+      itPriorities: "HIGH,URGENT",
+      sort: "priorityRecent",
+      order: "desc",
+    })));
+    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("itPriorities=HIGH%2CURGENT"));
+    expect(screen.getByText(/Dashboard filters: IT priorities/)).toBeInTheDocument();
+  });
+
+  it("syncs the mounted page from external URL changes and restores state on Back", async () => {
+    const user = userEvent.setup();
+    const queue = vi.spyOn(ticketsApi, "fetchStaffQueue").mockResolvedValue(PAGE);
+    vi.spyOn(ticketsApi, "fetchTicketOwners").mockResolvedValue(OWNER_OPTIONS);
+    vi.spyOn(referenceData, "fetchCategories").mockResolvedValue([]);
+    renderQueue("/staff/tickets?scope=active&q=first&page=3&pageSize=50&sort=priorityRecent", true);
+
+    await waitFor(() => expect(queue).toHaveBeenLastCalledWith(expect.objectContaining({ q: "first", page: 3, pageSize: 50, sort: "priorityRecent" })));
+    await user.click(screen.getByRole("link", { name: "Next dashboard query" }));
+    await waitFor(() => expect(queue).toHaveBeenLastCalledWith(expect.objectContaining({ scope: "all", status: "WAITING_FOR_REQUESTER", page: 2, pageSize: 20, sort: "updatedAt", updatedFrom: "2026-10-23T17:00:00.000Z" })));
+    expect(screen.getByLabelText("Status")).toHaveValue("WAITING_FOR_REQUESTER");
+    await user.click(screen.getByRole("button", { name: "Back to first query" }));
+    await waitFor(() => expect(queue).toHaveBeenLastCalledWith(expect.objectContaining({ q: "first", page: 3, pageSize: 50, sort: "priorityRecent" })));
+    expect(screen.getByDisplayValue("50 tickets")).toBeInTheDocument();
+  });
+
+  it("replaces a Dashboard status/priority set with the selected single value and keeps date bounds", async () => {
+    const user = userEvent.setup();
+    const queue = vi.spyOn(ticketsApi, "fetchStaffQueue").mockResolvedValue(PAGE);
+    vi.spyOn(ticketsApi, "fetchTicketOwners").mockResolvedValue(OWNER_OPTIONS);
+    vi.spyOn(referenceData, "fetchCategories").mockResolvedValue([]);
+    renderQueue("/staff/tickets?statuses=OPEN%2CCLOSED&itPriorities=HIGH%2CURGENT&updatedFrom=2026-10-23T17%3A00%3A00.000Z&updatedThrough=2026-10-29T12%3A00%3A00.000Z");
+
+    await waitFor(() => expect(queue).toHaveBeenCalled());
+    await user.selectOptions(screen.getByLabelText("Status"), "RESOLVED");
+    await waitFor(() => expect(queue).toHaveBeenLastCalledWith(expect.objectContaining({ status: "RESOLVED", updatedFrom: "2026-10-23T17:00:00.000Z" })));
+    let location = new URL(screen.getByTestId("location").textContent!, "http://local.test");
+    expect(location.searchParams.has("statuses")).toBe(false);
+    expect(location.searchParams.get("updatedThrough")).toBe("2026-10-29T12:00:00.000Z");
+
+    await user.selectOptions(screen.getByLabelText("IT Priority"), "LOW");
+    await waitFor(() => expect(queue).toHaveBeenLastCalledWith(expect.objectContaining({ status: "RESOLVED", itPriority: "LOW", updatedFrom: "2026-10-23T17:00:00.000Z" })));
+    location = new URL(screen.getByTestId("location").textContent!, "http://local.test");
+    expect(location.searchParams.has("itPriorities")).toBe(false);
+    expect(location.searchParams.get("updatedThrough")).toBe("2026-10-29T12:00:00.000Z");
+  });
+
+  it("shows invalid queue link filters and offers a reset instead of silently dropping them", async () => {
+    const queue = vi.spyOn(ticketsApi, "fetchStaffQueue").mockResolvedValue(PAGE);
+    vi.spyOn(ticketsApi, "fetchTicketOwners").mockResolvedValue(OWNER_OPTIONS);
+    vi.spyOn(referenceData, "fetchCategories").mockResolvedValue([]);
+    const user = userEvent.setup();
+
+    renderQueue("/staff/tickets?itPriorities=HIGH%2CHIGH");
+    expect(await screen.findByText("This queue link has invalid filters")).toBeInTheDocument();
+    expect(queue).not.toHaveBeenCalled();
+    await user.click(screen.getAllByRole("button", { name: "Clear Filters" })[0]);
+    await waitFor(() => expect(queue).toHaveBeenCalledWith(expect.objectContaining({ page: 1, sort: "itPriority" })));
+  });
+
+  it("trims only outer search whitespace before URL/API serialization and preserves spaces between words", async () => {
+    const user = userEvent.setup();
+    const queue = vi.spyOn(ticketsApi, "fetchStaffQueue").mockResolvedValue(PAGE);
+    vi.spyOn(ticketsApi, "fetchTicketOwners").mockResolvedValue(OWNER_OPTIONS);
+    vi.spyOn(referenceData, "fetchCategories").mockResolvedValue([]);
+    renderQueue();
+
+    const search = screen.getByRole("searchbox", { name: "Search" });
+    expect(search).toHaveAttribute("maxLength", "100");
+    await user.type(search, "  printer   driver  ");
+    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("q=printer+++driver"), { timeout: 1500 });
+    await waitFor(() => expect(queue).toHaveBeenLastCalledWith(expect.objectContaining({ q: "printer   driver" })), { timeout: 1500 });
+  });
+
+  it("marks old results busy while search is debouncing and while the new request is pending", async () => {
+    let resolveSearch!: (value: typeof PAGE) => void;
+    const searchResult = new Promise<typeof PAGE>((resolve) => { resolveSearch = resolve; });
+    const queue = vi.spyOn(ticketsApi, "fetchStaffQueue").mockImplementation((query) =>
+      query.q ? searchResult : Promise.resolve(PAGE)
+    );
+    vi.spyOn(ticketsApi, "fetchTicketOwners").mockResolvedValue(OWNER_OPTIONS);
+    vi.spyOn(referenceData, "fetchCategories").mockResolvedValue([]);
+    vi.useFakeTimers();
+    renderQueue();
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+    expect(screen.getAllByRole("link", { name: "TCK-0101" })).not.toHaveLength(0);
+    const search = screen.getByRole("searchbox", { name: "Search" });
+    const initialCalls = queue.mock.calls.length;
+    fireEvent.change(search, { target: { value: "vpn" } });
+
+    const results = screen.getByTestId("staff-queue-results");
+    expect(results).toHaveAttribute("aria-busy", "true");
+    expect(screen.getByTestId("staff-queue-search-pending")).toHaveTextContent("Updating ticket results");
+    expect(screen.getAllByRole("link", { name: "TCK-0101" })).not.toHaveLength(0);
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(299); });
+    expect(queue).toHaveBeenCalledTimes(initialCalls);
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(queue).toHaveBeenLastCalledWith(expect.objectContaining({ q: "vpn" }));
+    expect(results).toHaveAttribute("aria-busy", "true");
+    await act(async () => { resolveSearch(PAGE); await Promise.resolve(); });
+    expect(results).toHaveAttribute("aria-busy", "false");
+    expect(screen.queryByTestId("staff-queue-search-pending")).not.toBeInTheDocument();
+  });
+
+  it("announces when a pasted search exceeds the 100-character limit", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(ticketsApi, "fetchStaffQueue").mockResolvedValue(PAGE);
+    vi.spyOn(ticketsApi, "fetchTicketOwners").mockResolvedValue(OWNER_OPTIONS);
+    vi.spyOn(referenceData, "fetchCategories").mockResolvedValue([]);
+    renderQueue();
+
+    const search = screen.getByRole("searchbox", { name: "Search" });
+    await user.click(search);
+    await user.paste("p".repeat(120));
+
+    expect(search).toHaveValue("p".repeat(100));
+    expect(screen.getByTestId("staff-queue-search-limit")).toHaveTextContent("Search is limited to 100 characters");
+    expect(search).toHaveAttribute("aria-describedby", "staff-queue-search-limit");
+  });
+
+  it("restores URL-backed search across Back and Forward while replacing intermediate Queue states", async () => {
+    const user = userEvent.setup();
+    const queue = vi.spyOn(ticketsApi, "fetchStaffQueue").mockResolvedValue(PAGE);
+    vi.spyOn(ticketsApi, "fetchTicketOwners").mockResolvedValue(OWNER_OPTIONS);
+    vi.spyOn(referenceData, "fetchCategories").mockResolvedValue([]);
+    renderQueue("/staff/tickets?q=first", true);
+
+    await waitFor(() => expect(queue).toHaveBeenCalledWith(expect.objectContaining({ q: "first" })));
+    await user.click(screen.getByRole("link", { name: "Next dashboard query" }));
+    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("scope=all"));
+    const search = screen.getByRole("searchbox", { name: "Search" });
+    await user.type(search, "second query");
+    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("q=second+query"), { timeout: 1500 });
+
+    await user.click(screen.getByRole("button", { name: "Back to first query" }));
+    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("q=first"));
+    expect(search).toHaveValue("first");
+    await user.click(screen.getByRole("button", { name: "Forward to latest query" }));
+    await waitFor(() => expect(screen.getByTestId("location")).toHaveTextContent("q=second+query"));
+    expect(search).toHaveValue("second query");
+  });
+
+  it("treats whitespace-only search input as empty and rejects overflow query links", async () => {
+    const user = userEvent.setup();
+    const queue = vi.spyOn(ticketsApi, "fetchStaffQueue").mockResolvedValue(PAGE);
+    vi.spyOn(ticketsApi, "fetchTicketOwners").mockResolvedValue(OWNER_OPTIONS);
+    vi.spyOn(referenceData, "fetchCategories").mockResolvedValue([]);
+    renderQueue("/staff/tickets?q=first");
+    await waitFor(() => expect(queue).toHaveBeenCalledWith(expect.objectContaining({ q: "first" })));
+
+    const search = screen.getByRole("searchbox", { name: "Search" });
+    await user.clear(search);
+    await user.type(search, "     ");
+    await waitFor(() => expect(screen.getByTestId("location")).not.toHaveTextContent("q="), { timeout: 1500 });
+    await waitFor(() => expect(queue).toHaveBeenLastCalledWith(expect.not.objectContaining({ q: expect.anything() })), { timeout: 1500 });
+
+    cleanup();
+    vi.restoreAllMocks();
+    const overflow = vi.spyOn(ticketsApi, "fetchStaffQueue").mockResolvedValue(PAGE);
+    vi.spyOn(ticketsApi, "fetchTicketOwners").mockResolvedValue(OWNER_OPTIONS);
+    vi.spyOn(referenceData, "fetchCategories").mockResolvedValue([]);
+    renderQueue(`/staff/tickets?q=${"x".repeat(101)}`);
+    expect(await screen.findByText("This queue link has invalid filters")).toBeInTheDocument();
+    expect(overflow).not.toHaveBeenCalled();
+  });
+
+  it("rejects an impossible offset date instead of normalizing it into a different calendar day", async () => {
+    const queue = vi.spyOn(ticketsApi, "fetchStaffQueue").mockResolvedValue(PAGE);
+    vi.spyOn(ticketsApi, "fetchTicketOwners").mockResolvedValue(OWNER_OPTIONS);
+    vi.spyOn(referenceData, "fetchCategories").mockResolvedValue([]);
+    renderQueue("/staff/tickets?updatedFrom=2026-02-30T00%3A00%3A00Z");
+
+    expect(await screen.findByText("This queue link has invalid filters")).toBeInTheDocument();
+    expect(queue).not.toHaveBeenCalled();
+  });
+
   it("UI-Q01: wires approved query controls, restores URL state, and resets page on changes", async () => {
     const user = userEvent.setup();
     const queue = vi.spyOn(ticketsApi, "fetchStaffQueue").mockResolvedValue(PAGE);

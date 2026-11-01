@@ -2,7 +2,7 @@ import type { CorsOptions } from "cors";
 import type { SecurityConfig } from "./config.js";
 
 export const CORS_METHODS = ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"];
-export const CORS_HEADERS = ["Content-Type", "X-CSRF-Token", "Accept"];
+export const CORS_HEADERS = ["Content-Type", "X-CSRF-Token", "Idempotency-Key", "Accept"];
 
 export function createCredentialedCorsOptions(config: SecurityConfig): CorsOptions {
   return {
@@ -16,6 +16,7 @@ export function createCredentialedCorsOptions(config: SecurityConfig): CorsOptio
     credentials: true,
     methods: CORS_METHODS,
     allowedHeaders: CORS_HEADERS,
+    exposedHeaders: ["Idempotency-Replayed"],
     optionsSuccessStatus: 204,
   };
 }

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { test, expect, request as playwrightRequest } from "@playwright/test";
 import {
   API_URL,
@@ -12,6 +13,32 @@ import {
   loginApi,
   loginUi,
 } from "../support/fixtures.js";
+
+async function addCompletedResolutionEvidence(
+  api: Awaited<ReturnType<typeof playwrightRequest.newContext>>,
+  csrfToken: string,
+  ticketId: number,
+  expectedTicketVersion: number,
+  assigneeId: number,
+): Promise<number> {
+  const created = await api.post(`${API_URL}/api/staff/tickets/${ticketId}/actions`, {
+    headers: { "X-CSRF-Token": csrfToken, "Idempotency-Key": randomUUID() },
+    data: { expectedTicketVersion, description: "Complete the work required to resolve this Ticket", assigneeId },
+  });
+  expect(created.status()).toBe(201);
+  const createResult = await created.json() as { action: { id: number }; ticketVersion: number };
+  const completed = await api.post(`${API_URL}/api/staff/tickets/${ticketId}/actions/${createResult.action.id}/transitions`, {
+    headers: { "X-CSRF-Token": csrfToken, "Idempotency-Key": randomUUID() },
+    data: {
+      expectedTicketVersion: createResult.ticketVersion,
+      expectedActionVersion: 1,
+      status: "COMPLETED",
+      result: "Verified the repair and recorded the outcome",
+    },
+  });
+  expect(completed.status()).toBe(200);
+  return (await completed.json() as { ticketVersion: number }).ticketVersion;
+}
 
 test.describe.serial("E2E-S01 — real Staff Queue and Ticket workflow", () => {
   let requester: E2EUser;
@@ -32,6 +59,7 @@ test.describe.serial("E2E-S01 — real Staff Queue and Ticket workflow", () => {
   });
 
   test("queue filters, ownership actions, communications, resolution lifecycle, attachments, and direct guards", async ({ page, request }) => {
+    test.setTimeout(60_000);
     const requesterApi = await playwrightRequest.newContext({ baseURL: API_URL });
     const staffApi = await playwrightRequest.newContext({ baseURL: API_URL });
     try {
@@ -45,7 +73,7 @@ test.describe.serial("E2E-S01 — real Staff Queue and Ticket workflow", () => {
       }
       const highPriorityUpdate = await staffApi.patch(`${API_URL}/api/staff/tickets/${queueTickets[0].id}/it-priority`, {
         headers: { "X-CSRF-Token": staffSession.csrfToken },
-        data: { itPriority: "HIGH" },
+        data: { itPriority: "HIGH", expectedTicketVersion: 1 },
       });
       expect(highPriorityUpdate.status()).toBe(200);
 
@@ -61,6 +89,9 @@ test.describe.serial("E2E-S01 — real Staff Queue and Ticket workflow", () => {
       expect((await missingCsrfClaim.json()).error.code).toBe("CSRF_INVALID");
 
       await loginUi(page, staff);
+      await expect(page).toHaveURL(/\/staff\/dashboard$/);
+      await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
+      await page.getByRole("link", { name: "Staff Queue" }).click();
       await expect(page).toHaveURL(/\/staff\/tickets(?:\?|$)/);
       await expect(page.getByRole("heading", { name: "Ticket Queue" })).toBeVisible();
 
@@ -111,6 +142,10 @@ test.describe.serial("E2E-S01 — real Staff Queue and Ticket workflow", () => {
       await page.getByLabel("Next status").selectOption("IN_PROGRESS");
       await page.getByRole("button", { name: "Update status" }).click();
       await expect(page.getByTestId("status-feedback")).toContainText("updated");
+      const detailBeforeEvidence = await staffApi.get(`${API_URL}/api/staff/tickets/${ticket.id}`);
+      const detailVersion = (await detailBeforeEvidence.json() as { version: number }).version;
+      await addCompletedResolutionEvidence(staffApi, staffSession.csrfToken, ticket.id, detailVersion, secondStaff.id);
+      await page.reload();
 
       await expect(page.locator("#staff-status option[value='WAITING_FOR_REQUESTER']")).toHaveCount(1);
       const waitingExplanation = `Please confirm whether the issue is now resolved. Waiting evidence ${E2E_TAG}.`;
@@ -181,18 +216,30 @@ test.describe.serial("E2E-S01 — real Staff Queue and Ticket workflow", () => {
       const finalTicket = await createTicketApi(requesterApi, requesterSession, `Issue 61 final guard ${E2E_TAG}`);
       const finalOwner = await staffApi.patch(`${API_URL}/api/staff/tickets/${finalTicket.id}/claim`, {
         headers: { "X-CSRF-Token": staffSession.csrfToken },
+        data: { expectedTicketVersion: 1 },
       });
       expect(finalOwner.status()).toBe(200);
+      let ticketVersion = (await finalOwner.json()).ticketVersion as number;
       for (const status of ["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"] as const) {
         const finalStatus = await staffApi.patch(`${API_URL}/api/staff/tickets/${finalTicket.id}/status`, {
-          headers: { "X-CSRF-Token": staffSession.csrfToken },
-          data: { status },
+          headers: { "X-CSRF-Token": staffSession.csrfToken, "Idempotency-Key": randomUUID() },
+          data: { expectedTicketVersion: ticketVersion, status },
         });
         expect(finalStatus.status()).toBe(200);
+        ticketVersion = (await finalStatus.json()).ticketVersion as number;
+        if (status === "IN_PROGRESS") {
+          ticketVersion = await addCompletedResolutionEvidence(
+            staffApi,
+            staffSession.csrfToken,
+            finalTicket.id,
+            ticketVersion,
+            staff.id,
+          );
+        }
       }
       const finalInvalidPriority = await staffApi.patch(`${API_URL}/api/staff/tickets/${finalTicket.id}/it-priority`, {
         headers: { "X-CSRF-Token": staffSession.csrfToken },
-        data: { itPriority: "NOT_A_PRIORITY" },
+        data: { itPriority: "NOT_A_PRIORITY", expectedTicketVersion: ticketVersion },
       });
       expect(finalInvalidPriority.status()).toBe(409);
       expect((await finalInvalidPriority.json()).error.code).toBe("TICKET_FINAL");

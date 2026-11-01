@@ -1,12 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { Link, MemoryRouter, Route, Routes } from "react-router-dom";
 import { StaffTicketDetailPage } from "../../src/pages/StaffTicketDetailPage.js";
 import * as ticketsApi from "../../src/api/tickets.js";
 import * as attachmentApi from "../../src/api/attachments.js";
+import * as actionsApi from "../../src/api/actions.js";
 import { ApiError } from "../../src/lib/http.js";
-import type { TicketDetail } from "../../src/types/index.js";
+import type { ResolutionGate, TicketDetail } from "../../src/types/index.js";
+import type { ActionPage, TicketAction } from "../../src/api/actions.js";
+
+const auth = vi.hoisted(() => ({ user: { id: 10, fullName: "Alex Staff", email: "alex@example.test", role: "STAFF", active: true, mustChangePassword: false } }));
+vi.mock("../../src/context/AuthContext.js", () => ({
+  useAuth: () => ({ user: auth.user }),
+  roleLabel: (role: string) => role === "ADMIN" ? "Administrator" : role === "STAFF" ? "IT Staff" : "Requester",
+}));
 
 const OWNER = { id: 10, fullName: "Alex Staff", role: "STAFF" as const };
 const ADMIN = { id: 11, fullName: "Ada Admin", role: "ADMIN" as const };
@@ -22,6 +30,13 @@ const NOTE = {
   createdAt: "2026-09-02T11:00:00.000Z",
   author: { id: 10, fullName: "Alex Staff", role: "STAFF" as const },
 };
+const EMPTY_GATE: ResolutionGate = {
+  canResolve: false,
+  reasons: ["NO_COMPLETED_ACTION"],
+  completedCount: 0,
+  unfinishedCount: 0,
+  followUpCount: 0,
+};
 
 const DETAIL: TicketDetail = {
   id: 42,
@@ -31,6 +46,7 @@ const DETAIL: TicketDetail = {
   requestedPriority: "HIGH",
   itPriority: "MEDIUM",
   currentStatus: "OPEN",
+  version: 1,
   createdAt: "2026-09-01T09:14:00.000Z",
   updatedAt: "2026-09-02T10:00:00.000Z",
   category: { id: 2, name: "Network" },
@@ -65,13 +81,20 @@ const DETAIL: TicketDetail = {
   allowedTransitions: ["IN_PROGRESS", "WAITING_FOR_REQUESTER", "CANCELLED"],
 };
 
-function renderDetail(responses: TicketDetail[] = [DETAIL]) {
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((accept) => { resolve = accept; });
+  return { promise, resolve };
+}
+
+function renderDetail(responses: TicketDetail[] = [DETAIL], withTicketSwitcher = false, loader?: (ticketId: number) => Promise<TicketDetail>) {
   const fetch = vi.spyOn(ticketsApi, "fetchStaffTicket");
-  responses.forEach((response) => fetch.mockResolvedValueOnce(response));
+  if (loader) fetch.mockImplementation(loader);
+  else responses.forEach((response) => fetch.mockResolvedValueOnce(response));
   const rendered = render(
     <MemoryRouter initialEntries={[`/staff/tickets/${DETAIL.id}`]}>
       <Routes>
-        <Route path="/staff/tickets/:id" element={<StaffTicketDetailPage />} />
+        <Route path="/staff/tickets/:id" element={withTicketSwitcher ? <><Link to="/staff/tickets/43">Open next Ticket</Link><Link to="/staff/tickets/42">Return to first Ticket</Link><StaffTicketDetailPage /></> : <StaffTicketDetailPage />} />
         <Route path="/staff/tickets" element={<h1>Staff Queue</h1>} />
       </Routes>
     </MemoryRouter>
@@ -107,28 +130,36 @@ describe("Issue #58 Staff Ticket Detail", () => {
 
   it("claims an unassigned ticket with independent busy/success feedback", async () => {
     const user = userEvent.setup();
-    const detail = { ...DETAIL, owner: null };
-    renderDetail([detail, { ...detail, owner: OWNER }]);
-    const claim = vi.spyOn(ticketsApi, "claimStaffTicket").mockResolvedValue({ owner: OWNER });
+    const detail = { ...DETAIL, owner: null, allowedTransitions: [] };
+    renderDetail([detail, { ...detail, owner: OWNER, allowedTransitions: ["IN_PROGRESS"] }]);
+    const claim = vi.spyOn(ticketsApi, "claimStaffTicket").mockResolvedValue({ owner: OWNER, ticketVersion: 2 });
 
     await user.click(await screen.findByRole("button", { name: "Claim Ticket" }));
-    expect(claim).toHaveBeenCalledWith(DETAIL.id);
-    expect(await screen.findByText("Ticket claimed successfully. Refreshing owner details.")).toBeInTheDocument();
+    expect(claim).toHaveBeenCalledWith(DETAIL.id, 1);
+    expect(await screen.findByText("Ticket claimed successfully. Refreshing owner and transition details.")).toBeInTheDocument();
+    expect(await screen.findByRole("option", { name: "In Progress" })).toBeInTheDocument();
   });
 
   it("loads the safe owner directory and captures the displayed expectedOwnerId for Reassign", async () => {
     const user = userEvent.setup();
+    const inactiveOwner = { ...OWNER, id: 12, fullName: "Inactive Staff" };
     const owners = vi.spyOn(ticketsApi, "fetchTicketOwners").mockResolvedValue([OWNER, ADMIN]);
-    const reassign = vi.spyOn(ticketsApi, "reassignStaffTicket").mockResolvedValue({ owner: ADMIN });
-    renderDetail([DETAIL, { ...DETAIL, owner: ADMIN }]);
+    const reassign = vi.spyOn(ticketsApi, "reassignStaffTicket").mockResolvedValue({ owner: ADMIN, ticketVersion: 2 });
+    renderDetail([
+      { ...DETAIL, owner: inactiveOwner, allowedTransitions: [] },
+      { ...DETAIL, owner: ADMIN, allowedTransitions: ["IN_PROGRESS"] },
+    ]);
 
+    expect(await screen.findByRole("heading", { name: DETAIL.ticketNumber })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "In Progress" })).not.toBeInTheDocument();
     await user.click(await screen.findByRole("button", { name: "Reassign Ticket" }));
     expect(await screen.findByRole("option", { name: "Ada Admin — Administrator" })).toBeInTheDocument();
     expect(owners).toHaveBeenCalledTimes(1);
     await user.selectOptions(screen.getByLabelText("New eligible Owner"), String(ADMIN.id));
     await user.click(screen.getByRole("button", { name: "Confirm Reassign" }));
-    expect(reassign).toHaveBeenCalledWith(DETAIL.id, ADMIN.id, OWNER.id);
-    expect(await screen.findByText("Owner changed successfully. Refreshing Ticket detail.")).toBeInTheDocument();
+    expect(reassign).toHaveBeenCalledWith(DETAIL.id, ADMIN.id, inactiveOwner.id, 1);
+    expect(await screen.findByText("Owner changed successfully. Refreshing owner and transition details.")).toBeInTheDocument();
+    expect(await screen.findByRole("option", { name: "In Progress" })).toBeInTheDocument();
   });
 
   it("handles stale Reassign by refreshing and requiring an explicit retry", async () => {
@@ -140,9 +171,12 @@ describe("Issue #58 Staff Ticket Detail", () => {
     await user.click(await screen.findByRole("button", { name: "Reassign Ticket" }));
     await user.selectOptions(await screen.findByLabelText("New eligible Owner"), String(ADMIN.id));
     await user.click(screen.getByRole("button", { name: "Confirm Reassign" }));
-    expect(await screen.findByText(/ownership changed.*explicitly retry/i)).toBeInTheDocument();
+    expect((await screen.findAllByText(/ownership changed.*reload and review/i)).length).toBeGreaterThan(0);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByLabelText("New eligible Owner")).toHaveValue(String(ADMIN.id));
+    await user.click(screen.getByRole("button", { name: "Reload latest Ticket before retrying" }));
     expect((await screen.findAllByText("Ada Admin")).length).toBeGreaterThan(0);
-    expect(screen.getByRole("button", { name: "Reassign Ticket" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
   it("keeps owner-directory forbidden and retry feedback separate from the detail", async () => {
@@ -161,59 +195,202 @@ describe("Issue #58 Staff Ticket Detail", () => {
 
   it("saves IT Priority independently and keeps Requested Priority read-only", async () => {
     const user = userEvent.setup();
-    const save = vi.spyOn(ticketsApi, "updateStaffItPriority").mockResolvedValue({ itPriority: "URGENT" });
+    const save = vi.spyOn(ticketsApi, "updateStaffItPriority").mockResolvedValue({ itPriority: "URGENT", ticketVersion: 2 });
     renderDetail();
     await user.selectOptions(await screen.findByRole("combobox", { name: "IT Priority" }), "URGENT");
     await user.click(screen.getByRole("button", { name: "Save IT Priority" }));
-    expect(save).toHaveBeenCalledWith(DETAIL.id, "URGENT");
+    expect(save).toHaveBeenCalledWith(DETAIL.id, "URGENT", 1);
     expect(await screen.findByText("IT Priority saved.")).toBeInTheDocument();
     expect(screen.getByTestId("requested-priority")).toHaveTextContent("High");
   });
 
   it("requires confirmation for significant transitions and explains Closed finality", async () => {
     const user = userEvent.setup();
-    const update = vi.spyOn(ticketsApi, "updateStaffTicketStatus").mockResolvedValue({ currentStatus: "CLOSED", resolutionIndication: null, allowedTransitions: [] });
+    const update = vi.spyOn(ticketsApi, "updateStaffTicketStatus").mockResolvedValue({ currentStatus: "CLOSED", resolutionIndication: null, allowedTransitions: [], ticketVersion: 2, workCycle: 1, resolvedAt: null, resolutionGate: EMPTY_GATE });
     renderDetail([{ ...DETAIL, allowedTransitions: ["CLOSED"] }, { ...DETAIL, currentStatus: "CLOSED", allowedTransitions: [] }]);
     await user.selectOptions(await screen.findByLabelText("Next status"), "CLOSED");
     await user.click(screen.getByRole("button", { name: "Update status" }));
     expect(screen.getByRole("dialog")).toHaveTextContent("Closing this Ticket is final");
     expect(update).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "Confirm Closed" }));
-    expect(update).toHaveBeenCalledWith(DETAIL.id, "CLOSED", undefined);
+    expect(update).toHaveBeenCalledWith(DETAIL.id, "CLOSED", 1, undefined, expect.any(String));
+  });
+
+  it("reuses the exact status idempotency key after an ambiguous server error", async () => {
+    const user = userEvent.setup();
+    const update = vi.spyOn(ticketsApi, "updateStaffTicketStatus")
+      .mockRejectedValueOnce(new ApiError(500, "INTERNAL_ERROR", "unknown commit outcome"))
+      .mockResolvedValueOnce({ currentStatus: "IN_PROGRESS", resolutionIndication: null, allowedTransitions: [], ticketVersion: 2, workCycle: 1, resolvedAt: null, resolutionGate: EMPTY_GATE });
+    renderDetail([{ ...DETAIL, allowedTransitions: ["IN_PROGRESS"] }]);
+    await user.selectOptions(await screen.findByLabelText("Next status"), "IN_PROGRESS");
+    await user.click(screen.getByRole("button", { name: "Update status" }));
+    expect(await screen.findByText(/status could not be updated/i)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Update status" }));
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(2));
+    expect(update.mock.calls[0]).toEqual([DETAIL.id, "IN_PROGRESS", 1, undefined, expect.any(String)]);
+    expect(update.mock.calls[1][4]).toBe(update.mock.calls[0][4]);
   });
 
   it("requires a Public Comment for Waiting for Requester and submits it with the status mutation", async () => {
     const user = userEvent.setup();
     const update = vi.spyOn(ticketsApi, "updateStaffTicketStatus")
       .mockRejectedValueOnce(new ApiError(400, "VALIDATION_FAILED", "invalid"))
-      .mockResolvedValueOnce({ currentStatus: "WAITING_FOR_REQUESTER", resolutionIndication: null, allowedTransitions: ["OPEN"] });
+      .mockResolvedValueOnce({ currentStatus: "WAITING_FOR_REQUESTER", resolutionIndication: null, allowedTransitions: ["OPEN"], ticketVersion: 2, workCycle: 1, resolvedAt: null, resolutionGate: EMPTY_GATE });
     renderDetail([{ ...DETAIL, allowedTransitions: ["WAITING_FOR_REQUESTER"] }]);
     await user.selectOptions(await screen.findByLabelText("Next status"), "WAITING_FOR_REQUESTER");
     await user.click(screen.getByRole("button", { name: "Update status" }));
     expect(await screen.findByText(/Enter a Public Comment when waiting/i)).toBeInTheDocument();
     await user.type(screen.getByLabelText(/Public Comment for Requester/), "Please test again.");
     await user.click(screen.getByRole("button", { name: "Update status" }));
-    expect(update).toHaveBeenCalledWith(DETAIL.id, "WAITING_FOR_REQUESTER", "Please test again.");
+    expect(update).toHaveBeenLastCalledWith(DETAIL.id, "WAITING_FOR_REQUESTER", 1, "Please test again.", expect.any(String));
+  });
+
+  it("shows current-cycle gate blockers and explains legacy resolution dates honestly", async () => {
+    const blockedGate: ResolutionGate = {
+      canResolve: false,
+      reasons: ["UNFINISHED_ACTIONS", "FOLLOW_UP_REQUIRED"],
+      completedCount: 1,
+      unfinishedCount: 2,
+      followUpCount: 1,
+    };
+    const first = renderDetail([{
+      ...DETAIL,
+      currentStatus: "IN_PROGRESS",
+      workCycle: 2,
+      resolutionGate: blockedGate,
+      allowedTransitions: ["WAITING_FOR_REQUESTER", "CANCELLED"],
+    }]);
+    await screen.findByRole("heading", { name: DETAIL.ticketNumber });
+    expect(screen.getByLabelText("Resolution requirements")).toHaveTextContent("Cycle 2: 1 completed, 2 unfinished, 1 requiring follow-up.");
+    expect(screen.getByLabelText("Resolution requirements")).toHaveTextContent("Finish or cancel the unfinished Actions in this work cycle.");
+    expect(screen.queryByRole("option", { name: "Resolved" })).not.toBeInTheDocument();
+
+    first.unmount();
+    renderDetail([{ ...DETAIL, currentStatus: "RESOLVED", resolvedAt: null, workCycle: 1, allowedTransitions: ["CLOSED", "REOPENED"] }]);
+    expect(await screen.findByTestId("ticket-work-cycle")).toHaveTextContent("Legacy resolution time unknown.");
+    expect(screen.getByTestId("ticket-work-cycle")).not.toHaveTextContent("Not resolved in this cycle.");
+  });
+
+  it("requires a reason before cancellation and explains the unfinished Action effect", async () => {
+    const user = userEvent.setup();
+    const cancelled = { ...DETAIL, currentStatus: "CANCELLED" as const, allowedTransitions: [] };
+    const update = vi.spyOn(ticketsApi, "updateStaffTicketStatus").mockResolvedValue({
+      currentStatus: "CANCELLED",
+      resolutionIndication: null,
+      allowedTransitions: [],
+      ticketVersion: 2,
+      workCycle: 1,
+      resolvedAt: null,
+      resolutionGate: EMPTY_GATE,
+    });
+    renderDetail([{ ...DETAIL, allowedTransitions: ["CANCELLED"] }, cancelled]);
+    await user.selectOptions(await screen.findByLabelText("Next status"), "CANCELLED");
+    await user.click(screen.getByRole("button", { name: "Update status" }));
+    expect(await screen.findByText("Enter a reason before cancelling this Ticket.")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(update).not.toHaveBeenCalled();
+
+    await user.type(screen.getByLabelText(/Cancellation reason/), "Requester withdrew the work");
+    await user.click(screen.getByRole("button", { name: "Update status" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog).toHaveTextContent("All unfinished Actions in the current work cycle will be cancelled");
+    await user.click(within(dialog).getByRole("button", { name: "Confirm Cancelled" }));
+    expect(update).toHaveBeenCalledWith(DETAIL.id, "CANCELLED", 1, undefined, expect.any(String), "Requester withdrew the work");
+  });
+
+  it("clears a cancellation reason when navigating to another Ticket", async () => {
+    const user = userEvent.setup();
+    const nextTicket = {
+      ...DETAIL,
+      id: 43,
+      ticketNumber: "TKT-2026-000043",
+      allowedTransitions: ["CANCELLED" as const],
+    };
+    const update = vi.spyOn(ticketsApi, "updateStaffTicketStatus");
+    renderDetail([{ ...DETAIL, allowedTransitions: ["CANCELLED"] }, nextTicket], true);
+
+    await user.selectOptions(await screen.findByLabelText("Next status"), "CANCELLED");
+    await user.type(await screen.findByLabelText(/Cancellation reason/), "Ticket 42 reason");
+    await user.click(screen.getByRole("link", { name: "Open next Ticket" }));
+    expect(await screen.findByRole("heading", { name: nextTicket.ticketNumber })).toBeInTheDocument();
+
+    await user.selectOptions(await screen.findByLabelText("Next status"), "CANCELLED");
+    expect(screen.getByLabelText(/Cancellation reason/)).toHaveValue("");
+    await user.click(screen.getByRole("button", { name: "Update status" }));
+    expect(await screen.findByText("Enter a reason before cancelling this Ticket.")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("ignores a stale Action-parent refresh after navigating away and back to the same Ticket", async () => {
+    const user = userEvent.setup();
+    const pendingRefresh = deferred<TicketDetail>();
+    const currentTicket = { ...DETAIL, summary: "Current route version of Ticket 42" };
+    const nextTicket = { ...DETAIL, id: 43, ticketNumber: "TKT-2026-000043", summary: "Ticket 43" };
+    let ticket42Reads = 0;
+    const { fetch } = renderDetail([], true, async (ticketId) => {
+      if (ticketId === 43) return nextTicket;
+      ticket42Reads += 1;
+      if (ticket42Reads === 1) return DETAIL;
+      if (ticket42Reads === 2) return pendingRefresh.promise;
+      return currentTicket;
+    });
+
+    const action: TicketAction = {
+      id: 80, ticketId: 42, workCycle: 1, status: "PLANNED", description: "Add a browser-created Action",
+      result: null, actionAt: "2026-09-02T10:00:00.000Z", assignee: OWNER, assigneeEligible: true,
+      createdBy: OWNER, performedBy: null, followUpRequired: false, followUpNote: null, attachmentNotes: null,
+      version: 1, createdAt: "2026-09-02T10:01:00.000Z", updatedAt: "2026-09-02T10:01:00.000Z",
+      completedAt: null, cancelledAt: null, cancelledBy: null, cancelReason: null,
+      permissions: { canEdit: true, allowedTransitions: ["COMPLETED"] },
+    };
+    vi.spyOn(actionsApi, "fetchEligibleActionOwners").mockResolvedValue([OWNER, ADMIN]);
+    vi.spyOn(actionsApi, "fetchStaffActions").mockResolvedValue({ data: [], page: 1, pageSize: 10, total: 0, totalPages: 0, ticketVersion: 1, workCycle: 1 } satisfies ActionPage);
+    vi.spyOn(actionsApi, "fetchStaffWorkflow").mockResolvedValue({ data: [], page: 1, pageSize: 10, total: 0, totalPages: 0 });
+    vi.spyOn(actionsApi, "createStaffAction").mockResolvedValue({ action, ticketVersion: 2 });
+
+    await screen.findByRole("heading", { name: DETAIL.ticketNumber });
+    await user.click(screen.getByRole("tab", { name: "Actions Taken" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "New Action" })).toBeEnabled());
+    await user.click(screen.getByRole("button", { name: "New Action" }));
+    await user.type(screen.getByLabelText(/^Action Description/), "Add a browser-created Action");
+    await user.click(screen.getByRole("button", { name: "Save Planned Action" }));
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+
+    await user.click(screen.getByRole("link", { name: "Open next Ticket" }));
+    await screen.findByRole("heading", { name: nextTicket.ticketNumber });
+    await user.click(screen.getByRole("link", { name: "Return to first Ticket" }));
+    await screen.findByRole("heading", { name: DETAIL.ticketNumber });
+    expect(await screen.findByText(currentTicket.summary)).toBeInTheDocument();
+
+    pendingRefresh.resolve({ ...DETAIL, summary: "Stale pre-navigation parent response" });
+    await waitFor(() => expect(screen.getByText(currentTicket.summary)).toBeInTheDocument());
+    expect(screen.queryByText("Stale pre-navigation parent response")).not.toBeInTheDocument();
   });
 
   it.each([
-    ["RESOLVED", "Confirm Resolved"],
-    ["CANCELLED", "Confirm Cancelled"],
-    ["REOPENED", "Confirm Reopened"],
-  ] as const)("requires explicit confirmation before %s", async (status, confirmationLabel) => {
+    ["RESOLVED", "Confirm Resolved", ""],
+    ["REOPENED", "Confirm Reopened", "Reopening starts a fresh work cycle. Earlier-cycle Actions and history remain available as locked, read-only history."],
+  ] as const)("requires explicit confirmation before %s", async (status, confirmationLabel, explanation) => {
     const user = userEvent.setup();
     const update = vi.spyOn(ticketsApi, "updateStaffTicketStatus").mockResolvedValue({
       currentStatus: status,
       resolutionIndication: null,
       allowedTransitions: [],
+      ticketVersion: 2,
+      workCycle: status === "REOPENED" ? 2 : 1,
+      resolvedAt: null,
+      resolutionGate: EMPTY_GATE,
     });
     renderDetail([{ ...DETAIL, allowedTransitions: [status] }, { ...DETAIL, currentStatus: status, allowedTransitions: [] }]);
     await user.selectOptions(await screen.findByRole("combobox", { name: "Next status" }), status);
     await user.click(screen.getByRole("button", { name: "Update status" }));
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toBeInTheDocument();
+    if (explanation) expect(dialog).toHaveTextContent(explanation);
     expect(update).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: confirmationLabel }));
-    expect(update).toHaveBeenCalledWith(DETAIL.id, status, undefined);
+    expect(update).toHaveBeenCalledWith(DETAIL.id, status, 1, undefined, expect.any(String));
   });
 
   it("keeps Public Comments and Internal Notes available while a Ticket is Resolved", async () => {

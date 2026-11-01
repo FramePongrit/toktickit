@@ -1,4 +1,5 @@
 import { test, expect, request as playwrightRequest } from "@playwright/test";
+import { getPrisma } from "../../server/src/prisma.js";
 import {
   API_URL,
   E2E_CHANGED_PASSWORD,
@@ -60,6 +61,9 @@ test.describe.serial("E2E-U01 — Administrator User Management", () => {
       expect(staffSession.user.role).toBe("STAFF");
 
       await loginUi(page, admin);
+      await expect(page).toHaveURL(/\/staff\/dashboard$/);
+      await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
+      await page.getByRole("link", { name: "User Management" }).click();
       await expect(page).toHaveURL(/\/admin\/users$/);
       await expect(page.getByRole("heading", { name: "User Management" })).toBeVisible();
       await expect(page.getByTestId("admin-users-table")).toBeVisible();
@@ -191,6 +195,14 @@ test.describe.serial("E2E-U01 — Administrator User Management", () => {
     try {
       await Promise.all([loginUi(firstPage, admin), loginUi(secondPage, lastActiveAdmin)]);
       await Promise.all([
+        expect(firstPage).toHaveURL(/\/staff\/dashboard$/),
+        expect(secondPage).toHaveURL(/\/staff\/dashboard$/),
+      ]);
+      await Promise.all([
+        firstPage.getByRole("link", { name: "User Management" }).click(),
+        secondPage.getByRole("link", { name: "User Management" }).click(),
+      ]);
+      await Promise.all([
         expect(firstPage).toHaveURL(/\/admin\/users$/),
         expect(secondPage).toHaveURL(/\/admin\/users$/),
       ]);
@@ -211,20 +223,98 @@ test.describe.serial("E2E-U01 — Administrator User Management", () => {
       await firstDialog.getByLabel("Active account").uncheck();
       await secondDialog.getByLabel("Active account").uncheck();
 
-      const firstResponsePromise = firstPage.waitForResponse((response) =>
-        response.url().endsWith(userPath(lastActiveAdmin.id)) && response.request().method() === "PATCH"
-      );
-      const secondResponsePromise = secondPage.waitForResponse((response) =>
-        response.url().endsWith(userPath(admin.id)) && response.request().method() === "PATCH"
-      );
-      await Promise.all([
-        firstDialog.getByRole("button", { name: "Save changes" }).click(),
-        secondDialog.getByRole("button", { name: "Save changes" }).click(),
-      ]);
-      const [firstResponse, secondResponse] = await Promise.all([firstResponsePromise, secondResponsePromise]);
+      const activeAdminIdsBefore = await getPrisma().user.findMany({
+        where: { active: true, role: "ADMIN" },
+        orderBy: { id: "asc" },
+        select: { id: true },
+      });
+      expect(activeAdminIdsBefore.map(({ id }) => id)).toEqual([admin.id, lastActiveAdmin.id].sort((left, right) => left - right));
+
+      let releaseRosterLock!: () => void;
+      let signalHolderReady!: (pid: number) => void;
+      let rejectHolderReady!: (error: unknown) => void;
+      const holderReady = new Promise<number>((resolve, reject) => {
+        signalHolderReady = resolve;
+        rejectHolderReady = reject;
+      });
+      const rosterLockReleased = new Promise<void>((resolve) => { releaseRosterLock = resolve; });
+      let firstResponsePromise: Promise<import("@playwright/test").Response> | undefined;
+      let secondResponsePromise: Promise<import("@playwright/test").Response> | undefined;
+      let observedWaiterPids: number[] = [];
+      const rosterLockHolder = getPrisma().$transaction(async (tx) => {
+        const [{ backendPid }] = await tx.$queryRaw<{ backendPid: number }[]>`SELECT pg_backend_pid()::int AS "backendPid"`;
+        await tx.$queryRaw`
+          SELECT "id"
+          FROM "User"
+          WHERE "id" IN (${admin.id}, ${lastActiveAdmin.id})
+          ORDER BY "id" ASC
+          FOR UPDATE
+        `;
+        signalHolderReady(backendPid);
+        await rosterLockReleased;
+      }, { timeout: 30_000 }).catch((error: unknown) => {
+        rejectHolderReady(error);
+        throw error;
+      });
+
+      try {
+        const holderBackendPid = await holderReady;
+        firstResponsePromise = firstPage.waitForResponse((response) =>
+          response.url().endsWith(userPath(lastActiveAdmin.id)) && response.request().method() === "PATCH"
+        , { timeout: 15_000 });
+        secondResponsePromise = secondPage.waitForResponse((response) =>
+          response.url().endsWith(userPath(admin.id)) && response.request().method() === "PATCH"
+        , { timeout: 15_000 });
+        await Promise.all([
+          firstDialog.getByRole("button", { name: "Save changes" }).click(),
+          secondDialog.getByRole("button", { name: "Save changes" }).click(),
+        ]);
+        await expect.poll(async () => {
+          const blocked = await getPrisma().$queryRaw<{ pid: number }[]>`
+            WITH RECURSIVE wait_chain(waiter_pid, blocker_pid, path) AS (
+              SELECT activity.pid, blocker.pid, ARRAY[activity.pid, blocker.pid]
+              FROM pg_stat_activity activity
+              CROSS JOIN LATERAL unnest(pg_blocking_pids(activity.pid)) AS blocker(pid)
+              WHERE activity.datname = current_database()
+                AND activity.pid <> ${holderBackendPid}
+                AND activity.wait_event_type = 'Lock'
+                AND activity.query ILIKE '%FROM "User"%'
+                AND activity.query ILIKE '%FOR UPDATE%'
+              UNION ALL
+              SELECT chain.waiter_pid, next_blocker.pid, chain.path || next_blocker.pid
+              FROM wait_chain chain
+              CROSS JOIN LATERAL unnest(pg_blocking_pids(chain.blocker_pid)) AS next_blocker(pid)
+              WHERE chain.blocker_pid <> ${holderBackendPid}
+                AND NOT next_blocker.pid = ANY(chain.path)
+            )
+            SELECT DISTINCT waiter_pid::int AS "pid"
+            FROM wait_chain
+            WHERE blocker_pid = ${holderBackendPid}
+          `;
+          observedWaiterPids = [...new Set(blocked.map(({ pid }) => pid))].sort((left, right) => left - right);
+          return observedWaiterPids.length;
+        }, { timeout: 10_000, intervals: [50, 100, 200, 500] }).toBe(2);
+        console.log(`[Admin concurrency barrier] holderPid=${holderBackendPid}; distinct blocked service PIDs=${observedWaiterPids.join(",")}`);
+      } finally {
+        releaseRosterLock();
+        try {
+          await rosterLockHolder;
+        } finally {
+          await Promise.allSettled([firstResponsePromise, secondResponsePromise].filter(Boolean) as Promise<unknown>[]);
+        }
+      }
+
+      const [firstResponse, secondResponse] = await Promise.all([firstResponsePromise!, secondResponsePromise!]);
       const [firstBody, secondBody] = await Promise.all([firstResponse.json(), secondResponse.json()]);
       const responses = [firstResponse, secondResponse];
       expect(responses.map((response) => response.status()).sort()).toEqual([200, 409]);
+      const activeAdminIdsAfter = await getPrisma().user.findMany({
+        where: { active: true, role: "ADMIN" },
+        orderBy: { id: "asc" },
+        select: { id: true },
+      });
+      expect(activeAdminIdsAfter).toHaveLength(1);
+      expect([admin.id, lastActiveAdmin.id]).toContain(activeAdminIdsAfter[0].id);
       const rejectedIndex = firstResponse.status() === 409 ? 0 : 1;
       const rejectedBody = rejectedIndex === 0 ? firstBody : secondBody;
       expect(rejectedBody.error.code).toBe("LAST_ACTIVE_ADMINISTRATOR");

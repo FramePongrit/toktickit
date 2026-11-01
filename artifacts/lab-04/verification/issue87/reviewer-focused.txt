@@ -1,0 +1,38 @@
+Issue 87 independent Reviewer verification
+Client date: 2026-10-28 Asia/Bangkok
+Source: uncommitted feature/lab4-ticket-workflow working source based on e6e782da2a8d8a75b592a86fa48f09711f32357a
+Environment: explicit DATABASE_URL for synthetic lab4test user/database on 127.0.0.1:55434, schema lab4_issue87_base (credential omitted); LAB4_PG_CONTAINER=toktickit-lab4-issue85-test
+Command: npm --prefix server test -- --run tests/lab-04/ticket-rules.unit.test.ts tests/lab-04/ticket-workflow.api.test.ts
+Exit code: 0
+Result: 2 files / 9 tests passed, zero failures or skips. Three Unhandled error stderr messages are deliberate rollback failure injections asserted by the test.
+Local independent execution; no CI or human approval claim.
+
+
+> toktickit-server@1.0.0 test
+> vitest run --run tests/lab-04/ticket-rules.unit.test.ts tests/lab-04/ticket-workflow.api.test.ts
+
+
+ RUN  v2.1.9 D:/Software Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/server
+
+Environment variables loaded from .env
+Running seed command `tsx prisma/seed.ts` ...
+Seeded 4 categories, 7 related systems, 5 active requesters, 3 active IT staff, and 1 active administrator.
+
+The seed command has been executed.
+stderr | tests/lab-04/ticket-workflow.api.test.ts > Issue #87 — Ticket workflow gate and history > rolls back cancellation and Waiting comment when revision/event writes fail after effects
+Unhandled error
+
+stderr | tests/lab-04/ticket-workflow.api.test.ts > Issue #87 — Ticket workflow gate and history > rolls back cancellation and Waiting comment when revision/event writes fail after effects
+Unhandled error
+
+stderr | tests/lab-04/ticket-workflow.api.test.ts > Issue #87 — Ticket workflow gate and history > rolls back cancellation and Waiting comment when revision/event writes fail after effects
+Unhandled error
+
+ ✓ tests/lab-04/ticket-workflow.api.test.ts (6 tests) 2813ms
+   ✓ Issue #87 — Ticket workflow gate and history > gates resolution on current-cycle work, retains the legacy close exception, and reopens once 658ms
+ ✓ tests/lab-04/ticket-rules.unit.test.ts (3 tests) 5ms
+
+ Test Files  2 passed (2)
+      Tests  9 passed (9)
+   Start at  02:23:42
+   Duration  5.56s (transform 231ms, setup 0ms, collect 601ms, tests 2.82s, environment 0ms, prepare 99ms)

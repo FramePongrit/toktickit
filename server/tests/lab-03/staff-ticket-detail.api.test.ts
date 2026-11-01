@@ -57,7 +57,24 @@ function staffDetail(auth: AuthSessionFixture, ticketId: number) {
 }
 
 function mutate(auth: AuthSessionFixture, method: "patch", path: string) {
-  return withAuth(request(app)[method](path), auth);
+  const apiRequest = withAuth(request(app)[method](path), auth);
+  const send = apiRequest.send.bind(apiRequest);
+  (apiRequest as unknown as { send: (body?: string | object) => Promise<Response> }).send = async (body?: string | object) => {
+    const match = path.match(/^\/api\/staff\/tickets\/(\d+)\//);
+    const endpoint = path.slice(match?.[0].length ?? 0);
+    if (match && ["claim", "owner", "it-priority", "status"].includes(endpoint)) {
+      const ticket = await prisma.ticket.findUnique({ where: { id: Number(match[1]) }, select: { version: true, ownerId: true } });
+      if (ticket && body !== null && typeof body === "object" && !Array.isArray(body)) {
+        const normalized = { ...(body as Record<string, unknown>) };
+        normalized.expectedTicketVersion ??= ticket.version;
+        if (endpoint === "owner") normalized.expectedOwnerId ??= ticket.ownerId;
+        if (endpoint === "status") apiRequest.set("Idempotency-Key", randomUUID());
+        return send(normalized);
+      }
+    }
+    return send(body);
+  };
+  return apiRequest;
 }
 
 async function waitForPostgresLockWait(backendPid: number): Promise<void> {
@@ -99,6 +116,24 @@ async function makeTicket(overrides: {
   return ticket;
 }
 
+async function addCompletedEvidence(ticketId: number): Promise<void> {
+  const ticket = await prisma.ticket.findUniqueOrThrow({ where: { id: ticketId }, select: { workCycle: true, createdAt: true } });
+  await prisma.actionTaken.create({
+    data: {
+      ticketId,
+      workCycle: ticket.workCycle,
+      status: "COMPLETED",
+      description: "Completed evidence for the status-matrix fixture",
+      result: "Verified resolved",
+      actionAt: ticket.createdAt,
+      assigneeId: staffAId,
+      createdById: staffAId,
+      performedById: staffAId,
+      completedAt: new Date(),
+    },
+  });
+}
+
 beforeAll(async () => {
   const [category, relatedSystem] = await Promise.all([
     prisma.category.findFirstOrThrow({ where: { active: true }, orderBy: { id: "asc" } }),
@@ -131,6 +166,10 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  await prisma.idempotencyRecord.deleteMany({ where: { userId: { in: userIds } } });
+  await prisma.ticketWorkflowEvent.deleteMany({ where: { ticketId: { in: ticketIds } } });
+  await prisma.actionRevision.deleteMany({ where: { action: { ticketId: { in: ticketIds } } } });
+  await prisma.actionTaken.deleteMany({ where: { ticketId: { in: ticketIds } } });
   await prisma.publicComment.deleteMany({ where: { ticketId: { in: ticketIds } } });
   await prisma.internalNote.deleteMany({ where: { ticketId: { in: ticketIds } } });
   await prisma.attachment.deleteMany({ where: { ticketId: { in: ticketIds } } });
@@ -263,23 +302,23 @@ describe("Issue #57 — Claim and Reassign API-S02", () => {
     });
   });
 
-  it("uses parent-row serialization for a controlled concurrent Reassign race", async () => {
+  it("uses ordered User and parent locks for a controlled concurrent Reassign race", async () => {
     const ticket = await makeTicket({ label: "REASSIGN-RACE" });
     let candidatesReady!: () => void;
     let releaseCandidates!: () => void;
-    let candidateCount = 0;
-    const bothCandidatesLocked = new Promise<void>((resolve) => {
+    let attemptCount = 0;
+    const bothAttemptsReady = new Promise<void>((resolve) => {
       candidatesReady = resolve;
     });
-    const releaseParentAttempts = new Promise<void>((resolve) => {
+    const releaseUserLocks = new Promise<void>((resolve) => {
       releaseCandidates = resolve;
     });
 
     setStaffTicketOperationsLockTestHook(async (context) => {
-      if (context.ticketId !== ticket.id || context.operation !== "REASSIGN_AFTER_CANDIDATE_LOCK") return;
-      candidateCount += 1;
-      if (candidateCount === 2) candidatesReady();
-      await releaseParentAttempts;
+      if (context.ticketId !== ticket.id || context.operation !== "REASSIGN_BEFORE_CANDIDATE_LOCK") return;
+      attemptCount += 1;
+      if (attemptCount === 2) candidatesReady();
+      await releaseUserLocks;
     });
 
     try {
@@ -293,7 +332,7 @@ describe("Issue #57 — Claim and Reassign API-S02", () => {
       });
       void first.then(() => undefined, () => undefined);
       void second.then(() => undefined, () => undefined);
-      await bothCandidatesLocked;
+      await bothAttemptsReady;
       releaseCandidates();
       const responses = await Promise.all([first, second]);
       expect(responses.filter((response) => response.status === 200)).toHaveLength(1);
@@ -587,7 +626,7 @@ describe("Issue #57 — IT Priority API-S03", () => {
     const ticket = await makeTicket({ requestedPriority: "LOW", itPriority: "LOW", label: "PRIORITY" });
     const response = await mutate(staffAAuth, "patch", `/api/staff/tickets/${ticket.id}/it-priority`).send({ itPriority: "URGENT" });
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ itPriority: "URGENT" });
+    expect(response.body).toEqual({ itPriority: "URGENT", ticketVersion: 2 });
     expect(await prisma.ticket.findUniqueOrThrow({ where: { id: ticket.id }, select: { requestedPriority: true, itPriority: true } })).toEqual({ requestedPriority: "LOW", itPriority: "URGENT" });
   });
 
@@ -671,9 +710,11 @@ describe("Issue #57 — Status API-S04", () => {
   it("allows every documented status edge with the Waiting comment rule", async () => {
     for (const [from, to] of allowedEdges) {
       const ticket = await makeTicket({ status: from, label: `EDGE-${from}-${to}` });
+      if (to === "RESOLVED") await addCompletedEvidence(ticket.id);
       const response = await mutate(staffAAuth, "patch", `/api/staff/tickets/${ticket.id}/status`).send({
         status: to,
         ...(to === "WAITING_FOR_REQUESTER" ? { publicComment: "  Please provide the requested information.  " } : {}),
+        ...(to === "CANCELLED" ? { cancelReason: "The Requester withdrew the request." } : {}),
       });
       expect(response.status, `${from} -> ${to}`).toBe(200);
       expect(response.body.currentStatus).toBe(to);

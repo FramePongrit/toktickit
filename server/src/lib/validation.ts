@@ -68,11 +68,24 @@ export const communicationBodySchema = z.object({
 
 export type CommunicationBodyInput = z.infer<typeof communicationBodySchema>;
 
+export const TICKET_STATUSES = [
+  "NEW",
+  "OPEN",
+  "IN_PROGRESS",
+  "WAITING_FOR_REQUESTER",
+  "REOPENED",
+  "RESOLVED",
+  "CLOSED",
+  "CANCELLED",
+] as const;
+
 export const TICKET_SORT_FIELDS = [
   "createdAt",
   "ticketNumber",
   "requestedPriority",
   "summary",
+  "updatedAt",
+  "resolvedAt",
 ] as const;
 
 export const TICKET_PAGE_SIZES = [10, 20, 50] as const;
@@ -87,14 +100,46 @@ const numericParam = (label: string) =>
     .regex(/^[1-9]\d*$/, `${label} must be a positive whole number.`)
     .transform(Number);
 
+const ticketDateParam = z.iso.datetime({ offset: true }).transform((value) => new Date(value));
+
+function commaSeparatedEnumSet<const T extends readonly [string, ...string[]]>(values: T, label: string) {
+  return z.preprocess(
+    (value) => typeof value === "string" ? value.split(",").map((item) => item.trim()) : value,
+    z.array(z.enum(values))
+      .min(1, `${label} must contain at least one value.`)
+      .max(values.length, `${label} contains too many values.`)
+      .refine((items) => new Set(items).size === items.length, `${label} must not contain duplicates.`)
+  );
+}
+
+function refineTicketListDates<T extends {
+  status?: unknown;
+  statuses?: unknown;
+  itPriority?: unknown;
+  itPriorities?: unknown;
+  updatedFrom?: Date;
+  updatedThrough?: Date;
+  resolvedFrom?: Date;
+  resolvedThrough?: Date;
+}>(query: T, context: z.RefinementCtx): void {
+  if (query.status !== undefined && query.statuses !== undefined) {
+    context.addIssue({ code: "custom", path: ["statuses"], message: "Use status or statuses, not both." });
+  }
+  if (query.itPriority !== undefined && query.itPriorities !== undefined) {
+    context.addIssue({ code: "custom", path: ["itPriorities"], message: "Use itPriority or itPriorities, not both." });
+  }
+  for (const [fromKey, throughKey] of [["updatedFrom", "updatedThrough"], ["resolvedFrom", "resolvedThrough"]] as const) {
+    const from = query[fromKey] as Date | undefined;
+    const through = query[throughKey] as Date | undefined;
+    if (from && through && from > through) {
+      context.addIssue({ code: "custom", path: [throughKey], message: `${throughKey} must be at or after ${fromKey}.` });
+    }
+  }
+}
+
 /**
- * Invalid parameters are rejected rather than clamped. Silent correction cannot
- * be asserted by a test, so `pageSize=7` is a 400 rather than quietly becoming
- * 10 (BR-20).
- *
- * There is deliberately no `requesterId` parameter: ownership comes from the
- * identity middleware alone, which is the whole point of enforcing it in the
- * backend (BR-16).
+ * Invalid parameters are rejected rather than clamped. Ownership comes only
+ * from the authenticated identity, never a caller-supplied requesterId.
  */
 export const listTicketsQuerySchema = z.object({
   page: optionalParam(numericParam("Page")).transform((v) => v ?? 1),
@@ -115,6 +160,14 @@ export const listTicketsQuerySchema = z.object({
       error: "Priority must be one of LOW, MEDIUM, HIGH or URGENT.",
     })
   ),
+  status: z.enum(TICKET_STATUSES, {
+    error: `Status must be one of ${TICKET_STATUSES.join(", ")}.`,
+  }).optional(),
+  statuses: commaSeparatedEnumSet(TICKET_STATUSES, "Statuses").optional(),
+  updatedFrom: ticketDateParam.optional(),
+  updatedThrough: ticketDateParam.optional(),
+  resolvedFrom: ticketDateParam.optional(),
+  resolvedThrough: ticketDateParam.optional(),
   sort: optionalParam(
     z.enum(TICKET_SORT_FIELDS, {
       error: `Sort must be one of ${TICKET_SORT_FIELDS.join(", ")}.`,
@@ -123,20 +176,9 @@ export const listTicketsQuerySchema = z.object({
   order: optionalParam(
     z.enum(["asc", "desc"], { error: "Order must be asc or desc." })
   ).transform((v) => v ?? "desc"),
-});
+}).strict().superRefine(refineTicketListDates);
 
 export type ListTicketsQuery = z.infer<typeof listTicketsQuerySchema>;
-
-export const TICKET_STATUSES = [
-  "NEW",
-  "OPEN",
-  "IN_PROGRESS",
-  "WAITING_FOR_REQUESTER",
-  "REOPENED",
-  "RESOLVED",
-  "CLOSED",
-  "CANCELLED",
-] as const;
 
 export const STAFF_QUEUE_SORT_FIELDS = [
   "itPriority",
@@ -144,6 +186,7 @@ export const STAFF_QUEUE_SORT_FIELDS = [
   "updatedAt",
   "ticketNumber",
   "status",
+  "priorityRecent",
 ] as const;
 
 const trimmedOptionalParam = <T extends z.ZodTypeAny>(schema: T) =>
@@ -186,9 +229,15 @@ export const staffQueueQuerySchema = z
     status: trimmedOptionalParam(z.enum(TICKET_STATUSES, {
       error: `Status must be one of ${TICKET_STATUSES.join(", ")}.`,
     })),
+    statuses: commaSeparatedEnumSet(TICKET_STATUSES, "Statuses").optional(),
     itPriority: trimmedOptionalParam(z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"], {
       error: "IT Priority must be one of LOW, MEDIUM, HIGH or URGENT.",
     })),
+    itPriorities: commaSeparatedEnumSet(["LOW", "MEDIUM", "HIGH", "URGENT"] as const, "IT Priorities").optional(),
+    updatedFrom: ticketDateParam.optional(),
+    updatedThrough: ticketDateParam.optional(),
+    resolvedFrom: ticketDateParam.optional(),
+    resolvedThrough: ticketDateParam.optional(),
     categoryId: trimmedOptionalParam(numericParam("Category")),
     owner: trimmedOptionalParam(staffQueueOwner),
     sort: trimmedOptionalParam(z.enum(STAFF_QUEUE_SORT_FIELDS, {
@@ -209,13 +258,14 @@ export const staffQueueQuerySchema = z
     ),
   })
   .strict()
+  .superRefine(refineTicketListDates)
   .transform((query) => {
     const sort = query.sort ?? "itPriority";
     return {
       ...query,
       scope: query.scope ?? "active",
       sort,
-      order: query.order ?? (sort === "itPriority" ? "desc" : "asc"),
+      order: query.order ?? (sort === "itPriority" || sort === "priorityRecent" ? "desc" : "asc"),
       page: query.page ?? 1,
       pageSize: query.pageSize ?? 10,
     };
@@ -234,6 +284,7 @@ export const staffOwnerMutationSchema = z
   .object({
     ownerId: positiveIntegerBody("Owner"),
     expectedOwnerId: positiveIntegerBody("Expected Owner"),
+    expectedTicketVersion: positiveIntegerBody("Expected Ticket Version"),
   })
   .strict()
   .refine((value) => value.ownerId !== value.expectedOwnerId, {
@@ -248,19 +299,144 @@ export const staffPriorityMutationSchema = z
     itPriority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"], {
       error: "IT Priority must be one of LOW, MEDIUM, HIGH or URGENT.",
     }),
+    expectedTicketVersion: positiveIntegerBody("Expected Ticket Version"),
   })
   .strict();
 
 export type StaffPriorityMutationInput = z.infer<typeof staffPriorityMutationSchema>;
 
+const cancelReason = z.string().trim().min(1, "Cancellation Reason is required.").max(1000);
+
 export const staffStatusMutationSchema = z
   .object({
+    expectedTicketVersion: positiveIntegerBody("Expected Ticket Version"),
     status: ticketStatus,
     publicComment: z.string().optional(),
+    cancelReason: cancelReason.optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((value, context) => {
+    if (value.status === "CANCELLED" && value.cancelReason === undefined) {
+      context.addIssue({ code: "custom", path: ["cancelReason"], message: "Cancellation Reason is required." });
+    }
+    if (value.status !== "CANCELLED" && value.cancelReason !== undefined) {
+      context.addIssue({ code: "custom", path: ["cancelReason"], message: "Cancellation Reason is only accepted for Cancelled." });
+    }
+    if (value.status !== "WAITING_FOR_REQUESTER" && value.publicComment !== undefined) {
+      context.addIssue({ code: "custom", path: ["publicComment"], message: "Public Comment is only accepted for Waiting for Requester." });
+    }
+  });
 
 export type StaffStatusMutationInput = z.infer<typeof staffStatusMutationSchema>;
+
+export const staffClaimMutationSchema = z.object({
+  expectedTicketVersion: positiveIntegerBody("Expected Ticket Version"),
+}).strict();
+
+const actionDate = z.iso.datetime({ offset: true }).transform((value) => new Date(value));
+const optionalActionText = (maximum: number) => z.preprocess(
+  (value) => value === undefined ? undefined : typeof value === "string" ? (value.trim() || null) : value,
+  z.string().max(maximum).nullable().optional()
+);
+const correctionReason = z.string().trim().min(1, "Correction Reason is required.").max(1000);
+
+export const actionListQuerySchema = z.object({
+  page: optionalParam(numericParam("Page")).transform((value) => value ?? 1),
+  pageSize: optionalParam(
+    z.string().transform(Number).refine(
+      (value) => (TICKET_PAGE_SIZES as readonly number[]).includes(value),
+      `Page size must be one of ${TICKET_PAGE_SIZES.join(", ")}.`
+    )
+  ).transform((value) => value ?? 10),
+}).strict();
+
+export type ActionListQuery = z.infer<typeof actionListQuerySchema>;
+
+export const emptyQuerySchema = z.object({}).strict();
+
+export const staffActionsQuerySchema = z.object({
+  view: z.enum(["active-assigned", "completed-performed"]).optional().default("active-assigned"),
+  page: optionalParam(numericParam("Page")).transform((value) => value ?? 1),
+  pageSize: optionalParam(
+    z.string().transform(Number).refine(
+      (value) => (TICKET_PAGE_SIZES as readonly number[]).includes(value),
+      `Page size must be one of ${TICKET_PAGE_SIZES.join(", ")}.`
+    )
+  ).transform((value) => value ?? 10),
+  from: ticketDateParam.optional(),
+  through: ticketDateParam.optional(),
+}).strict().superRefine((query, context) => {
+  if (query.view === "completed-performed") {
+    if (!query.from) context.addIssue({ code: "custom", path: ["from"], message: "From is required for completed-performed Actions." });
+    if (!query.through) context.addIssue({ code: "custom", path: ["through"], message: "Through is required for completed-performed Actions." });
+    if (query.from && query.through && query.from > query.through) {
+      context.addIssue({ code: "custom", path: ["through"], message: "Through must be at or after From." });
+    }
+  } else if (query.from || query.through) {
+    context.addIssue({ code: "custom", path: [query.from ? "from" : "through"], message: "Date bounds are only accepted for completed-performed Actions." });
+  }
+});
+
+export type StaffActionsQuery = z.infer<typeof staffActionsQuerySchema>;
+
+export const actionCreateSchema = z.object({
+  expectedTicketVersion: positiveIntegerBody("Expected Ticket Version"),
+  description: z.string().trim().min(1).max(2000),
+  actionAt: actionDate.optional(),
+  assigneeId: positiveIntegerBody("Assignee").optional(),
+  result: optionalActionText(2000),
+  followUpRequired: z.boolean().optional().default(false),
+  followUpNote: optionalActionText(2000),
+  attachmentNotes: optionalActionText(1000),
+}).strict();
+
+export type ActionCreateInput = z.infer<typeof actionCreateSchema>;
+
+const actionPatchFields = {
+  expectedTicketVersion: positiveIntegerBody("Expected Ticket Version"),
+  expectedActionVersion: positiveIntegerBody("Expected Action Version"),
+  description: z.string().trim().min(1).max(2000).optional(),
+  result: optionalActionText(2000),
+  actionAt: actionDate.optional(),
+  followUpRequired: z.boolean().optional(),
+  followUpNote: optionalActionText(2000),
+  attachmentNotes: optionalActionText(1000),
+  assigneeId: positiveIntegerBody("Assignee").optional(),
+  correctionReason: correctionReason.optional(),
+};
+
+export const actionPatchSchema = z.object(actionPatchFields).strict().refine(
+  (value) => Object.keys(value).some((key) =>
+    ["description", "result", "actionAt", "followUpRequired", "followUpNote", "attachmentNotes", "assigneeId"].includes(key)
+  ),
+  { message: "At least one Action field must be supplied." }
+);
+
+export type ActionPatchInput = z.infer<typeof actionPatchSchema>;
+
+const actionTransitionBase = {
+  expectedTicketVersion: positiveIntegerBody("Expected Ticket Version"),
+  expectedActionVersion: positiveIntegerBody("Expected Action Version"),
+};
+
+export const actionTransitionSchema = z.discriminatedUnion("status", [
+  z.object({ ...actionTransitionBase, status: z.literal("IN_PROGRESS") }).strict(),
+  z.object({
+    ...actionTransitionBase,
+    status: z.literal("COMPLETED"),
+    result: optionalActionText(2000),
+    actionAt: actionDate.optional(),
+    followUpRequired: z.boolean().optional(),
+    followUpNote: optionalActionText(2000),
+  }).strict(),
+  z.object({
+    ...actionTransitionBase,
+    status: z.literal("CANCELLED"),
+    cancelReason,
+  }).strict(),
+]);
+
+export type ActionTransitionInput = z.infer<typeof actionTransitionSchema>;
 
 const userRole = z.enum(["REQUESTER", "STAFF", "ADMIN"], {
   error: "Role must be one of REQUESTER, STAFF or ADMIN.",

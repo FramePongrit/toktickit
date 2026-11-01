@@ -87,6 +87,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  await prisma.ticketWorkflowEvent.deleteMany({ where: { ticket: { requesterId: { in: [activeRequesterId, inactiveRequesterId] } } } });
   // FK order: tickets before the requesters they point at.
   await prisma.ticket.deleteMany({
     where: { requesterId: { in: [activeRequesterId, inactiveRequesterId] } },

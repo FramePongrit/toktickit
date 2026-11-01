@@ -3,8 +3,8 @@ import { getPrisma } from "../prisma.js";
 import { HttpError } from "../lib/httpError.js";
 import type { StaffQueueQuery } from "../lib/validation.js";
 import { serializeResolutionIndication } from "./communications.service.js";
+import { ACTIVE_TICKET_STATUSES, ticketPrioritiesWhere, ticketResolvedAtRangeWhere, ticketStatusesWhere, ticketUpdatedAtRangeWhere } from "../lib/dashboardRules.js";
 
-const ACTIVE_STATUSES = ["NEW", "OPEN", "IN_PROGRESS", "WAITING_FOR_REQUESTER", "REOPENED"] as const;
 const ELIGIBLE_OWNER_ROLES = ["STAFF", "ADMIN"] as const;
 
 const queueSelect = {
@@ -69,9 +69,13 @@ function buildQueueWhere(
   resolvedOwner: StaffQueueQuery["owner"] | number | undefined
 ): Prisma.TicketWhereInput {
   const filters: Prisma.TicketWhereInput[] = [];
-  if (query.scope === "active") filters.push({ currentStatus: { in: [...ACTIVE_STATUSES] } });
+  if (query.scope === "active") filters.push(ticketStatusesWhere(ACTIVE_TICKET_STATUSES));
   if (query.status) filters.push({ currentStatus: query.status });
+  if (query.statuses) filters.push(ticketStatusesWhere(query.statuses));
   if (query.itPriority) filters.push({ itPriority: query.itPriority });
+  if (query.itPriorities) filters.push(ticketPrioritiesWhere(query.itPriorities));
+  if (query.updatedFrom || query.updatedThrough) filters.push(ticketUpdatedAtRangeWhere(query.updatedFrom, query.updatedThrough));
+  if (query.resolvedFrom || query.resolvedThrough) filters.push(ticketResolvedAtRangeWhere(query.resolvedFrom, query.resolvedThrough));
   if (query.categoryId !== undefined) filters.push({ categoryId: query.categoryId });
   if (typeof resolvedOwner === "number") filters.push({ ownerId: resolvedOwner });
   if (resolvedOwner === "unassigned") filters.push({ ownerId: null });
@@ -89,6 +93,11 @@ function buildQueueWhere(
 }
 
 function buildQueueOrder(query: StaffQueueQuery): Prisma.TicketOrderByWithRelationInput[] {
+  if (query.sort === "priorityRecent") return [
+    { itPriority: "desc" },
+    { updatedAt: "desc" },
+    { id: "desc" },
+  ];
   const primary = query.sort === "status"
     ? { currentStatus: query.order }
     : { [query.sort]: query.order };

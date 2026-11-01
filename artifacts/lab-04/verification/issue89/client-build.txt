@@ -1,0 +1,16 @@
+Issue 89 client production build; 2026-10-29 Asia/Bangkok
+Command: npm --prefix client run build
+
+> toktickit-client@1.0.0 build
+> tsc && vite build
+
+vite v6.4.3 building for production...
+transforming...
+✓ 71 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.41 kB │ gzip:   0.28 kB
+dist/assets/index-DWm3Nisu.css  242.46 kB │ gzip:  33.44 kB
+dist/assets/index-r24_RzRP.js   360.13 kB │ gzip: 102.85 kB
+✓ built in 4.32s
+Exit code: 0

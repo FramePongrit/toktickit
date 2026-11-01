@@ -1,0 +1,111 @@
+[WebServer] (node:28192) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] TokTickIT API listening on http://localhost:3000
+[WebServer] (node:14496) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer]
+[WebServer]   VITE v6.4.3  ready in 375 ms
+[WebServer]
+[WebServer]   ➜  Local:   http://localhost:5173/
+
+Running 7 tests using 1 worker
+
+(node:11716) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x  1 [e2e] › e2e\lab-03\authentication.spec.ts:36:3 › E2E-A01 — Lab 3 authentication and direct security › valid login lands by Role and direct API guards reject unauthenticated/forged mutations (2.8s)
+  -  2 [e2e] › e2e\lab-03\authentication.spec.ts:85:3 › E2E-A01 — Lab 3 authentication and direct security › invalid and inactive credentials expose safe, distinct browser feedback
+  -  3 [e2e] › e2e\lab-03\authentication.spec.ts:111:3 › E2E-A01 — Lab 3 authentication and direct security › mandatory password change gates normal routes and invalidates the Initial Password
+(node:28640) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x  4 [e2e] › e2e\lab-03\staff-ticket-flow.spec.ts:61:3 › E2E-S01 — real Staff Queue and Ticket workflow › queue filters, ownership actions, communications, resolution lifecycle, attachments, and direct guards (36.8s)
+  -  5 [e2e] › e2e\lab-03\staff-ticket-flow.spec.ts:256:3 › E2E-S01 — real Staff Queue and Ticket workflow › Requester can upload, download, and remove an attachment through the browser
+(node:18692) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x  6 [e2e] › e2e\lab-03\user-administration.spec.ts:39:3 › E2E-U01 — Administrator User Management › Admin manages a User while direct non-Admin and CSRF boundaries remain enforced (0ms)
+  -  7 [e2e] › e2e\lab-03\user-administration.spec.ts:188:3 › E2E-U01 — Administrator User Management › Browser proves LAST_ACTIVE_ADMINISTRATOR for an isolated concurrent Admin pair
+
+
+  1) [e2e] › e2e\lab-03\authentication.spec.ts:36:3 › E2E-A01 — Lab 3 authentication and direct security › valid login lands by Role and direct API guards reject unauthenticated/forged mutations
+
+    Error: locator.click: Error: strict mode violation: getByRole('link', { name: 'My Tickets' }) resolved to 2 elements:
+        1) <a href="/tickets" class="nav-link" data-discover="true">My Tickets</a> aka getByRole('link', { name: 'My Tickets', exact: true })
+        2) <a href="/tickets" data-discover="true" class="btn btn-outline-primary">Open My Tickets</a> aka getByRole('link', { name: 'Open My Tickets' })
+
+    Call log:
+      - waiting for getByRole('link', { name: 'My Tickets' })
+
+
+      49 |     await expect(page.getByRole("link", { name: "My Tickets" })).toBeVisible();
+      50 |     await expect(page.getByRole("link", { name: "Staff Queue" })).toHaveCount(0);
+    > 51 |     await page.getByRole("link", { name: "My Tickets" }).click();
+         |                                                          ^
+      52 |     await expect(page).toHaveURL(/\/tickets$/);
+      53 |     await expect(page.getByRole("heading", { name: "My Tickets" })).toBeVisible();
+      54 |
+        at D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\e2e\lab-03\authentication.spec.ts:51:58
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\issue90\pw-output-inherited\lab-03-authentication-E2E--f8423-henticated-forged-mutations-e2e\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\issue90\pw-output-inherited\lab-03-authentication-E2E--f8423-henticated-forged-mutations-e2e\error-context.md
+
+    Error Context: test-results\issue90\pw-output-inherited\lab-03-authentication-E2E--f8423-henticated-forged-mutations-e2e\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\issue90\pw-output-inherited\lab-03-authentication-E2E--f8423-henticated-forged-mutations-e2e\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\issue90\pw-output-inherited\lab-03-authentication-E2E--f8423-henticated-forged-mutations-e2e\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [e2e] › e2e\lab-03\staff-ticket-flow.spec.ts:61:3 › E2E-S01 — real Staff Queue and Ticket workflow › queue filters, ownership actions, communications, resolution lifecycle, attachments, and direct guards
+
+    Test timeout of 30000ms exceeded.
+
+    Error Context: test-results\issue90\pw-output-inherited\lab-03-staff-ticket-flow-E-4d3c8-tachments-and-direct-guards-e2e\error-context.md
+
+    Error Context: test-results\issue90\pw-output-inherited\lab-03-staff-ticket-flow-E-4d3c8-tachments-and-direct-guards-e2e\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\issue90\pw-output-inherited\lab-03-staff-ticket-flow-E-4d3c8-tachments-and-direct-guards-e2e\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\issue90\pw-output-inherited\lab-03-staff-ticket-flow-E-4d3c8-tachments-and-direct-guards-e2e\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [e2e] › e2e\lab-03\user-administration.spec.ts:39:3 › E2E-U01 — Administrator User Management › Admin manages a User while direct non-Admin and CSRF boundaries remain enforced
+
+    Error: Issue #61 E2E refuses non-isolated database schema: lab4_issue90_e2e_20261030
+
+       at support\fixtures.ts:19
+
+      17 |   const schema = new URL(configured).searchParams.get("schema");
+      18 |   if (!schema || !/^issue61_verify_[a-f0-9]{24}$/.test(schema)) {
+    > 19 |     throw new Error(`Issue #61 E2E refuses non-isolated database schema: ${schema ?? "missing"}`);
+         |           ^
+      20 |   }
+      21 | }
+      22 |
+        at assertIsolatedE2EDatabase (D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\e2e\support\fixtures.ts:19:11)
+        at D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\e2e\lab-03\user-administration.spec.ts:26:5
+
+    Error Context: test-results\issue90\pw-output-inherited\lab-03-user-administration-2b733--boundaries-remain-enforced-e2e\error-context.md
+
+    Error Context: test-results\issue90\pw-output-inherited\lab-03-user-administration-2b733--boundaries-remain-enforced-e2e\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\issue90\pw-output-inherited\lab-03-user-administration-2b733--boundaries-remain-enforced-e2e\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\issue90\pw-output-inherited\lab-03-user-administration-2b733--boundaries-remain-enforced-e2e\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3 failed
+    [e2e] › e2e\lab-03\authentication.spec.ts:36:3 › E2E-A01 — Lab 3 authentication and direct security › valid login lands by Role and direct API guards reject unauthenticated/forged mutations
+    [e2e] › e2e\lab-03\staff-ticket-flow.spec.ts:61:3 › E2E-S01 — real Staff Queue and Ticket workflow › queue filters, ownership actions, communications, resolution lifecycle, attachments, and direct guards
+    [e2e] › e2e\lab-03\user-administration.spec.ts:39:3 › E2E-U01 — Administrator User Management › Admin manages a User while direct non-Admin and CSRF boundaries remain enforced
+  4 did not run

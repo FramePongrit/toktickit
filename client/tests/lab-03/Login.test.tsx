@@ -127,7 +127,7 @@ describe("Issue 50 Login", () => {
     expect(screen.queryByText("server detail must not be rendered")).not.toBeInTheDocument();
   });
 
-  it("UI-L01/UI-H01: normalizes email, sends credentials, and lands by the authenticated role", async () => {
+  it("UI-L01/UI-H01: normalizes email, sends credentials, and lands Staff at Dashboard", async () => {
     const user = userEvent.setup();
     const staff = { ...USER, fullName: "Somsak Staff", role: "STAFF" as const };
     fetchMock.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
@@ -142,7 +142,7 @@ describe("Issue 50 Login", () => {
     await user.type(screen.getByLabelText(/^Password/), "valid-password1");
     await user.click(screen.getByRole("button", { name: "Sign in" }));
 
-    expect(await screen.findByTestId("staff-landing")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
     const loginCall = fetchMock.mock.calls.find(([input]) => pathOf(input) === "/api/auth/login");
     expect(loginCall?.[1]).toEqual(expect.objectContaining({ credentials: "include" }));
     expect(JSON.parse(String((loginCall?.[1] as RequestInit).body))).toEqual({ email: "staff@example.test", password: "valid-password1" });
@@ -165,6 +165,29 @@ describe("Issue 50 Login", () => {
 
     expect(await screen.findByRole("heading", { name: "Change password" })).toBeInTheDocument();
     expect(screen.getByText(/initial password must be changed/i)).toBeInTheDocument();
+  });
+
+  it("UI-05: restores a permitted direct destination after Login", async () => {
+    const user = userEvent.setup();
+    fetchMock.mockImplementation((input: RequestInfo | URL) => {
+      if (pathOf(input) === "/api/auth/me") return Promise.resolve(response(401));
+      if (pathOf(input) === "/api/auth/login") return Promise.resolve(response(200, { user: USER, csrfToken: "csrf-login" }));
+      if (pathOf(input) === "/api/categories" || pathOf(input) === "/api/related-systems") return Promise.resolve(response(200, []));
+      return Promise.resolve(response(404));
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/tickets/new?source=dashboard"]}>
+        <AuthProvider><AppRoutes /></AuthProvider>
+      </MemoryRouter>
+    );
+    await screen.findByRole("heading", { name: "Sign in" });
+    await user.type(screen.getByLabelText(/Email/), "niran@example.test");
+    await user.type(screen.getByLabelText(/^Password/), "valid-password1");
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+
+    expect(await screen.findByRole("heading", { name: "Create Ticket" })).toBeInTheDocument();
+    expect(screen.getByTestId("current-user")).toHaveTextContent("Niran Requester");
   });
 
   it("UI-L01: gives a generic retryable message for network/server failures", async () => {

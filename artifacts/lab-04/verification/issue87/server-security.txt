@@ -1,0 +1,21 @@
+Issue #87 server security suite
+Environment: local auth/security tests; no database access. This suite opens Supertest loopback sockets, so it was rerun with approved host socket access after sandbox EACCES.
+Command: npm --prefix server run test:security (escalated socket access).
+
+> toktickit-server@1.0.0 test:security
+> vitest run --config vitest.security.config.ts
+
+
+ RUN  v2.1.9 D:/Software Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/server
+
+ ✓ tests/lab-03/auth-security.unit.test.ts (21 tests) 1352ms
+   ✓ password security > hashes with bcrypt cost 12 and compares without exposing the hash 651ms
+   ✓ password security > detects reuse of the current password but accepts a different valid password 636ms
+
+ Test Files  1 passed (1)
+      Tests  21 passed (21)
+   Start at  02:31:11
+   Duration  2.02s (transform 198ms, setup 0ms, collect 485ms, tests 1.35s, environment 0ms, prepare 54ms)
+
+
+Exit code: 0

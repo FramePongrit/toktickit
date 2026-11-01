@@ -1,0 +1,5 @@
+
+> toktickit-server@1.0.0 build
+> tsc
+
+Exit code: 0

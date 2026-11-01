@@ -1,0 +1,421 @@
+Issue 89 list URL synchronization/client date validation regression; 2026-10-29 Asia/Bangkok
+Command: npm --prefix client test -- --run tests/lab-02/MyTickets.test.tsx tests/lab-03/StaffTicketQueue.test.tsx
+
+> toktickit-client@1.0.0 test
+> vitest run --run tests/lab-02/MyTickets.test.tsx tests/lab-03/StaffTicketQueue.test.tsx
+
+
+ RUN  v2.1.9 D:/Software Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/client
+
+ ✓ tests/lab-02/MyTickets.test.tsx (24 tests) 2386ms
+   ✓ My Tickets — list > round-trips Dashboard filters, page size, search, sort, and page through the URL 546ms
+   ✓ My Tickets — search, filters and sorting > UI-13: sends the search term after debouncing 344ms
+ ❯ tests/lab-03/StaffTicketQueue.test.tsx (15 tests | 1 failed) 2623ms
+   × Issue 56 Staff Ticket Queue > syncs the mounted page from external URL changes and restores state on Back 340ms
+     → Unable to find an element with the display value: Waiting for Requester.
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<section[39m
+      [33mclass[39m=[32m"staff-queue-page"[39m
+      [33mdata-testid[39m=[32m"staff-landing"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3 mb-4"[39m
+      [36m>[39m
+        [36m<div>[39m
+          [36m<h1[39m
+            [33mclass[39m=[32m"h3 mb-1"[39m
+            [33mdata-page-heading[39m=[32m"true"[39m
+            [33mtabindex[39m=[32m"-1"[39m
+          [36m>[39m
+            [0mTicket Queue[0m
+          [36m</h1>[39m
+          [36m<h2[39m
+            [33mclass[39m=[32m"visually-hidden"[39m
+          [36m>[39m
+            [0mStaff Queue[0m
+          [36m</h2>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"zen-muted mb-0"[39m
+          [36m>[39m
+            [0mFind and prioritize support work for Requesters.[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33maria-label[39m=[32m"Ticket scope"[39m
+          [33mclass[39m=[32m"btn-group"[39m
+          [33mrole[39m=[32m"group"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33maria-pressed[39m=[32m"false"[39m
+            [33mclass[39m=[32m"btn btn-outline-primary"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0mActive[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33maria-pressed[39m=[32m"true"[39m
+            [33mclass[39m=[32m"btn btn-outline-primary"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0mAll[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<p[39m
+        [33maria-live[39m=[32m"polite"[39m
+        [33mclass[39m=[32m"zen-muted mb-3"[39m
+      [36m>[39m
+        [0mAll Tickets includes active and final historical work.[0m
+      [36m</p>[39m
+      [36m<section[39m
+        [33maria-label[39m=[32m"Queue filters"[39m
+        [33mclass[39m=[32m"zen-card p-3 mb-4"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"row g-3"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"col-12 col-md-6 col-lg-4"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"form-label fw-semibold"[39m
+              [33mfor[39m=[32m"staff-queue-search"[39m
+            [36m>[39m
+              [0mSearch[0m
+            [36m</label>[39m
+            [36m<input[39m
+              [33mclass[39m=[32m"form-control"[39m
+              [33mid[39m=[32m"staff-queue-search"[39m
+              [33mplaceholder[39m=[32m"Ticket number, summary, requester…"[39m
+              [33mtype[39m=[32m"search"[39m
+              [33mvalue[39m=[32m""[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"col-12 col-md-6 col-lg-4"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"form-label fw-semibold"[39m
+              [33mfor[39m=[32m"staff-queue-status"[39m
+            [36m>[39m
+              [0mStatus[0m
+            [36m</label>[39m
+            [36m<select[39m
+              [33mclass[39m=[32m"form-select"[39m
+              [33mid[39m=[32m"staff-queue-status"[39m
+            [36m>[39m
+              [36m<option[39m
+                [33mvalue[39m=[32m""[39m
+              [36m>[39m
+                [0mAll statuses[0m
+              [36m</option>[39m
+              [36m<option[39m
+                [33mvalue[39m=[32m"NEW"[39m
+              [36m>[39m
+                [0mNew[0m
+              [36m</option>[39m
+              [36m<option[39m
+                [33mvalue[39m=[32m"OPEN"[39m
+              [36m>[39m
+                [0mOpen[0m
+              [36m</option>[39m
+              [36m<option[39m
+                [33mvalue[39m=[32m"IN_PROGRESS"[39m
+              [36m>[39m
+                [0mIn Progress[0m
+              [36m</option>[39m
+              [36m<option[39m
+                [33mvalue[39m=[32m"WAITING_FOR_REQUESTER"[39m
+              [36m>[39m
+                [0mWaiting For Requester[0m
+              [36m</option>[39m
+              [36m<option[39m
+                [33mvalue[39m=[32m"REOPENED"[39m
+              [36m>[39m
+                [0mReopened[0m
+              [36m</option>[39m
+              [36m<option[39m
+                [33mvalue[39m=[32m"RESOLVED"[39m
+              [36m>[39m
+                [0mResolved[0m
+              [36m</option>[39m
+              [36m<option[39m
+                [33mvalue[39m=[32m"CLOSED"[39m
+              [36m>[39m
+                [0mClosed[0m
+              [36m</option>[39m
+              [36m<option[39m
+                [33mvalue[39m=[32m"CANCELLED"[39m
+              [36m>[39m
+                [0mCancelled[0m
+              [36m</option>[39m
+            [36m</select>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"col-12 col-md-6 col-lg-4"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"form-label fw-semibold"[39m
+              [33mfor[39m=[32m"staff-queue-it-priority"[39m
+            [36m>[39m
+              [0mIT Priority[0m
+            [36m</label>[39m
+            [36m<select[39m
+              [33mclass[39m=[32m"form-select"[39m
+              [33mid[39m=[32m"staff-queue-it-priority"[39m
+            [36m>[39m
+              [36m<option[39m
+                [33mvalue[39m=[32m""[39m
+              [36m>[39m
+                [0mAll IT priorities[0m
+              [36m</option>[39m
+              [36m<option[39m
+                [33mvalue[39m=[32m"LOW"[39m
+              [36m>[39m
+                [0mLow[0m
+              [36m</option>[39m
+              [36m<option[39m
+                [33mvalue[39m=[32m"MEDIUM"[39m
+              [36m>[39m
+                [0mMedium[0m
+              [36m</option>[39m
+              [36m<option[39m
+                [33mvalue[39m=[32m"HIGH"[39m
+              [36m>[39m
+                [0mHigh[0m
+              [36m</option>[39m
+              [36m<option[39m
+                [33mvalue[39m=[32m"URGENT"[39m
+              [36m>[39m
+                [0mUrgent[0m
+              [36m</option>[39m
+            [36m</select>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"col-12 col-md-6 col-lg-4"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"form-label fw-semibold"[39m
+              [33mfor[39m=[32m"staff-queue-category"[39m
+            [36m>[39m
+              [0mCategory[0m
+            [36m</label>[39m
+            [36m<select[39m
+              [33mc...
+   ✓ Issue 56 Staff Ticket Queue > replaces a Dashboard status/priority set with the selected single value and keeps date bounds 343ms
+   ✓ Issue 56 Staff Ticket Queue > UI-Q02: uses bounded pagination at the first, middle, and last page without an overflow strip 318ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/lab-03/StaffTicketQueue.test.tsx > Issue 56 Staff Ticket Queue > syncs the mounted page from external URL changes and restores state on Back
+TestingLibraryElementError: Unable to find an element with the display value: Waiting for Requester.
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <section
+      class="staff-queue-page"
+      data-testid="staff-landing"
+    >
+      <div
+        class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3 mb-4"
+      >
+        <div>
+          <h1
+            class="h3 mb-1"
+            data-page-heading="true"
+            tabindex="-1"
+          >
+            Ticket Queue
+          </h1>
+          <h2
+            class="visually-hidden"
+          >
+            Staff Queue
+          </h2>
+          <p
+            class="zen-muted mb-0"
+          >
+            Find and prioritize support work for Requesters.
+          </p>
+        </div>
+        <div
+          aria-label="Ticket scope"
+          class="btn-group"
+          role="group"
+        >
+          <button
+            aria-pressed="false"
+            class="btn btn-outline-primary"
+            type="button"
+          >
+            Active
+          </button>
+          <button
+            aria-pressed="true"
+            class="btn btn-outline-primary"
+            type="button"
+          >
+            All
+          </button>
+        </div>
+      </div>
+      <p
+        aria-live="polite"
+        class="zen-muted mb-3"
+      >
+        All Tickets includes active and final historical work.
+      </p>
+      <section
+        aria-label="Queue filters"
+        class="zen-card p-3 mb-4"
+      >
+        <div
+          class="row g-3"
+        >
+          <div
+            class="col-12 col-md-6 col-lg-4"
+          >
+            <label
+              class="form-label fw-semibold"
+              for="staff-queue-search"
+            >
+              Search
+            </label>
+            <input
+              class="form-control"
+              id="staff-queue-search"
+              placeholder="Ticket number, summary, requester…"
+              type="search"
+              value=""
+            />
+          </div>
+          <div
+            class="col-12 col-md-6 col-lg-4"
+          >
+            <label
+              class="form-label fw-semibold"
+              for="staff-queue-status"
+            >
+              Status
+            </label>
+            <select
+              class="form-select"
+              id="staff-queue-status"
+            >
+              <option
+                value=""
+              >
+                All statuses
+              </option>
+              <option
+                value="NEW"
+              >
+                New
+              </option>
+              <option
+                value="OPEN"
+              >
+                Open
+              </option>
+              <option
+                value="IN_PROGRESS"
+              >
+                In Progress
+              </option>
+              <option
+                value="WAITING_FOR_REQUESTER"
+              >
+                Waiting For Requester
+              </option>
+              <option
+                value="REOPENED"
+              >
+                Reopened
+              </option>
+              <option
+                value="RESOLVED"
+              >
+                Resolved
+              </option>
+              <option
+                value="CLOSED"
+              >
+                Closed
+              </option>
+              <option
+                value="CANCELLED"
+              >
+                Cancelled
+              </option>
+            </select>
+          </div>
+          <div
+            class="col-12 col-md-6 col-lg-4"
+          >
+            <label
+              class="form-label fw-semibold"
+              for="staff-queue-it-priority"
+            >
+              IT Priority
+            </label>
+            <select
+              class="form-select"
+              id="staff-queue-it-priority"
+            >
+              <option
+                value=""
+              >
+                All IT priorities
+              </option>
+              <option
+                value="LOW"
+              >
+                Low
+              </option>
+              <option
+                value="MEDIUM"
+              >
+                Medium
+              </option>
+              <option
+                value="HIGH"
+              >
+                High
+              </option>
+              <option
+                value="URGENT"
+              >
+                Urgent
+              </option>
+            </select>
+          </div>
+          <div
+            class="col-12 col-md-6 col-lg-4"
+          >
+            <label
+              class="form-label fw-semibold"
+              for="staff-queue-category"
+            >
+              Category
+            </label>
+            <select
+              c...
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ tests/lab-03/StaffTicketQueue.test.tsx:129:19
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  1 failed | 38 passed (39)
+   Start at  23:10:30
+   Duration  10.12s (transform 1.18s, setup 894ms, collect 2.68s, tests 5.01s, environment 6.47s, prepare 694ms)
+
+Exit code: 1

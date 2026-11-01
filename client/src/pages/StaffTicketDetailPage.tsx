@@ -11,14 +11,18 @@ import {
   updateStaffTicketStatus,
 } from "../api/tickets.js";
 import { AttachmentSection } from "../components/AttachmentSection.js";
+import { ActionsTakenPanel } from "../components/ActionsTakenPanel.js";
 import { PriorityBadge, StatusBadge } from "../components/Badges.js";
 import { StateBlock } from "../components/StateBlock.js";
+import { TicketDetailTabs } from "../components/TicketDetailTabs.js";
 import { roleLabel } from "../context/AuthContext.js";
 import { ApiError } from "../lib/http.js";
 import type {
   InternalNote,
   Priority,
   PublicComment,
+  ResolutionGate,
+  ResolutionGateReason,
   Role,
   TicketDetail,
   TicketOwnerOption,
@@ -90,12 +94,13 @@ function ReadOnlyField({
   );
 }
 
-function ActionFeedback({ feedback, testId }: { feedback: ActionFeedback; testId: string }) {
+function ActionFeedback({ feedback, testId, onReload }: { feedback: ActionFeedback; testId: string; onReload?: () => void }) {
   if (!feedback.error && !feedback.success) return null;
   return (
     <div className="mt-2" data-testid={testId} aria-live="polite">
       {feedback.error && <p className="zen-field-error mb-2" role="alert">{feedback.error}</p>}
       {feedback.success && <p className="zen-success mb-2" role="status">{feedback.success}</p>}
+      {onReload && <button type="button" className="btn btn-outline-primary btn-sm" onClick={onReload}>Reload latest Ticket before retrying</button>}
     </div>
   );
 }
@@ -195,7 +200,11 @@ function ConfirmationDialog({
       <p className="mb-3">
         {status === "CLOSED"
           ? "Closing this Ticket is final. Closed Tickets are read-only and cannot be reopened."
-          : `Update this Ticket to ${titleCase(status)}?`}
+          : status === "CANCELLED"
+            ? "This is final. All unfinished Actions in the current work cycle will be cancelled with the reason entered above."
+            : status === "REOPENED"
+              ? "Reopening starts a fresh work cycle. Earlier-cycle Actions and history remain available as locked, read-only history."
+            : `Update this Ticket to ${titleCase(status)}?`}
       </p>
       <div className="d-flex flex-wrap justify-content-end gap-2">
         <button ref={cancelRef} type="button" className="btn btn-outline-primary" onClick={onCancel} disabled={busy}>
@@ -214,12 +223,37 @@ function ownerText(owner: TicketOwnerOption | null | undefined): React.ReactNode
   return <>{owner.fullName} <span className="zen-muted">({roleLabel(owner.role)})</span></>;
 }
 
+function isResolutionGate(value: unknown): value is ResolutionGate {
+  if (!value || typeof value !== "object") return false;
+  const gate = value as Record<string, unknown>;
+  return typeof gate.canResolve === "boolean"
+    && typeof gate.completedCount === "number"
+    && typeof gate.unfinishedCount === "number"
+    && typeof gate.followUpCount === "number"
+    && Array.isArray(gate.reasons)
+    && gate.reasons.every((reason) => ["NO_COMPLETED_ACTION", "UNFINISHED_ACTIONS", "FOLLOW_UP_REQUIRED", "OWNER_REQUIRED"].includes(String(reason)));
+}
+
+const GATE_REASON_TEXT: Record<ResolutionGateReason, string> = {
+  NO_COMPLETED_ACTION: "Complete at least one Action in this work cycle.",
+  UNFINISHED_ACTIONS: "Finish or cancel the unfinished Actions in this work cycle.",
+  FOLLOW_UP_REQUIRED: "Clear required follow-up on Completed Actions before resolving.",
+  OWNER_REQUIRED: "Assign an active IT Staff member or Administrator before changing status.",
+};
+
 export function StaffTicketDetailPage() {
   const { id } = useParams();
   const ticketId = Number(id);
+  const routeScope = useRef({ ticketId, generation: 0 });
+  if (routeScope.current.ticketId !== ticketId) {
+    routeScope.current = { ticketId, generation: routeScope.current.generation + 1 };
+  }
   const [ticket, setTicket] = useState<TicketDetail | null>(null);
+  const loadedTicketId = useRef<number | null>(null);
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [reload, setReload] = useState(0);
+  const [reviewRequired, setReviewRequired] = useState<"owner" | "priority" | "status" | null>(null);
+  const statusIntent = useRef<{ body: string; key: string } | null>(null);
 
   const [claimFeedback, setClaimFeedback] = useState<ActionFeedback>(idleFeedback());
   const [ownerFeedback, setOwnerFeedback] = useState<ActionFeedback>(idleFeedback());
@@ -231,6 +265,7 @@ export function StaffTicketDetailPage() {
   const [priorityDraft, setPriorityDraft] = useState<Priority>("MEDIUM");
   const [statusDraft, setStatusDraft] = useState<TicketStatus | "">("");
   const [waitingComment, setWaitingComment] = useState("");
+  const [cancelReason, setCancelReason] = useState("");
   const [publicDraft, setPublicDraft] = useState("");
   const [noteDraft, setNoteDraft] = useState("");
   const [statusDialog, setStatusDialog] = useState<TicketStatus | null>(null);
@@ -246,15 +281,30 @@ export function StaffTicketDetailPage() {
   const ownerDialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const scope = routeScope.current;
+    return () => {
+      if (routeScope.current === scope) routeScope.current = { ticketId: scope.ticketId, generation: scope.generation + 1 };
+    };
+  }, [ticketId]);
+
+  useEffect(() => {
     let cancelled = false;
     setLoadState("loading");
     fetchStaffTicket(ticketId)
       .then((loaded) => {
         if (cancelled) return;
+        const firstLoadForTicket = loadedTicketId.current !== ticketId;
+        loadedTicketId.current = ticketId;
         setTicket(loaded);
-        setPriorityDraft(loaded.itPriority ?? loaded.requestedPriority);
-        setStatusDraft("");
-        setWaitingComment("");
+        if (firstLoadForTicket) {
+          setPriorityDraft(loaded.itPriority ?? loaded.requestedPriority);
+          setStatusDraft("");
+          setWaitingComment("");
+          setCancelReason("");
+          setStatusDialog(null);
+          setReviewRequired(null);
+          statusIntent.current = null;
+        }
         setLoadState("ready");
       })
       .catch((error) => {
@@ -310,12 +360,43 @@ export function StaffTicketDetailPage() {
     setReload((value) => value + 1);
   }
 
+  async function reloadForReview() {
+    const target = reviewRequired;
+    try {
+      const latest = await fetchStaffTicket(ticketId);
+      setTicket(latest);
+      if (target === "owner") setExpectedOwnerId(latest.owner?.id ?? null);
+      setReviewRequired(null);
+      const feedback = { busy: false, error: null, success: "Latest Ticket loaded. Review it before explicitly retrying." };
+      if (target === "owner") setOwnerFeedback(feedback);
+      else if (target === "priority") setPriorityFeedback(feedback);
+      else setStatusFeedback(feedback);
+    } catch {
+      const feedback = { busy: false, error: "The latest Ticket could not be loaded. Please retry the reload.", success: null };
+      if (target === "owner") setOwnerFeedback(feedback);
+      else if (target === "priority") setPriorityFeedback(feedback);
+      else setStatusFeedback(feedback);
+    }
+  }
+
+  async function refreshActionParent(): Promise<TicketDetail> {
+    const scope = routeScope.current;
+    const requestedId = scope.ticketId;
+    const latest = await fetchStaffTicket(requestedId);
+    if (routeScope.current === scope) {
+      setTicket(latest);
+      setLoadState("ready");
+    }
+    return latest;
+  }
+
   async function handleClaim() {
     if (!ticket) return;
     setClaimFeedback({ busy: true, error: null, success: null });
     try {
-      await claimStaffTicket(ticket.id);
-      setClaimFeedback({ busy: false, error: null, success: "Ticket claimed successfully. Refreshing owner details." });
+      const result = await claimStaffTicket(ticket.id, ticket.version ?? 1);
+      setTicket((current) => current ? { ...current, owner: result.owner, version: result.ticketVersion } : current);
+      setClaimFeedback({ busy: false, error: null, success: "Ticket claimed successfully. Refreshing owner and transition details." });
       setReload((value) => value + 1);
     } catch (error) {
       if (error instanceof ApiError && error.code === "TICKET_FINAL") finalError(setClaimFeedback);
@@ -369,18 +450,21 @@ export function StaffTicketDetailPage() {
     }
     setOwnerFeedback({ busy: true, error: null, success: null });
     try {
-      await reassignStaffTicket(ticket.id, ownerId, expectedOwnerId);
+      const result = await reassignStaffTicket(ticket.id, ownerId, expectedOwnerId, ticket.version ?? 1);
+      setTicket((current) => current ? { ...current, owner: result.owner, version: result.ticketVersion } : current);
       setOwnerDialog(false);
-      setOwnerFeedback({ busy: false, error: null, success: "Owner changed successfully. Refreshing Ticket detail." });
+      setOwnerFeedback({ busy: false, error: null, success: "Owner changed successfully. Refreshing owner and transition details." });
       setReload((value) => value + 1);
     } catch (error) {
       if (error instanceof ApiError && error.code === "TICKET_FINAL") {
         setOwnerDialog(false);
         finalError(setOwnerFeedback);
       } else if (error instanceof ApiError && error.code === "TICKET_OWNER_CHANGED") {
-        setOwnerDialog(false);
-        setOwnerFeedback({ busy: false, error: "Ticket ownership changed. Review the refreshed Owner and explicitly retry Reassign.", success: null });
-        setReload((value) => value + 1);
+        setReviewRequired("owner");
+        setOwnerFeedback({ busy: false, error: "Ticket ownership changed. Reload and review the current Owner before retrying.", success: null });
+      } else if (error instanceof ApiError && error.code === "STALE_TICKET_VERSION") {
+        setReviewRequired("owner");
+        setOwnerFeedback({ busy: false, error: "Ticket changed. Reload and review it before retrying Reassign.", success: null });
       } else if (error instanceof ApiError && error.code === "OWNER_NOT_ELIGIBLE") {
         setOwnerFeedback({ busy: false, error: "Select an active IT Staff member or Administrator.", success: null });
         void loadOwners();
@@ -394,43 +478,86 @@ export function StaffTicketDetailPage() {
     if (!ticket) return;
     setPriorityFeedback({ busy: true, error: null, success: null });
     try {
-      const result = await updateStaffItPriority(ticket.id, priorityDraft);
-      setTicket((current) => current ? { ...current, itPriority: result.itPriority } : current);
+      const result = await updateStaffItPriority(ticket.id, priorityDraft, ticket.version ?? 1);
+      setTicket((current) => current ? { ...current, itPriority: result.itPriority, version: result.ticketVersion } : current);
       setPriorityFeedback({ busy: false, error: null, success: "IT Priority saved." });
     } catch (error) {
       if (error instanceof ApiError && error.code === "TICKET_FINAL") finalError(setPriorityFeedback);
-      else setPriorityFeedback({ busy: false, error: safeErrorMessage(error, "IT Priority could not be saved. Please retry."), success: null });
+      else if (error instanceof ApiError && error.code === "STALE_TICKET_VERSION") {
+        setReviewRequired("priority");
+        setPriorityFeedback({ busy: false, error: "Ticket changed. Reload and review it before retrying Priority.", success: null });
+      } else setPriorityFeedback({ busy: false, error: safeErrorMessage(error, "IT Priority could not be saved. Please retry."), success: null });
     }
   }
 
   async function performStatus(status: TicketStatus) {
     if (!ticket) return;
+    const body = JSON.stringify({
+      expectedTicketVersion: ticket.version ?? 1,
+      status,
+      ...(status === "CANCELLED" ? { cancelReason: cancelReason.trim() } : {}),
+      ...(status === "WAITING_FOR_REQUESTER" ? { publicComment: waitingComment.trim() } : {}),
+    });
+    if (!statusIntent.current || statusIntent.current.body !== body) {
+      statusIntent.current = { body, key: crypto.randomUUID() };
+    }
     setStatusFeedback({ busy: true, error: null, success: null });
     try {
-      const result = await updateStaffTicketStatus(
-        ticket.id,
-        status,
-        status === "WAITING_FOR_REQUESTER" ? waitingComment.trim() : undefined
-      );
+      const result = status === "CANCELLED"
+        ? await updateStaffTicketStatus(
+          ticket.id,
+          status,
+          ticket.version ?? 1,
+          undefined,
+          statusIntent.current.key,
+          cancelReason.trim()
+        )
+        : await updateStaffTicketStatus(
+          ticket.id,
+          status,
+          ticket.version ?? 1,
+          status === "WAITING_FOR_REQUESTER" ? waitingComment.trim() : undefined,
+          statusIntent.current.key
+        );
+      statusIntent.current = null;
       setStatusDialog(null);
       setStatusDraft("");
       setWaitingComment("");
+      setCancelReason("");
       setStatusFeedback({ busy: false, error: null, success: `Ticket status updated to ${titleCase(status)}.` });
       setReload((value) => value + 1);
       setTicket((current) => current ? {
         ...current,
         currentStatus: result.currentStatus,
+        version: result.ticketVersion,
         resolutionIndication: result.resolutionIndication,
         allowedTransitions: result.allowedTransitions,
+        workCycle: result.workCycle,
+        resolvedAt: result.resolvedAt,
+        resolutionGate: result.resolutionGate,
       } : current);
     } catch (error) {
+      if (error instanceof ApiError && error.status < 500) statusIntent.current = null;
       if (error instanceof ApiError && error.code === "TICKET_FINAL") {
         setStatusDialog(null);
         finalError(setStatusFeedback);
       } else if (error instanceof ApiError && error.code === "TICKET_OWNER_REQUIRED") {
         setStatusFeedback({ busy: false, error: "Assign an active IT Staff member or Administrator with Claim/Reassign before updating status.", success: null });
+      } else if (error instanceof ApiError && error.code === "RESOLUTION_GATE_FAILED") {
+        const gate = error.meta?.resolutionGate;
+        if (isResolutionGate(gate)) {
+          setTicket((current) => current ? {
+            ...current,
+            resolutionGate: gate,
+            allowedTransitions: current.allowedTransitions?.filter((next) => next !== "RESOLVED"),
+          } : current);
+        }
+        setStatusFeedback({ busy: false, error: error.message, success: null });
       } else if (error instanceof ApiError && error.code === "VALIDATION_FAILED" && status === "WAITING_FOR_REQUESTER") {
         setStatusFeedback({ busy: false, error: "Enter a Public Comment when waiting for the Requester.", success: null });
+      } else if (error instanceof ApiError && (error.code === "STALE_TICKET_VERSION" || error.code === "IDEMPOTENCY_KEY_REUSED")) {
+        setReviewRequired("status");
+        setStatusFeedback({ busy: false, error: "Ticket changed. Reload and review it before explicitly retrying this status.", success: null });
       } else {
         setStatusFeedback({ busy: false, error: safeErrorMessage(error, "The status could not be updated. Please retry."), success: null });
       }
@@ -441,6 +568,10 @@ export function StaffTicketDetailPage() {
     event.preventDefault();
     if (!statusDraft) {
       setStatusFeedback({ busy: false, error: "Select a permitted next status.", success: null });
+      return;
+    }
+    if (statusDraft === "CANCELLED" && !cancelReason.trim()) {
+      setStatusFeedback({ busy: false, error: "Enter a reason before cancelling this Ticket.", success: null });
       return;
     }
     setStatusFeedback(idleFeedback());
@@ -512,6 +643,11 @@ export function StaffTicketDetailPage() {
 
   const isFinal = FINAL_STATUSES.has(ticket.currentStatus);
   const allowedTransitions = ticket.allowedTransitions ?? [];
+  const resolutionTimeLabel = ticket.resolvedAt
+    ? `Resolved ${formatDateTime(ticket.resolvedAt)}`
+    : ticket.currentStatus === "RESOLVED" || ticket.currentStatus === "CLOSED"
+      ? "Legacy resolution time unknown."
+      : "Not resolved in this cycle.";
   const comments = sorted(ticket.publicComments);
   const notes = sorted(ticket.internalNotes);
 
@@ -539,6 +675,8 @@ export function StaffTicketDetailPage() {
         </div>
       )}
 
+      <TicketDetailTabs
+        details={<>
       <section className="zen-card p-3 p-md-4 mb-4" aria-label="Ticket and Requester information">
         <div className="row">
           <ReadOnlyField label="Ticket No.">{ticket.ticketNumber}</ReadOnlyField>
@@ -581,7 +719,7 @@ export function StaffTicketDetailPage() {
                     {owners.map((owner) => <option key={owner.id} value={owner.id}>{owner.fullName} — {roleLabel(owner.role)}</option>)}
                   </select>
                 )}
-                <ActionFeedback feedback={ownerFeedback} testId="owner-feedback" />
+                <ActionFeedback feedback={ownerFeedback} testId="owner-feedback" onReload={reviewRequired === "owner" ? () => void reloadForReview() : undefined} />
                 <div className="d-flex flex-wrap justify-content-end gap-2 mt-3">
                   <button type="button" className="btn btn-outline-primary" onClick={closeOwnerDialog} disabled={ownerFeedback.busy}>Cancel</button>
                   <button type="button" className="btn btn-primary" onClick={() => void handleReassign()} disabled={ownerFeedback.busy || ownerDirectoryState !== "ready" || !selectedOwnerId}>
@@ -608,12 +746,17 @@ export function StaffTicketDetailPage() {
           </div>
           {!isFinal && <div className="col-12 col-md-auto mt-3 mt-md-0"><button type="button" className="btn btn-primary" onClick={() => void handlePrioritySave()} disabled={priorityFeedback.busy}>{priorityFeedback.busy ? "Saving…" : "Save IT Priority"}</button></div>}
         </div>
-        <ActionFeedback feedback={priorityFeedback} testId="priority-feedback" />
+        <ActionFeedback feedback={priorityFeedback} testId="priority-feedback" onReload={reviewRequired === "priority" ? () => void reloadForReview() : undefined} />
       </section>
 
       <section className="zen-card staff-action-card p-3 p-md-4 mb-4" aria-labelledby="status-heading">
         <h2 className="h5" id="status-heading">Status</h2>
         <p className="zen-muted">Only status transitions permitted by the server are offered.</p>
+        <p className="zen-muted" data-testid="ticket-work-cycle">Work cycle {ticket.workCycle ?? 1} · {resolutionTimeLabel}</p>
+        {ticket.resolutionGate && <div className="zen-warning-panel mb-3" aria-label="Resolution requirements">
+          <p className="mb-1">Cycle {ticket.workCycle ?? 1}: {ticket.resolutionGate.completedCount} completed, {ticket.resolutionGate.unfinishedCount} unfinished, {ticket.resolutionGate.followUpCount} requiring follow-up.</p>
+          {ticket.resolutionGate.reasons.length > 0 && <ul className="mb-0">{ticket.resolutionGate.reasons.map((reason) => <li key={reason}>{GATE_REASON_TEXT[reason]}</li>)}</ul>}
+        </div>}
         {!isFinal && (allowedTransitions.length === 0 ? (
           <p className="zen-warning-panel mb-0" role="status">Assign an eligible Owner with Claim or Reassign before updating status.</p>
         ) : (
@@ -624,7 +767,8 @@ export function StaffTicketDetailPage() {
               {allowedTransitions.map((status) => <option key={status} value={status}>{titleCase(status)}</option>)}
             </select>
             {statusDraft === "WAITING_FOR_REQUESTER" && <div className="mt-3"><label className="form-label fw-semibold" htmlFor="waiting-public-comment">Public Comment for Requester<span className="zen-required" aria-hidden="true">*</span><span className="visually-hidden"> (required)</span></label><textarea id="waiting-public-comment" className="form-control" rows={4} maxLength={MESSAGE_LIMIT} value={waitingComment} onChange={(event) => setWaitingComment(event.target.value)} aria-describedby="waiting-comment-hint" /><p id="waiting-comment-hint" className="zen-muted mt-1 mb-0">{MESSAGE_LIMIT - waitingComment.length} characters remaining.</p></div>}
-            <ActionFeedback feedback={statusFeedback} testId="status-feedback" />
+            {statusDraft === "CANCELLED" && <div className="mt-3"><label className="form-label fw-semibold" htmlFor="ticket-cancel-reason">Cancellation reason<span className="zen-required" aria-hidden="true">*</span><span className="visually-hidden"> (required)</span></label><textarea id="ticket-cancel-reason" className="form-control" rows={3} maxLength={1000} value={cancelReason} onChange={(event) => { setCancelReason(event.target.value); setStatusFeedback(idleFeedback()); }} aria-describedby="ticket-cancel-hint" /><p id="ticket-cancel-hint" className="zen-muted mt-1 mb-0">{1000 - cancelReason.length} characters remaining. Unfinished current-cycle Actions will be cancelled together.</p></div>}
+            <ActionFeedback feedback={statusFeedback} testId="status-feedback" onReload={reviewRequired === "status" ? () => void reloadForReview() : undefined} />
             <button ref={statusTriggerRef} type="submit" className="btn btn-primary mt-3" disabled={statusFeedback.busy}>{statusFeedback.busy ? "Updating…" : "Update status"}</button>
             {statusDialog && <ConfirmationDialog status={statusDialog} busy={statusFeedback.busy} onCancel={() => setStatusDialog(null)} onConfirm={() => void performStatus(statusDialog)} />}
           </form>
@@ -653,6 +797,9 @@ export function StaffTicketDetailPage() {
       </section>
 
       <AttachmentSection ticketId={ticket.id} attachments={ticket.attachments} onChanged={() => undefined} readOnly />
+        </>}
+        actions={<ActionsTakenPanel ticket={ticket} viewerRole="STAFF" refreshParent={refreshActionParent} />}
+      />
     </div>
   );
 }

@@ -1,0 +1,182 @@
+Issue 88 independent Reviewer client verification
+Client date: 2026-10-29 Asia/Bangkok
+Source: feature/lab4-actions-ui working source based on 030f5da261b45d88332ea518a7a5c8ae6b5ffe9a
+Command: npm --prefix client test -- --run tests/lab-04/ActionsTaken.test.tsx tests/lab-04/bangkokDateTime.test.ts tests/lab-04/TicketDetailTabs.test.tsx
+Environment: local Vitest/jsdom; DB-free. Executor held the isolated DB slot.
+Exit code: 0
+Result: 3 files / 28 tests passed, zero failures/skips, 15.70 seconds.
+Local independent execution; not CI or human approval.
+
+
+> toktickit-client@1.0.0 test
+> vitest run --run tests/lab-04/ActionsTaken.test.tsx tests/lab-04/bangkokDateTime.test.ts tests/lab-04/TicketDetailTabs.test.tsx
+
+
+ RUN  v2.1.9 D:/Software Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/client
+
+ ✓ tests/lab-04/bangkokDateTime.test.ts (2 tests) 3ms
+ ✓ tests/lab-04/TicketDetailTabs.test.tsx (1 test) 96ms
+ ✓ tests/lab-04/ActionsTaken.test.tsx (25 tests) 12936ms
+   ✓ Issue #88 Actions Taken > creates a Planned Action with an untouched date omitted and sends a scoped idempotency key 633ms
+   ✓ Issue #88 Actions Taken > keeps the exact create body and key for an ambiguous server failure retry 835ms
+   ✓ Issue #88 Actions Taken > starts a new create intent after the user edits a field following an ambiguous failure 964ms
+   ✓ Issue #88 Actions Taken > parses a user-edited datetime-local value as Bangkok +07 and validates against server time 569ms
+   ✓ Issue #88 Actions Taken > starts and completes current-cycle Actions with the captured versions and completion actor kept distinct 572ms
+   ✓ Issue #88 Actions Taken > retries an ambiguous completion with the exact saved body and idempotency key 489ms
+   ✓ Issue #88 Actions Taken > preserves Action timestamp precision for a description-only terminal correction 1100ms
+   ✓ Issue #88 Actions Taken > completes an Action created in the Ticket's first minute without truncating its timestamp 399ms
+   ✓ Issue #88 Actions Taken > keeps edit versions captured when a background parent/list refresh advances versions 738ms
+   ✓ Issue #88 Actions Taken > retains an inactive assignee label while allowing a descriptive edit without changing assignment 801ms
+   ✓ Issue #88 Actions Taken > cancels an Action with an explicit reason without presenting it as completed work 630ms
+   ✓ Issue #88 Actions Taken > preserves an edit draft through conflict reload and submits only after explicit review 676ms
+   ✓ Issue #88 Actions Taken > focuses the first invalid date and completion Result fields 753ms
+   ✓ Issue #88 Actions Taken > confirms discarding a nonempty create draft and returns focus to its opener 922ms
+   ✓ Issue #88 Actions Taken > returns focus to the Edit control when changes are discarded 460ms
+   ✓ Issue #88 Actions Taken > keeps transition versions captured while a completion form stays open across refresh 370ms
+   ✓ Issue #88 Actions Taken > refreshes an off-page deep-linked Action after its successful transition 324ms
+   ✓ Issue #88 Actions Taken > does not apply an old create response after in-place navigation to another Ticket 797ms
+
+ Test Files  3 passed (3)
+      Tests  28 passed (28)
+   Start at  13:52:26
+   Duration  15.70s (transform 420ms, setup 806ms, collect 1.06s, tests 13.03s, environment 3.37s, prepare 609ms)
+
+Superseding verification after generation-token, busy-editor and read-only draft corrections
+Client date: 2026-10-29 Asia/Bangkok
+Source: feature/lab4-actions-ui working source, based on 030f5da261b45d88332ea518a7a5c8ae6b5ffe9a
+Command: npm --prefix client test -- --run tests/lab-04/ActionsTaken.test.tsx tests/lab-04/bangkokDateTime.test.ts tests/lab-04/TicketDetailTabs.test.tsx
+Environment: local Vitest/jsdom, no DB commands. Includes the hidden-tab/deep-link case under React.StrictMode.
+Exit code: 0
+Result: 3 files / 31 tests passed, zero failures/skips, 19.56 seconds. React act() warnings from two read-only rerender tests remain in the complete output below; these are not failed assertions.
+
+
+> toktickit-client@1.0.0 test
+> vitest run --run tests/lab-04/ActionsTaken.test.tsx tests/lab-04/bangkokDateTime.test.ts tests/lab-04/TicketDetailTabs.test.tsx
+
+
+ RUN  v2.1.9 D:/Software Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/client
+
+ ✓ tests/lab-04/bangkokDateTime.test.ts (2 tests) 5ms
+ ✓ tests/lab-04/TicketDetailTabs.test.tsx (1 test) 199ms
+stderr | tests/lab-04/ActionsTaken.test.tsx > Issue #88 Actions Taken > preserves but disables an Action edit draft when the parent is finalized or its cycle advances
+Warning: An update to ActionsTakenPanel inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at ActionsTakenPanel (D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\client\src\components\ActionsTakenPanel.tsx:311:3)
+    at Router (file:///D:/Software%20Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/client/node_modules/react-router/dist/development/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///D:/Software%20Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/client/node_modules/react-router/dist/development/chunk-BV7QT456.mjs:7044:3)
+Warning: An update to ActionsTakenPanel inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at ActionsTakenPanel (D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\client\src\components\ActionsTakenPanel.tsx:311:3)
+    at Router (file:///D:/Software%20Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/client/node_modules/react-router/dist/development/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///D:/Software%20Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/client/node_modules/react-router/dist/development/chunk-BV7QT456.mjs:7044:3)
+Warning: An update to ActionsTakenPanel inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at ActionsTakenPanel (D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\client\src\components\ActionsTakenPanel.tsx:311:3)
+    at Router (file:///D:/Software%20Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/client/node_modules/react-router/dist/development/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///D:/Software%20Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/client/node_modules/react-router/dist/development/chunk-BV7QT456.mjs:7044:3)
+
+stderr | tests/lab-04/ActionsTaken.test.tsx > Issue #88 Actions Taken > preserves but blocks an open transition after the Ticket enters a final status
+Warning: An update to ActionsTakenPanel inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at ActionsTakenPanel (D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\client\src\components\ActionsTakenPanel.tsx:311:3)
+    at Router (file:///D:/Software%20Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/client/node_modules/react-router/dist/development/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///D:/Software%20Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/client/node_modules/react-router/dist/development/chunk-BV7QT456.mjs:7044:3)
+Warning: An update to ActionsTakenPanel inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at ActionsTakenPanel (D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\client\src\components\ActionsTakenPanel.tsx:311:3)
+    at Router (file:///D:/Software%20Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/client/node_modules/react-router/dist/development/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///D:/Software%20Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/client/node_modules/react-router/dist/development/chunk-BV7QT456.mjs:7044:3)
+Warning: An update to ActionsTakenPanel inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at ActionsTakenPanel (D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\client\src\components\ActionsTakenPanel.tsx:311:3)
+    at Router (file:///D:/Software%20Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/client/node_modules/react-router/dist/development/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///D:/Software%20Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/client/node_modules/react-router/dist/development/chunk-BV7QT456.mjs:7044:3)
+Warning: An update to ActionsTakenPanel inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at ActionsTakenPanel (D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\client\src\components\ActionsTakenPanel.tsx:311:3)
+    at Router (file:///D:/Software%20Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/client/node_modules/react-router/dist/development/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///D:/Software%20Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/client/node_modules/react-router/dist/development/chunk-BV7QT456.mjs:7044:3)
+
+ ✓ tests/lab-04/ActionsTaken.test.tsx (28 tests) 15501ms
+   ✓ Issue #88 Actions Taken > creates a Planned Action with an untouched date omitted and sends a scoped idempotency key 704ms
+   ✓ Issue #88 Actions Taken > keeps the exact create body and key for an ambiguous server failure retry 816ms
+   ✓ Issue #88 Actions Taken > starts a new create intent after the user edits a field following an ambiguous failure 960ms
+   ✓ Issue #88 Actions Taken > parses a user-edited datetime-local value as Bangkok +07 and validates against server time 608ms
+   ✓ Issue #88 Actions Taken > starts and completes current-cycle Actions with the captured versions and completion actor kept distinct 548ms
+   ✓ Issue #88 Actions Taken > retries an ambiguous completion with the exact saved body and idempotency key 492ms
+   ✓ Issue #88 Actions Taken > preserves Action timestamp precision for a description-only terminal correction 1004ms
+   ✓ Issue #88 Actions Taken > completes an Action created in the Ticket's first minute without truncating its timestamp 430ms
+   ✓ Issue #88 Actions Taken > keeps edit versions captured when a background parent/list refresh advances versions 804ms
+   ✓ Issue #88 Actions Taken > retains an inactive assignee label while allowing a descriptive edit without changing assignment 732ms
+   ✓ Issue #88 Actions Taken > cancels an Action with an explicit reason without presenting it as completed work 715ms
+   ✓ Issue #88 Actions Taken > preserves an edit draft through conflict reload and submits only after explicit review 792ms
+   ✓ Issue #88 Actions Taken > focuses the first invalid date and completion Result fields 769ms
+   ✓ Issue #88 Actions Taken > confirms discarding a nonempty create draft and returns focus to its opener 971ms
+   ✓ Issue #88 Actions Taken > returns focus to the Edit control when changes are discarded 503ms
+   ✓ Issue #88 Actions Taken > keeps editor controls from replacing a form while its save is pending 696ms
+   ✓ Issue #88 Actions Taken > preserves but disables an Action edit draft when the parent is finalized or its cycle advances 642ms
+   ✓ Issue #88 Actions Taken > preserves but blocks an open transition after the Ticket enters a final status 587ms
+   ✓ Issue #88 Actions Taken > keeps transition versions captured while a completion form stays open across refresh 387ms
+   ✓ Issue #88 Actions Taken > refreshes an off-page deep-linked Action after its successful transition 354ms
+   ✓ Issue #88 Actions Taken > does not apply an old create response after in-place navigation to another Ticket 826ms
+
+ Test Files  3 passed (3)
+      Tests  31 passed (31)
+   Start at  13:59:43
+   Duration  19.56s (transform 520ms, setup 1.11s, collect 1.61s, tests 15.70s, environment 5.18s, prepare 719ms)

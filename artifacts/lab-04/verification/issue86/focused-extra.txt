@@ -1,0 +1,30 @@
+
+> toktickit-server@1.0.0 test
+> vitest run --run tests/lab-04/actions-taken.api.test.ts tests/lab-04/concurrency.api.test.ts tests/lab-04/idempotency.api.test.ts
+
+
+ RUN  v2.1.9 D:/Software Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/server
+
+Environment variables loaded from .env
+Running seed command `tsx prisma/seed.ts` ...
+Seeded 4 categories, 7 related systems, 5 active requesters, 3 active IT staff, and 1 active administrator.
+
+The seed command has been executed.
+ ✓ tests/lab-04/actions-taken.api.test.ts (6 tests) 1583ms
+ ✓ tests/lab-04/concurrency.api.test.ts (5 tests) 1428ms
+   ✓ API-C01 / API-C02 — operational concurrency > keeps Admin roster edits and an Admin-caller/Staff-assignee write in ordered User locks 452ms
+stderr | tests/lab-04/idempotency.api.test.ts > API-I01 — serialized idempotent writes > rolls back an injected post-effect failure and permits the same key to succeed
+Unhandled error
+
+stderr | tests/lab-04/idempotency.api.test.ts > API-I01 — serialized idempotent writes > rolls back Action create history and version on failure, then replays a successful transition
+Unhandled error
+
+ ✓ tests/lab-04/idempotency.api.test.ts (5 tests) 859ms
+
+ Test Files  3 passed (3)
+      Tests  16 passed (16)
+   Start at  03:39:28
+   Duration  6.99s (transform 198ms, setup 0ms, collect 931ms, tests 3.87s, environment 0ms, prepare 135ms)
+
+Environment: disposable PostgreSQL 16 task-owned lab4_issue86_base schema; credentials omitted.
+Exit status: 0

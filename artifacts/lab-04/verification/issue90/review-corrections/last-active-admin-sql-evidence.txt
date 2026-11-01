@@ -1,0 +1,7 @@
+Independent SQL run before the LAST_ACTIVE_ADMINISTRATOR browser race on a fresh, unseeded, task-owned schema.
+Schema: issue61_verify_e333200ebea2495d9fafdd7b
+Target: dedicated PostgreSQL container 127.0.0.1:55434, database lab4test; credentials omitted.
+Executed SQL: SELECT count(*) FROM "issue61_verify_e333200ebea2495d9fafdd7b"."User" WHERE "active" = true AND "role" = 'ADMIN';
+SQL parameters: none
+Result: 0 active Admin rows before browser fixture creation.
+The browser test then asserts the two created Admin fixture IDs are exactly the active roster before racing, expects [200, 409], and asserts one of those two IDs remains active after.

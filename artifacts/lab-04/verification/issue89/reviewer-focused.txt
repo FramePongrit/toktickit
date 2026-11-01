@@ -1,0 +1,112 @@
+Independent Reviewer Dashboard API/rules verification
+Ponytail FULL; local execution, not CI or human approval
+Started: 2026-10-29T23:33:20.5253611+07:00
+Command: npm test -- --run tests/lab-04/dashboard-rules.unit.test.ts tests/lab-04/dashboard.api.test.ts
+Environment: dedicated PostgreSQL16 127.0.0.1:55434/lab4test, schema lab4_issue89_base, synthetic credentials omitted; LAB4_PG_CONTAINER=toktickit-lab4-issue85-test
+Source base HEAD: 6b1277d5e0335f5e8013cd1cc60248c6eeafc668
+Source: reviewed working implementation on feature/lab4-dashboard-api; exact final source commit pending
+
+
+> toktickit-server@1.0.0 test
+> vitest run --run tests/lab-04/dashboard-rules.unit.test.ts tests/lab-04/dashboard.api.test.ts
+
+
+ RUN  v2.1.9 D:/Software Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/server
+
+Environment variables loaded from .env
+Running seed command `tsx prisma/seed.ts` ...
+PrismaClientInitializationError:
+Invalid `prisma.category.upsert()` invocation in
+D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\server\prisma\seed.ts:268:27
+
+  265 const fixtureHash = await bcrypt.hash(LEGACY_INITIAL_PASSWORD, BCRYPT_COST);
+  266
+  267 for (const name of CATEGORIES) {
+→ 268   await prisma.category.upsert(
+Can't reach database server at `127.0.0.1:55434`
+
+Please make sure your database server is running at `127.0.0.1:55434`.
+    at $n.handleRequestError (D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\server\node_modules\@prisma\client\runtime\library.js:121:7615)
+    at $n.handleAndLogRequestError (D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\server\node_modules\@prisma\client\runtime\library.js:121:6623)
+    at $n.request (D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\server\node_modules\@prisma\client\runtime\library.js:121:6307)
+    at async l (D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\server\node_modules\@prisma\client\runtime\library.js:130:9633)
+    at async seedDatabase (D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\server\prisma\seed.ts:268:5)
+    at async main (D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\server\prisma\seed.ts:568:3) {
+  clientVersion: '5.22.0',
+  errorCode: undefined
+}
+
+An error occurred while running the seed command:
+Error: Command failed with exit code 1: tsx prisma/seed.ts
+
+ Test Files  no tests
+      Tests  no tests
+   Start at  23:33:23
+   Duration  5.01s (transform 42ms, setup 0ms, collect 0ms, tests 0ms, environment 0ms, prepare 0ms)
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: Command failed: npx prisma db seed
+ ❯ genericNodeError node:internal/errors:985:15
+ ❯ wrappedFn node:internal/errors:539:14
+ ❯ checkExecSyncError node:child_process:942:11
+ ❯ Proxy.execSync node:child_process:1014:15
+ ❯ Object.globalSetup [as setup] tests/globalSetup.ts:4:25
+      2|
+      3| /**
+      4|  * Runs once before any suite. The seed is idempotent, so this only gu…
+       |                         ^
+      5|  * that the reference data every suite depends on — the four categorie…
+      6|  * related systems, and the seeded requesters — is present.
+ ❯ WorkspaceProject.initializeGlobalSetup ../../../../../Software%20Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/server/node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:9926:53
+ ❯ Vitest.initializeGlobalSetup ../../../../../Software%20Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/server/node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:10794:7
+ ❯ ../../../../../Software%20Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/server/node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:10816:7
+ ❯ Vitest.runFiles ../../../../../Software%20Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/server/node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:10840:12
+ ❯ Vitest.start ../../../../../Software%20Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/server/node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:10682:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { status: 1, signal: null, output: [ null, null, null ], pid: 22648, stdout: null, stderr: null }
+
+
+
+
+Exit code: 1
+Finished: 2026-10-29T23:33:29.8388682+07:00
+Cleanup: suite-owned fixture cleanup; shared isolated reference seed retained.
+
+Retry with approved network access after sandbox P1001 prevented global seed before any tests.
+Retry started: 2026-10-29T23:33:43.9862260+07:00
+
+> toktickit-server@1.0.0 test
+> vitest run --run tests/lab-04/dashboard-rules.unit.test.ts tests/lab-04/dashboard.api.test.ts
+
+
+ RUN  v2.1.9 D:/Software Engineering/lab1/Lab1_Starter_Scaffold/toktickit-release-reproducibility/server
+
+Environment variables loaded from .env
+Running seed command `tsx prisma/seed.ts` ...
+Seeded 4 categories, 7 related systems, 5 active requesters, 3 active IT staff, and 1 active administrator.
+
+The seed command has been executed.
+ ✓ tests/lab-04/dashboard.api.test.ts (7 tests) 3599ms
+   ✓ Issue #89 Dashboard and Staff Actions APIs > returns all Staff status counts and Dashboard metrics matching independent SQL, including old-cycle performed work 413ms
+   ✓ Issue #89 Dashboard and Staff Actions APIs > advances only Ticket.updatedAt for successful visible activity and leaves failures, replays, and Internal Notes unchanged 534ms
+ ✓ tests/lab-04/dashboard-rules.unit.test.ts (4 tests) 20ms
+
+ Test Files  2 passed (2)
+      Tests  11 passed (11)
+   Start at  23:33:45
+   Duration  11.10s (transform 1.43s, setup 0ms, collect 2.36s, tests 3.62s, environment 0ms, prepare 252ms)
+
+
+Retry exit code: 0
+Finished: 2026-10-29T23:33:56.7351103+07:00
+Cleanup: suite-owned fixture cleanup; shared isolated reference seed retained.
+
+Read-only direct psql post-suite cleanup inventory; columns: Dashboard fixture Tickets|Dashboard fixture Users
+0|0
+Direct cleanup verification exit code: 0
+
+Final source association: 6f08f4e5e1a7ccaf5d53d3240d7cc28d7dc65495
+Confirmed git diff -- client server e2e is empty after source commit; only final EOF whitespace normalization differs from precommit reviewed source.
+No remaining actionable source findings. Local independent checks do not constitute human approval or CI.

@@ -3,6 +3,7 @@ import type {
   PagedResult,
   Priority,
   PublicComment,
+  ResolutionGate,
   ResolutionIndication,
   StaffQueueItem,
   TicketOwnerOption,
@@ -39,39 +40,56 @@ export function fetchStaffTicket(id: number): Promise<TicketDetail> {
   return request<TicketDetail>(`/api/staff/tickets/${id}`);
 }
 
-export function claimStaffTicket(id: number): Promise<{ owner: TicketOwnerOption }> {
-  return request<{ owner: TicketOwnerOption }>(`/api/staff/tickets/${id}/claim`, { method: "PATCH" });
+export function claimStaffTicket(id: number, expectedTicketVersion: number): Promise<{ owner: TicketOwnerOption; ticketVersion: number }> {
+  return request<{ owner: TicketOwnerOption; ticketVersion: number }>(`/api/staff/tickets/${id}/claim`, {
+    method: "PATCH",
+    body: JSON.stringify({ expectedTicketVersion }),
+  });
 }
 
 export function reassignStaffTicket(
   id: number,
   ownerId: number,
-  expectedOwnerId: number
-): Promise<{ owner: TicketOwnerOption }> {
-  return request<{ owner: TicketOwnerOption }>(`/api/staff/tickets/${id}/owner`, {
+  expectedOwnerId: number,
+  expectedTicketVersion: number
+): Promise<{ owner: TicketOwnerOption; ticketVersion: number }> {
+  return request<{ owner: TicketOwnerOption; ticketVersion: number }>(`/api/staff/tickets/${id}/owner`, {
     method: "PATCH",
-    body: JSON.stringify({ ownerId, expectedOwnerId }),
+    body: JSON.stringify({ ownerId, expectedOwnerId, expectedTicketVersion }),
   });
 }
 
 export function updateStaffItPriority(
   id: number,
-  itPriority: Priority
-): Promise<{ itPriority: Priority }> {
-  return request<{ itPriority: Priority }>(`/api/staff/tickets/${id}/it-priority`, {
+  itPriority: Priority,
+  expectedTicketVersion: number
+): Promise<{ itPriority: Priority; ticketVersion: number }> {
+  return request<{ itPriority: Priority; ticketVersion: number }>(`/api/staff/tickets/${id}/it-priority`, {
     method: "PATCH",
-    body: JSON.stringify({ itPriority }),
+    body: JSON.stringify({ itPriority, expectedTicketVersion }),
   });
 }
 
 export function updateStaffTicketStatus(
   id: number,
   status: TicketStatus,
-  publicComment?: string
-): Promise<Pick<TicketDetail, "currentStatus" | "resolutionIndication" | "allowedTransitions">> {
-  return request<Pick<TicketDetail, "currentStatus" | "resolutionIndication" | "allowedTransitions">>(
+  expectedTicketVersion: number,
+  publicComment: string | undefined,
+  idempotencyKey: string,
+  cancelReason?: string
+): Promise<Pick<TicketDetail, "currentStatus" | "resolutionIndication" | "allowedTransitions" | "workCycle" | "resolvedAt"> & { ticketVersion: number; resolutionGate: ResolutionGate }> {
+  return request<Pick<TicketDetail, "currentStatus" | "resolutionIndication" | "allowedTransitions" | "workCycle" | "resolvedAt"> & { ticketVersion: number; resolutionGate: ResolutionGate }>(
     `/api/staff/tickets/${id}/status`,
-    { method: "PATCH", body: JSON.stringify({ status, ...(publicComment === undefined ? {} : { publicComment }) }) }
+    {
+      method: "PATCH",
+      headers: { "Idempotency-Key": idempotencyKey },
+      body: JSON.stringify({
+        expectedTicketVersion,
+        status,
+        ...(publicComment === undefined ? {} : { publicComment }),
+        ...(cancelReason === undefined ? {} : { cancelReason }),
+      }),
+    }
   );
 }
 
@@ -106,7 +124,7 @@ export function indicateResolution(id: number): Promise<ResolutionIndication> {
   ).then((response) => response.resolutionIndication);
 }
 
-export type TicketSortField = "createdAt" | "ticketNumber" | "requestedPriority" | "summary";
+export type TicketSortField = "createdAt" | "ticketNumber" | "requestedPriority" | "summary" | "updatedAt" | "resolvedAt";
 
 export interface TicketQuery {
   page: number;
@@ -115,12 +133,18 @@ export interface TicketQuery {
   categoryId?: number;
   relatedSystemId?: number;
   priority?: Priority;
+  status?: TicketStatus;
+  statuses?: string;
+  updatedFrom?: string;
+  updatedThrough?: string;
+  resolvedFrom?: string;
+  resolvedThrough?: string;
   sort: TicketSortField;
   order: "asc" | "desc";
 }
 
 export type StaffQueueScope = "active" | "all";
-export type StaffQueueSortField = "itPriority" | "createdAt" | "updatedAt" | "ticketNumber" | "status";
+export type StaffQueueSortField = "itPriority" | "createdAt" | "updatedAt" | "ticketNumber" | "status" | "priorityRecent";
 export type SortOrder = "asc" | "desc";
 
 export interface StaffQueueQuery {
@@ -130,6 +154,12 @@ export interface StaffQueueQuery {
   q?: string;
   status?: import("../types/index.js").TicketStatus;
   itPriority?: Priority;
+  statuses?: string;
+  itPriorities?: string;
+  updatedFrom?: string;
+  updatedThrough?: string;
+  resolvedFrom?: string;
+  resolvedThrough?: string;
   categoryId?: number;
   owner?: "me" | "unassigned" | number;
   sort: StaffQueueSortField;

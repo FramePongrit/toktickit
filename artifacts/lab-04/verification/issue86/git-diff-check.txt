@@ -1,0 +1,6 @@
+warning: in the working copy of 'docs/lab-04/api-spec.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/lab-04/issue-plan.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/lab-04/reviewer.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/lib/validation.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'server/src/services/adminUsers.service.ts', LF will be replaced by CRLF the next time Git touches it
+Exit status: 0

@@ -3,6 +3,7 @@ import { getPrisma } from "../prisma.js";
 import { HttpError, type FieldIssue } from "../lib/httpError.js";
 import { allocateTicketNumber } from "./ticketNumber.service.js";
 import type { CreateTicketInput, ListTicketsQuery } from "../lib/validation.js";
+import { ticketResolvedAtRangeWhere, ticketUpdatedAtRangeWhere } from "../lib/dashboardRules.js";
 import {
   serializePublicComment,
   serializeResolutionIndication,
@@ -45,6 +46,8 @@ export function serializeTicketDetail(ticket: TicketWithDetail) {
     requestedPriority: ticket.requestedPriority,
     itPriority: ticket.itPriority,
     currentStatus: ticket.currentStatus,
+    workCycle: ticket.workCycle,
+    resolvedAt: ticket.resolvedAt,
     createdAt: ticket.createdAt,
     updatedAt: ticket.updatedAt,
     category: ticket.category,
@@ -97,6 +100,8 @@ const listSelect = {
   resolutionIndicatedAt: true,
   resolutionIndicatedBy: { select: { id: true, fullName: true, role: true } },
   createdAt: true,
+  updatedAt: true,
+  resolvedAt: true,
   category: { select: { id: true, name: true } },
   relatedSystem: { select: { id: true, name: true } },
   // Removed attachments do not count: the screen shows how many are usable.
@@ -112,6 +117,10 @@ export async function listTickets(requesterId: number, query: ListTicketsQuery) 
     ...(query.categoryId !== undefined && { categoryId: query.categoryId }),
     ...(query.relatedSystemId !== undefined && { relatedSystemId: query.relatedSystemId }),
     ...(query.priority !== undefined && { requestedPriority: query.priority }),
+    ...(query.status !== undefined && { currentStatus: query.status }),
+    ...(query.statuses !== undefined && { currentStatus: { in: query.statuses } }),
+    ...ticketUpdatedAtRangeWhere(query.updatedFrom, query.updatedThrough),
+    ...ticketResolvedAtRangeWhere(query.resolvedFrom, query.resolvedThrough),
     ...(query.q !== undefined && {
       OR: [
         { ticketNumber: { contains: query.q, mode: "insensitive" } },
@@ -123,9 +132,12 @@ export async function listTickets(requesterId: number, query: ListTicketsQuery) 
   // The secondary key is what keeps pagination stable: without it, rows that
   // tie on the primary sort can move between pages, so one ticket appears
   // twice and another never appears at all (BR-18).
+  const newDateSort = query.sort === "updatedAt" || query.sort === "resolvedAt";
   const orderBy: Prisma.TicketOrderByWithRelationInput[] = [
-    { [query.sort]: query.order },
-    { id: "desc" },
+    query.sort === "resolvedAt"
+      ? { resolvedAt: { sort: query.order, nulls: "last" } }
+      : { [query.sort]: query.order },
+    { id: newDateSort ? query.order : "desc" },
   ];
 
   // One transaction so `total` always describes the same snapshot as `data`.
@@ -189,7 +201,7 @@ export async function createTicket(requesterId: number, input: CreateTicketInput
   const created = await prisma.$transaction(async (tx) => {
     const ticketNumber = await allocateTicketNumber(tx, new Date().getFullYear());
 
-    return tx.ticket.create({
+    const ticket = await tx.ticket.create({
       data: {
         ticketNumber,
         requesterId,
@@ -203,6 +215,19 @@ export async function createTicket(requesterId: number, input: CreateTicketInput
       },
       include: detailInclude,
     });
+    await tx.ticketWorkflowEvent.create({
+      data: {
+        ticketId: ticket.id,
+        workCycle: ticket.workCycle,
+        kind: "CREATED",
+        fromStatus: null,
+        toStatus: ticket.currentStatus,
+        actorId: requesterId,
+        occurredAt: ticket.createdAt,
+        ticketVersion: ticket.version,
+      },
+    });
+    return ticket;
   });
 
   return serializeTicketDetail(created);

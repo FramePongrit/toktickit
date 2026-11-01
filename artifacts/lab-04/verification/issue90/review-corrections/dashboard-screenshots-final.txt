@@ -1,0 +1,31 @@
+Command: npm run e2e -- --project=dashboard-screenshots e2e/lab-04/dashboards.spec.ts
+Task schema: lab4_issue90_e2e_pr100_20261030a1 (dedicated PostgreSQL test container; credentials omitted)
+One screenshot-only test; uploads and images are task-owned under test-results/issue90/pr100-run-20261030a1/.
+
+> toktickit-e2e@1.0.0 e2e
+> playwright test --project=dashboard-screenshots e2e/lab-04/dashboards.spec.ts
+
+[WebServer] (node:17372) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] TokTickIT API listening on http://localhost:3000
+[WebServer] (node:13704) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer]
+[WebServer]   VITE v6.4.3  ready in 327 ms
+[WebServer]
+[WebServer]   ➜  Local:   http://localhost:5173/
+
+Running 1 test using 1 worker
+
+(node:32708) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Issue90 requester Dashboard geometry {"viewport":"1440x900","document":"1440x1235","horizontalOverflow":0}; screenshot D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\test-results\issue90\pr100-run-20261030a1\screenshots-final\requester-dashboard-1440x900.png.
+Issue90 requester Dashboard geometry {"viewport":"820x1024","document":"820x1676","horizontalOverflow":0}; screenshot D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\test-results\issue90\pr100-run-20261030a1\screenshots-final\requester-dashboard-820x1024.png.
+Issue90 requester Dashboard geometry {"viewport":"390x844","document":"390x2282","horizontalOverflow":0}; screenshot D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\test-results\issue90\pr100-run-20261030a1\screenshots-final\requester-dashboard-390x844.png.
+Issue90 staff Dashboard geometry {"viewport":"1440x900","document":"1440x1643","horizontalOverflow":0}; screenshot D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\test-results\issue90\pr100-run-20261030a1\screenshots-final\staff-dashboard-1440x900.png.
+Issue90 staff Dashboard geometry {"viewport":"820x1024","document":"820x2118","horizontalOverflow":0}; screenshot D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\test-results\issue90\pr100-run-20261030a1\screenshots-final\staff-dashboard-820x1024.png.
+Issue90 staff Dashboard geometry {"viewport":"390x844","document":"390x3143","horizontalOverflow":0}; screenshot D:\Software Engineering\lab1\Lab1_Starter_Scaffold\toktickit-release-reproducibility\test-results\issue90\pr100-run-20261030a1\screenshots-final\staff-dashboard-390x844.png.
+  ok 1 [dashboard-screenshots] › e2e\lab-04\dashboards.spec.ts:374:3 › E2E-03 — role Dashboards and exact drilldowns › Requester and Staff Dashboard responsive screenshots @screenshots (3.5s)
+
+  1 passed (9.9s)
+Exit code: 0
