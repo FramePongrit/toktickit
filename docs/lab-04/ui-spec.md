@@ -136,15 +136,26 @@ Use screenshots under artifacts/lab-04/screenshots/staff-dashboard/, requester-d
 
 | Check | Evidence | Status |
 |---|---|---|
-| Tokens/header/nav/buttons and coherent application shell | Role dashboards + Ticket Detail, three sizes | Planned |
-| Metrics/units/date text/drill-down/zero states | Dashboard captures + API/query comparison | Planned |
-| Editable/read-only/required/validation/busy controls | Action create/edit/correction and workflow gate | Planned |
-| Keyboard/tab/focus/labels/non-color cues | Recorded manual keyboard steps + UI/E2E assertions | Planned |
-| Wrapping/clipping/overlap/page overflow | Three viewport screenshots and geometry checks | Planned |
-| Forbidden/conflict/API-failure and preserved values | Component/E2E state evidence | Planned |
-| Earlier Requester/Staff/Admin screens retain consistency | Representative Lab 3 regression captures | Planned |
+| Tokens/header/nav/buttons and coherent application shell | Requester/Staff dashboards, Actions and representative Lab 3 screens | Captures and automated checks passed; user reported partial role inspections. Full human sign-off pending. |
+| Metrics/units/date text/drill-down/zero states | Dashboard captures, API assertions and independent SQL comparisons | Automated/API evidence passed; no complete manual zero/error-state review recorded. |
+| Editable/read-only/required/validation/busy controls | Action create/edit/correction and workflow-gate captures; component/E2E checks | Automated checks passed; user reported required-field/draft/cancel checks on selected Requester/Staff forms. Error/conflict paths remain outside reported manual scope. |
+| Keyboard/tab/focus/labels/non-color cues | UI/E2E keyboard assertions; user-reported keyboard actions listed below | Partial human check: Requester Dashboard Tab/Shift+Tab and Enter, Admin User Management focus. Full keyboard/dialog/error checklist pending. |
+| Wrapping/clipping/overlap/page overflow | Three viewport captures and geometry checks | Automated geometry passed; captures were inspected by the assistant/reviewer. User reported Dashboard/User Management at three viewport sizes, without separate captures/browser metadata. |
+| Forbidden/conflict/API-failure and preserved values | Component/E2E state evidence | Automated conflict/failure checks passed. No user-reported manual network-error/conflict draft test. |
+| Earlier Requester/Staff/Admin screens retain consistency | Lab 2/3 E2E and representative captures | Regression suites passed; user reported list/queue/User Management navigation and selected form checks. Full manual audit pending. |
 
-Compare rendered screens to this document and approved handout illustrations, not memory. Record actual screenshot paths and reviewer initials only after inspection. Do not mark a checklist row complete because a component test merely passed.
+Compare rendered screens to this document and approved handout illustrations, not memory. Agent-operated screenshot review, automated tests and user-reported manual interactions are recorded separately below. Do not treat one as a substitute for another or mark the whole checklist complete from a component test.
+
+### User-reported manual checks after PR #101 merge
+
+The user reported these interactions in the staging conversation (entries #774–#805). No browser/version metadata or screenshot for each interaction was captured, so these are partial reported checks, not a complete manual sign-off.
+
+- Requester: used Tab/Shift+Tab and Enter on **View Open Tickets**; opened and returned from a Ticket; tried search/filter; checked required-field validation and partial-input preservation on Create Ticket; inspected Dashboard/Create Ticket at normal and narrower widths.
+- Staff: inspected active Actions and opened a Ticket; checked Action required-field validation, partial draft preservation and cancel confirmation; tried Staff Queue search/filter and return navigation.
+- Admin: inspected User Management list, keyboard focus, edit/cancel and a narrow window; reported Dashboard/User Management inspection at 1440x900, 820x1024 and 390x844.
+- Console/network: screenshots showed Vite and React informational messages. The visible Network screenshot had filters enabled and showed 8 of 61 requests (200/304); the user later reported the view was normal after clearing filters, but no unfiltered request inventory was captured.
+
+The assistant separately inspected a live Admin Dashboard/deep link at one unspecified narrow viewport and nine screenshots from an earlier working-tree run. That agent-operated inspection is not human approval. Remaining work includes an unfiltered console/network review, documented browser/version, direct manual error/conflict/draft-preservation scenarios and a recorded whole-app sign-off.
 
 ## 11. Actions UI increment inspection (October 29)
 
