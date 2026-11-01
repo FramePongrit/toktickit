@@ -1,6 +1,6 @@
 # Lab 4 Test Plan and Results
 
-Status: planning contract authored 2026-10-23, with Issue #85 implementation results recorded on 2026-10-24 in section 10. Unimplemented test targets remain **Planned / Not run**. MIG-01/02/03 data/recovery files now exist; their passing results do not establish later workflow/API/UI behavior. Authority: [specification](specification.md), [API](api-spec.md), [UI](ui-spec.md).
+Status: planning contract authored 2026-10-23. Section 2 preserves the original planning snapshot; current Issue #85–91 execution results and test paths are recorded by increment below. PR #101 passed integrated checks on the feature head and merged to `lab4-staging`; **no result here is final-main evidence**. MIG-01/02/03 results do not substitute for workflow/API/UI checks. Authority: [specification](specification.md), [API](api-spec.md), [UI](ui-spec.md).
 
 ## 1. Strategy, TDD and isolation
 
@@ -13,6 +13,8 @@ Use existing Vitest/Supertest/Testing Library/Playwright and isolated-schema pat
 Use deterministic clock injection for Bangkok boundary cases, independent monotonic duration measurement for performance, distinct Requesters and Staff, safe synthetic data and test-owned attachment bytes. Include authorized success, wrong-role/direct API/cross-owner, invalid/boundary, zero/no-results, failures, conflict and retry cases. Every expected failure checks absence of partial writes/audits/files and unchanged versions.
 
 ## 2. Planned-test table
+
+The `Planned / Not run` cells below are the original 2026-10-23 contract-authoring status, not the current execution state. See sections 10–17 for later scoped runs; section 17 identifies the exact integrated CI head and remaining human/final-main work.
 
 Target files are implementation obligations, not links to nonexistent current files. The expected result column is an assertion, not an execution result.
 
@@ -65,6 +67,8 @@ Target files are implementation obligations, not links to nonexistent current fi
 | DOC-01 | Manual evidence audit | AC-24 | AC/FR/BR trace, actual test paths/results, review links, directory/README/gitignore and Answer Parts1-9 | Complete truthful final-main evidence; no placeholder approval or invented result | docs/lab-04/reviewer.md | Planned / Not run |
 
 ## 3. Acceptance-criterion traceability
+
+The entries below remain **pending on final main** under Issue #93. Staging and PR #101 evidence is recorded in section 17. AC-20 still has a partial human inspection record, and AC-24 final-main/PDF evidence remains future work.
 
 | AC | Planned test IDs | Final evidence |
 |---|---|---|
@@ -191,17 +195,17 @@ npm run screenshots
 
 These existing commands are execution targets; none were run during contract authoring. Implementation Issues must extend the migration config's explicit includes to Lab 4, add the new test paths to the appropriate suites, and add capture.screens.ts to the Playwright screenshot project. Do not assume the current Lab 3-only migration include discovers new files. Builds must still succeed.
 
-The planned e2e/run-lab04.ps1 runner must reuse the validated isolated-schema/port ownership pattern in e2e/run-issue61-full.ps1, with a Lab4-owned schema prefix, isolated uploads, explicit ports, environment restoration and constrained cleanup. Its committed interface will accept ApiPort, ClientPort and optional ScreenshotRoot. After that Issue implements the runner, the intended isolated full verification command is:
+The implemented `e2e/run-lab04.ps1` runner reuses the validated isolated-schema/port ownership pattern in `e2e/run-issue61-full.ps1`, with Lab 4-owned schema names, isolated uploads, explicit ports, environment restoration and constrained cleanup. Its interface accepts `ApiPort`, `ClientPort` and optional `ScreenshotRoot`. The isolated full verification command is:
 
 ~~~powershell
 powershell -ExecutionPolicy Bypass -File e2e/run-lab04.ps1 -ApiPort 3001 -ClientPort 5174
 ~~~
 
-The runner does not exist yet. Document its actual implemented invocation in README before marking results Pass. An explicit ScreenshotRoot artifacts/lab-04/screenshots opts into refreshing grading captures; routine checks write ignored test-results output. Preserve Lab 1-3 runs; do not hide required old suites through discovery narrowing.
+An explicit `ScreenshotRoot artifacts/lab-04/screenshots` opts into refreshing curated captures; routine checks write under ignored `test-results/`. The runner retains the earlier Lab 1–3 browser suites; its isolated scope does not weaken their assertions.
 
 ## 8. Visual, responsive and accessibility evidence
 
-Apply the [UI checklist](ui-spec.md#10-visual-checklist-and-artifacts). Capture Staff Dashboard, Requester Dashboard and Actions Taken at 1440x900, 820x1024 and 390x844 under their required artifacts/lab-04/screenshots subfolders. Include representative create/edit/correction/complete/cancel/gate/read-only/zero/error screens. Check actual keyboard operation, tab semantics/focus, non-color labels and increased text, plus clipping/overlap/horizontal overflow. Screenshots and a human checklist complement automated CSS/geometry tests; neither substitutes for the other.
+Apply the [UI checklist](ui-spec.md#10-visual-checklist-and-artifacts). Captured Dashboard and Actions views cover 1440x900, 820x1024 and 390x844, with representative Action and workflow states; automated geometry and accessibility checks passed. The user also reported specific Requester, Staff and Admin manual interactions after PR #101 merged; scope and evidence limits are recorded in `reviewer.md` and `ui-spec.md`. This is a partial human inspection, not a completed whole-app checklist or approval. Screenshots and automated checks do not substitute for the remaining human checks.
 
 ## 9. Final results and limitations
 
@@ -277,7 +281,7 @@ Implemented targets: UI-03/04/06 in client/tests/lab-04/{ActionsTaken,TicketDeta
 
 ## 15. Issue #89 Dashboard API verification protocol
 
-PERF-01 is deliberately separate from the normal server suite: `vitest.config.ts` excludes only `tests/lab-04/dashboard.performance.test.ts`, and `vitest.dashboard-perf.config.ts` runs that file explicitly. Both commands are required for this increment; a normal-suite pass alone is not a performance result.
+At the time of the Issue #89 protocol, vitest.config.ts excluded only the Dashboard performance fixture and vitest.dashboard-perf.config.ts ran it explicitly. The current default suite also excludes the Windows-only backup/restore runbook; the current commands and platform-specific results are recorded in section 17 and README. A normal-suite pass alone is not a performance result.
 
 From `server/`, set process-local `DATABASE_URL` using the synthetic test credentials, host `127.0.0.1`, port `55434`, database `lab4test`, schema `lab4_issue89_perf`; set `LAB4_PG_CONTAINER=toktickit-lab4-issue85-test`. Migrate a fresh task-owned performance schema before running `npx vitest run --config vitest.dashboard-perf.config.ts`. The fixture rejects other targets and nonempty schemas, creates exactly1000 Tickets/5000 Actions, then cleans only identities created by that run. Do not point this command at the application database or seeded normal-suite schema. Normal server/API regression uses the separate `lab4_issue89_base` schema.
 
@@ -292,3 +296,49 @@ Coverage includes UNIT-04/05 and API-D01-04: fixed Bangkok window bounds, owners
 ## 16. Issue #90 Dashboard UI verification
 
 [PR #100](https://github.com/FramePongrit/toktickit/pull/100), source `5236ef59aa25be02ae578087449dfc07e35e4aea`: final serial client 19 files / 219 tests passed, client build passed, Dashboard browser 1/1 and inherited authentication/Staff/Admin browser 7/7 passed. Independent AI Reviewer passed 6 files / 62 component tests and confirmed exact source. [Commands, limitations, earlier failures and screenshots](../../artifacts/lab-04/verification/issue90/README.md) remain available. Dashboard and navigation tests cover role-safe landing, URL filters and focus, identity changes/late responses, failure/stale states and PR99 Staff Queue search follow-up. Human approval, full release accessibility and final-main checks remain pending.
+
+## 17. Issue #91 integrated verification and current status
+
+**Source boundary:** PR #101 was reviewed and merged into `lab4-staging` as `5654d14e782800c6029da73f00411d49f291fb26`. Integrated CI tested PR head `53833eac2b2a73946401d5020efef812219eec05`, the implementation head immediately before the merge commit. [Integrated PostgreSQL/E2E/Windows run 41212795923](https://github.com/FramePongrit/toktickit/actions/runs/41212795923) and [client run 41212795912](https://github.com/FramePongrit/toktickit/actions/runs/41212795912) both succeeded on that head. These are feature-PR checks, not final-main results.
+
+| Scope / test paths | Verified result | Provenance |
+|---|---|---|
+| Server regression, including `server/tests/lab-04/**` and existing server suites | 27 files / 243 tests passed in the local integrated run; 0 failures/skips | Local `run-164bc`, Issue #91 runner; worktree based on PR #100 integration with Issue #91 changes. Not a clean exact-SHA or final-main run. |
+| Security (`server/vitest.security.config.ts`; `server/tests/lab-03/auth-security.unit.test.ts`) | 21 passed | Separate local integrated-run step; not added again to the server total. |
+| Migration/recovery (`server/vitest.migration.config.ts`; `server/tests/lab-03/migration-seed.regression.test.ts`, `server/tests/lab-04/migration.regression.test.ts`, `server/tests/lab-04/recovery.integration.test.ts`) | 3 files / 7 passed in the local Windows migration run; Windows backup runbook 6/6 passed in CI | Runbook is Windows-only and reported separately. The integrated Linux job uses PostgreSQL 16 and recovery/container tooling. |
+| Client (`client/tests/**`) | 20 files / 228 tests passed; client build passed | Local integrated run. CI client workflow also passed on PR #101 head in run 41212795912. |
+| Browser regression and accessibility (`e2e/lab-04/actions-taken-flow.spec.ts`, `ticket-resolution.spec.ts`, `regression.spec.ts`, `accessibility.spec.ts`, plus configured regression project) | 23 tests passed; exit 0 | Local integrated run and Linux CI. `e2e/run-lab04.ps1` uses task-owned schemas, upload root and ports. |
+| Dashboard and screenshot projects (e2e/lab-04/dashboards.spec.ts, e2e/lab-04/capture.screens.ts, e2e/lab-02/capture.screens.ts, e2e/lab-03/capture.screens.ts) | Dashboard 1/1; legacy captures 12/12 | Separate capture steps; routine output uses ignored test-results. Curated [Requester](../../artifacts/lab-04/screenshots/requester-dashboard/README.md), [Staff](../../artifacts/lab-04/screenshots/staff-dashboard/README.md) and [Actions](../../artifacts/lab-04/screenshots/actions-taken/README.md) captures include provenance; Dashboard images came from a dirty pre-final worktree, not final-main or human sign-off. |
+| Windows README backup/restore runbook | 6/6 passed, 0 skipped | Windows job in run 41212795923. Cases execute documented PowerShell logic with real temporary files and stubbed DB commands; real PostgreSQL recovery is covered separately by MIG-03. |
+| PERF-01 (`server/tests/lab-04/dashboard.performance.test.ts`) | Exactly 1,000 Tickets and 5,000 Actions; seven endpoints, three warmups plus 20 measured requests each; every p95 below 2,000 ms | Guarded opt-in performance step in Linux CI run 41212795923; maximum observed p95 was approximately 12.74 ms in that CI environment. This bounded smoke is not production-load evidence. |
+| Server/client builds and Prisma checks | Passed | Local integrated runner and PR CI. |
+
+The local integrated run reported server 243, security 21, migration 7, Windows runbook 5 (before its final sixth case), client 228, browser 23, Dashboard capture 1 and legacy captures 12. The final PR CI then passed the updated 6-case Windows runbook. The counts above keep configurations distinct and do not add security or migration tests to the 243 server-test total.
+
+### Actual test-file mapping for planned IDs
+
+Section 2 preserves the original planned path names. Several IDs are covered by shared files rather than the planned per-feature filenames; the actual files executed in the integrated run are:
+
+| Planned IDs | Actual files |
+|---|---|
+| UNIT-01/03/06, API-A01–07, API-C01–03, API-I01 | `server/tests/lab-04/action-rules.unit.test.ts`, `actions-taken.api.test.ts`, `concurrency.api.test.ts`, `idempotency.unit.test.ts`, `idempotency.api.test.ts` |
+| UNIT-02, API-W01–05 | `server/tests/lab-04/ticket-rules.unit.test.ts`, `ticket-workflow.api.test.ts`, with workflow/Action write races in `concurrency.api.test.ts` |
+| UNIT-04/05, API-D01–04 | `server/tests/lab-04/dashboard-rules.unit.test.ts`, `dashboard.api.test.ts` (Requester dashboard, Staff dashboard, drill-down/list predicates and public activity share this suite) |
+| MIG-01/02, MIG-03 | `server/tests/lab-03/migration-seed.regression.test.ts`, `server/tests/lab-04/migration.regression.test.ts`, `server/tests/lab-04/recovery.integration.test.ts`; Windows runbook in `server/tests/lab-04/backup-runbook.test.ts` |
+| UI-01 | `client/tests/lab-04/StaffDashboard.test.tsx` |
+| UI-02 | `client/tests/lab-04/RequesterDashboard.test.tsx` |
+| UI-03/06 | `client/tests/lab-04/ActionsTaken.test.tsx`, `client/tests/lab-04/TicketDetailTabs.test.tsx`, `client/tests/lab-04/bangkokDateTime.test.ts`, plus inherited `client/tests/lab-03/StaffTicketDetail.test.tsx` |
+| UI-04 | `client/tests/lab-04/TicketDetailTabs.test.tsx`, `client/tests/lab-03/StaffTicketDetail.test.tsx` |
+| UI-05 | `client/tests/lab-03/AppShell.test.tsx`, `Login.test.tsx`, `ChangePassword.test.tsx`, `http.test.ts` |
+| STYLE-01 | Existing Lab 2/3/4 component suites, including `client/tests/lab-02/AttachmentSection.test.tsx`, `client/tests/lab-03/AppShell.test.tsx`, `StaffTicketQueue.test.tsx`, `UserManagement.test.tsx`, and Lab 4 component files above; no standalone `UiStyle.test.tsx` exists. |
+| STYLE-02, E2E-01–04 | `e2e/lab-04/accessibility.spec.ts`, `actions-taken-flow.spec.ts`, `ticket-resolution.spec.ts`, `regression.spec.ts`, `dashboards.spec.ts`; these run under `e2e/run-lab04.ps1` and the configured Playwright projects. |
+| VIS-01 | `e2e/lab-04/capture.screens.ts`, `e2e/lab-04/dashboards.spec.ts`, plus configured `e2e/lab-02/capture.screens.ts` and `e2e/lab-03/capture.screens.ts`; geometry assertions live in the Lab 4 browser specs. |
+| REG-01 | `e2e/run-lab04.ps1`, `server/vitest.config.ts`, `server/vitest.security.config.ts`, `server/vitest.migration.config.ts`, `server/vitest.runbook.config.ts`, `client` Vitest config and `playwright.config.ts`; final-main execution remains pending Issue #93. |
+| PERF-01 | `server/tests/lab-04/dashboard.performance.test.ts`, enabled only by `npm --prefix server run test:performance`. |
+| DOC-01 | `README.md`, `docs/lab-04/{specification,api-spec,ui-spec,tests,reviewer,issue-plan,ai-use}.md`, `.gitignore`, and tracked screenshot inventories. This Issue #92 pass prepares staging evidence; final-main/PDF review remains pending Issue #93. |
+
+### Human inspection status
+
+After PR #101 merged, the user reported partial manual checks: Requester Dashboard keyboard navigation (Tab/Shift+Tab and Enter), My Tickets navigation/search/filter, Create Ticket required-field validation and partial-input preservation; Staff Dashboard/active Actions, Action form validation/draft/cancel confirmation, and Queue search/filter/return; Admin User Management list, focus, edit/cancel and a narrow window. The user also reported Dashboard/User Management inspection at 1440x900, 820x1024 and 390x844, without separately captured browser/version details. Console screenshots showed Vite/React informational messages; the displayed Network view was filtered (8 of 61 requests), and the user subsequently reported the network view was normal. These are user-reported observations, not a full inspection of every screen/error path.
+
+Separately, the assistant inspected the live Admin Dashboard/deep link at one narrow, unspecified viewport and inspected nine existing screenshots from an earlier working-tree run. That inspection is agent-operated, not human approval. Remaining human checklist items include complete unfiltered console/network review, documented browser/version and exact manual captures, additional error/conflict/draft-preservation flows, and recorded whole-app sign-off. Final-main regression and the single PDF are Issue #93 and remain pending.

@@ -110,7 +110,7 @@ Tests: UI-01/02/05, STYLE-01, E2E-03 preparation; keep all earlier component/nav
 
 ### L4-08 - Integrated regression, E2E, accessibility and performance evidence
 
-[Issue #91](https://github.com/FramePongrit/toktickit/issues/91) is Started on feature/lab4-quality-evidence, based on reviewed integration `b35e76c`; [PR #101](https://github.com/FramePongrit/toktickit/pull/101) is draft while human visual and keyboard checks remain pending.
+[Issue #91](https://github.com/FramePongrit/toktickit/issues/91) is Done. [PR #101](https://github.com/FramePongrit/toktickit/pull/101) was approved by Sxr1n on tested head `53833eac` and merged into `lab4-staging` as `5654d14` on 2026-10-31. The user reported partial manual review afterward; the complete human visual/keyboard checklist remains incomplete. See [reviewer.md](reviewer.md#issue-91-integrated-verification) for scope and CI evidence.
 
 Branch: feature/lab4-quality-evidence. Depends on: L4-05/07 and underlying APIs/data. Target: October 27.
 
@@ -122,11 +122,11 @@ Tests: E2E-01-04, STYLE-02, VIS-01, REG-01, PERF-01 and full planned matrix. Out
 
 ### L4-09 - Final documentation, visual inspection and review evidence
 
-Branch: feature/lab4-final-evidence. Depends on: L4-08. Target: October 28.
+Branch: feature/lab4-final-evidence. Depends on: L4-08. Planned target: October 28 (historical target; user deadline was October 29).
 
-Tasks: reconcile contract with approved implementation, fill tests.md results and actual paths, update README setup/seed/migration/recovery/test/demo; inspect .gitignore/tracked files; finish visual checklist and reviewer.md using real review identities/comments/responses/approvals/links. Prepare course-required curated ai-use.md later from the external staging record with real LLM naming, 6-10 prompts and the student's own reflection. Keep the full staging capture as requested; redact secrets before any publication.
+Tasks: reconcile contract with approved implementation, fill tests.md results and actual paths, update README setup/seed/migration/recovery/test/demo; inspect .gitignore/tracked files; update the visual checklist and reviewer.md using real review identities/comments/responses/approvals/links. The user has since asked that `ai-use.md` reproduce the staged user prompts in source order with concise answer summaries; keep the full staging capture private and exclude credentials. Model names must match the recorded assignments. The My Reflection text is an assistant-drafted factual draft that the user reviewed and endorsed on 2026-11-01 (staging entries #870–#871); retain that attribution and do not present it as wholly student-authored.
 
-Acceptance: AC-24 preparation; no fabricated review/test/reflection evidence, missing screenshot, stale Issue/PR status or broken relative document link. Contract changes are explained/approved, not rewritten merely to fit incomplete behavior.
+Acceptance: AC-24 preparation; no fabricated review/test/reflection evidence, missing screenshot, stale Issue/PR status or broken relative document link. Contract changes are explained/approved, not rewritten merely to fit incomplete behavior. Issue #92 started after its October 28 planned target and the approved October 29 deadline; actual work is dated 2026-11-01, without backdating.
 
 Verification: DOC-01 and full evidence mapping below. Any product-code correction requires relevant checks and integrated re-verification before release.
 
@@ -149,7 +149,7 @@ Use headings exactly Answer Part 1 through Answer Part 9 in that order. Links mu
 | Answer Part 1 | 10 | Feature -> lab4-staging -> main history; Project Issues Done; rendered reviewer.md with real identity/PR comments/responses/approvals; README/.gitignore/repo structure. L4-01/09/10. |
 | Answer Part 2 | 5 | Link/render specification.md: numbered FR/BR, Action/Ticket rules, dashboard math, AC, migration decisions/DoD, proof spec predates completed implementation PRs. L4-01/09. |
 | Answer Part 3 | 10 | Link/render tests.md with plans, AC trace, actual paths/final results; complete unit/API/integration/UI/auth/workflow/regression/E2E passing main output. L4-08/10. |
-| Answer Part 4 | 5 | Later curated ai-use.md naming actual LLM(s), 6-10 key prompts and student My Reflection about specification/coding agents. Full capture remains staging. L4-09. |
+| Answer Part 4 | 5 | Curated ai-use.md preserves the user's recorded prompts in order with concise answer summaries, identifies only recorded LLM assignments, and includes the user's verified My Reflection. A supplementary 6–10-entry index may highlight representative prompts without truncating the archive. Full capture remains private staging; an assistant-drafted reflection must be explicitly verified by the user before it is presented as theirs. L4-09. |
 | Answer Part 5 | 5 | Staff operational metrics/current-user Actions/priority or recent Tickets/counts/drilldown/loading/empty/forbidden/failure/responsive; selected independent DB count matches. L4-06/07/08. |
 | Answer Part 6 | 10 | Actions list/create/assign/edit/status/complete/cancel, validation/inactive-assignee rejection/roles/failures/responsive and multiple Actions/different staff on one Ticket. L4-03/05/08. |
 | Answer Part 7 | 5 | Permitted Ticket transitions, stable ordering, append-only history, role visibility and gate/reopen/cancel behavior. L4-04/05/08. |

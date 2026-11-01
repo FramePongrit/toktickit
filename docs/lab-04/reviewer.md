@@ -1,14 +1,14 @@
 # Lab 4 Peer Review and Evidence Record
 
-Status: **contract and PRs #95–#100 peer-reviewed and merged; Issue #91 in progress; release pending**. Prepared 2026-10-23; review ledger updated 2026-10-31. This file distinguishes actual events from pending review and test evidence.
+Status: **contract and PRs #95–#101 peer-reviewed and merged; Issue #92 in progress; release pending**. Prepared 2026-10-23; review ledger updated 2026-11-01. This file distinguishes actual events from pending review and test evidence.
 
-Repository: [FramePongrit/toktickit](https://github.com/FramePongrit/toktickit). Baseline: main 1a20e3465922a2c1dacc5a9eb18e55b0840284b8, [Lab 3 release PR 83](https://github.com/FramePongrit/toktickit/pull/83). Integration branch: lab4-staging. Current contract branch: feature/lab4-engineering-contract.
+Repository: [FramePongrit/toktickit](https://github.com/FramePongrit/toktickit). Baseline: main 1a20e3465922a2c1dacc5a9eb18e55b0840284b8, [Lab 3 release PR 83](https://github.com/FramePongrit/toktickit/pull/83). Integration branch: `lab4-staging` at `5654d14` after PR #101; current evidence branch: `feature/lab4-final-evidence`.
 
 ## 1. Contract approval provenance
 
 The stakeholder completed six decision rounds and clarification, accepted the consolidated shared understanding and authorized contract authoring on 2026-10-23. Approved deadline is October 29, superseding October 30; internal integrated release target is October 28. Repository documents are English.
 
-Working capture is the user-requested external D:/Software Engineering/lab4_ai_use_staging.md. It preserves user prompts/inter-agent task prompts and summary agent answers, including prior interview decisions. It is not yet the curated repository ai-use.md. Do not copy an unreviewed entire working log into a public PR; later course evidence uses selected prompts and actual LLM identification/student reflection.
+Working capture is the user-requested external `D:/Software Engineering/lab4_ai_use_staging.md`. It preserves recorded user prompts, inter-agent task prompts and summarized agent answers. The curated [ai-use record](ai-use.md) follows the user's later prompt-by-prompt instruction through the source cutoff; the private full capture itself is not copied into the repository. The reflection is attributed as an assistant-drafted factual draft; the user reviewed and endorsed it on 2026-11-01 (staging entries #870–#871).
 
 Contract commit 430cda5 was published before the first feature implementation started. [PR #94](https://github.com/FramePongrit/toktickit/pull/94) was approved by Sxr1n on 2026-10-24 at 16:42:50 Asia/Bangkok and merged into lab4-staging at 16:45:52, commit 954604e88c9a9b0f64b9e9c4fa727dfa7a990fc7. The reviewer explicitly reported reading specification.md and issue-plan.md in full; the approval is not represented as a full-file review of the other four documents.
 
@@ -19,7 +19,7 @@ Contract commit 430cda5 was published before the first feature implementation st
 | Contract Issue/PR link | [Issue #84](https://github.com/FramePongrit/toktickit/issues/84), [PR #94](https://github.com/FramePongrit/toktickit/pull/94) |
 | Peer reviewer identity | Sxr1n, collaborator, contract PR #94 |
 | Peer approval/comments/responses | Contract APPROVED 2026-10-24 16:42:50 Asia/Bangkok; PR95 initial findings then corrected head0a75793 APPROVED by Sxr1n October26 03:01:15; merged4d487a1 at03:01:40 |
-| Implementation test results | Initial source 6be4a1a and correction 9b29487 verified separately; results below; later Issues pending |
+| Implementation test results | Issues #85–#91 scoped results are recorded below; current staging CI is linked in the Issue #91 entry |
 | Final main / release PR | Pending |
 
 ## 2. Per-Issue review ledger
@@ -35,8 +35,8 @@ Plan IDs come from [issue-plan.md](issue-plan.md). Published Issues are linked b
 | L4-05 | [#88](https://github.com/FramePongrit/toktickit/issues/88) | feature/lab4-actions-ui / [#98](https://github.com/FramePongrit/toktickit/pull/98) | Sxr1n; AI Reviewer confirmed60e9d9d | APPROVED93c108e, no blocker; four follow-ups below | APPROVED October29 18:29:24; merged6b1277d at18:32:30 Asia/Bangkok | Done |
 | L4-06 | [#89](https://github.com/FramePongrit/toktickit/issues/89) | feature/lab4-dashboard-api / [#99](https://github.com/FramePongrit/toktickit/pull/99) | Sxr1n; AI Reviewer confirmed 6f08f4e | Approved with Staff search fix requested; correction carried into #90 | Merged 171d8bc | Done |
 | L4-07 | [#90](https://github.com/FramePongrit/toktickit/issues/90) | feature/lab4-dashboard-ui / [#100](https://github.com/FramePongrit/toktickit/pull/100) | Sxr1n; AI Reviewer | Dashboard, navigation, PR99 Staff search correction; evidence below | Approved 31 Oct 16:53:10; merged b35e76c 16:53:26 Bangkok | Done |
-| L4-08 | [#91](https://github.com/FramePongrit/toktickit/issues/91) | feature/lab4-quality-evidence / [#101](https://github.com/FramePongrit/toktickit/pull/101) | AI Reviewer; human pending | CI and evidence below; manual checks pending | Pending | Started |
-| L4-09 | [#92](https://github.com/FramePongrit/toktickit/issues/92) | feature/lab4-final-evidence / Pending | Pending | Pending | Pending | Backlog |
+| L4-08 | [#91](https://github.com/FramePongrit/toktickit/issues/91) | feature/lab4-quality-evidence / [#101](https://github.com/FramePongrit/toktickit/pull/101) | Sxr1n; AI Reviewer | [Sxr1n approval](https://github.com/FramePongrit/toktickit/pull/101#pullrequestreview-5723636677); user later reported partial manual inspection. Full visual/keyboard sign-off remains incomplete. | Sxr1n approved head `53833eac` on 2026-10-31 22:49:39 Asia/Bangkok; merged as `5654d14` at 22:54:01 | Done |
+| L4-09 | [#92](https://github.com/FramePongrit/toktickit/issues/92) | feature/lab4-final-evidence / PR pending | Pending | Documentation and evidence reconciliation in progress | Pending | Started |
 | L4-10 | [#93](https://github.com/FramePongrit/toktickit/issues/93) | lab4-staging -> main / Pending | Pending | Pending | Pending | Backlog |
 
 For each PR, record review-comment permalinks, author's response/fix links, actual submitted approval identity/time and resolved threads. If an AI factual audit assists drafting, label it as such; it is not a peer approval or proof the product works.
@@ -127,7 +127,7 @@ Three narrow follow-ups accompany #89: client-side Result validation for Complet
 | Traceability | Authoring inspection passed: 15 unique FR, 42 unique BR, 24 unique AC; all map to trace rows and every AC has planned tests; 45 unique test entries and 10 local Issue definitions |
 | Relative links and current Git diff | All local Markdown file links resolve, fences balanced, no trailing whitespace; six new docs only under docs/lab-04; HEAD remains the released Lab 3 baseline on the contract branch |
 | Application tests/builds | Not run for documentation-only authoring |
-| Required future product files/screenshots/ai-use.md | Clearly marked planned; not fabricated as existing |
+| Required future product files/screenshots/ai-use.md | Historical authoring snapshot: these were still planned then. Issue #92 now prepares selected screenshots and the prompt archive; final-main and PDF remain pending |
 
 Read-only AI factual audits checked all six documents against the handout, approved interview and existing code. Coverage audit found no missing mandatory scope or AC-to-test gap. Before final handoff the author corrected the exact statusCounts object shape, preserved Lab 3 USER_INACTIVE semantics, defined a submitted-payload digest before dynamic defaults, serialized concurrent request-key replay before stale-state checks, and specified unchanged-priority no-op behavior. These are documentation corrections within the approved policy, not human peer approvals or executed product tests.
 
@@ -147,10 +147,10 @@ Append an entry per real run with timestamp/time zone, code commit/branch, isola
 | 2026-10-24 Asia/Bangkok / 6be4a1a | npm --prefix server run test:security | Same dedicated environment | 21 / 0 / 0; 1 file | tests.md section10 | Pass |
 | 2026-10-24 Asia/Bangkok / 6be4a1a | Prisma validate/generate; server build | Current checkout; explicit test DATABASE_URL | Passed | tests.md section10 | No executable change after verification |
 | 2026-10-24 Asia/Bangkok / PR #95 | README PowerShell parsing and Windows containment assertions; git diff --check | Read-only syntax/assertions | Passed; 2 blocks and 4 path cases | tests.md section10 | Final runbook fixes verified |
-| Pending | Complete server/client/security/migration/build/E2E suite | Pending | Not run | Pending | Pending |
-| Pending | Performance 1000 Tickets / 5000 Actions | Pending | Not measured | Pending | Pending |
-| Pending | Backup/isolated restore and attachment verification | Pending | Not run | Pending | Pending |
-| Pending | Three-viewport screenshot and keyboard inspection | Pending | Not inspected | Pending | Pending |
+| Issue #93 | Final-main server/client/security/migration/build/E2E suite | Pending | Not run on final main | Issue #91 staging/CI results in tests.md §17 | Final-main SHA still required |
+| Issue #93 | Final-main 1000 Tickets / 5000 Actions performance run | Pending | Not run on final main | Issue #91 guarded staging/CI result in tests.md §17 | Final-main result still required |
+| Issue #85 / #91 | Backup/isolated restore and attachment verification | Passed in scoped migration/recovery runs; final-main rerun pending | MIG-03 and runbook cases reported in tests.md §§10–11,17 | Dedicated test environment | Preserve source/backup; no application DB mutation |
+| Issue #91 / #92 | Three-viewport Dashboard captures and human inspection | Automated captures/geometry passed; user-reported manual review is partial; full checklist pending | [Requester captures and provenance](../../artifacts/lab-04/screenshots/requester-dashboard/README.md); [Staff captures and provenance](../../artifacts/lab-04/screenshots/staff-dashboard/README.md); [Actions captures](../../artifacts/lab-04/screenshots/actions-taken/README.md) | Separate local/CI capture runs | Human whole-app sign-off and final-main verification remain required |
 
 For selected Dashboard metrics, record independent DB queries with redacted fixture actor ids/time bounds, result and corresponding API/card evidence. Include both positive and zero examples. Do not confuse requestedPriority with itPriority or assigned Actions with performed Actions.
 
@@ -162,7 +162,7 @@ For selected Dashboard metrics, record independent DB queries with redacted fixt
 - [ ] Release PR, review approval, merge commit and final main verification recorded.
 - [ ] README setup/migration/seed/test/demo/recovery and .gitignore/tracked-file evidence current.
 - [ ] UI visual/accessibility checklist actually inspected and screenshots readable at three required sizes.
-- [ ] Curated docs/lab-04/ai-use.md later prepared from staging with 6-10 prompts, actual LLM(s), and student's own My Reflection.
+- [ ] Curated docs/lab-04/ai-use.md prepared from staging with the user-requested prompt-by-prompt archive, recorded LLM assignments and the user's verified My Reflection; the supplementary Answer Part 4 index may select 6–10 representative prompts without truncating the archive. The reflection remains attributed as assistant-drafted and was user-reviewed and endorsed on 2026-11-01 (staging entries #870–#871).
 - [ ] One PDF contains exact Answer Part 1 through Answer Part 9 headings, all 60-point evidence and working links.
 - [ ] Final-main repository remains source of truth; actual submission cutoff checked; PDF submitted by October 29, 2026.
 
@@ -174,11 +174,11 @@ October29,2026, Asia/Bangkok. [PR99](https://github.com/FramePongrit/toktickit/p
 
 Review fixed concrete issues before handoff: Dashboard Action UI hrefs, nullable Staff resolvedAt projection, shared count/list predicates, exact date-boundary assertions, PERF owned-row cleanup/target restrictions/opt-in discovery/content/query checks, list URL/pageSize/back-forward synchronization, mutually exclusive filters and impossible-calendar-date rejection. Strict400 unknown requesterId-query tests retain independent ownership checks. Narrow PR98 follow-ups now validate Completed correction Result, paginate history independently and display safe known names with ID fallback. The larger Actions panel refactor remains deferred maintenance.
 
-The first manual-server combined browser run had one attachmentPOST500; canonical Staff2/2 and combined3/3 later passed without a product fix. Its cause remains unconfirmed. Diagnostic pre-browser stalls, temporary instrumentation removal and exact fixture cleanup are recorded; do not describe that failure as explained. Fullcourse E2E/final-main/CI/release/PDF and DashboardUI remain later work.
+At the Issue #87 handoff, the first manual-server combined browser run had one attachment POST 500; canonical Staff 2/2 and combined 3/3 later passed without a product fix. Its cause remains unconfirmed. Diagnostic pre-browser stalls, temporary instrumentation removal and exact fixture cleanup are recorded; do not describe that failure as explained. At that handoff, full-course E2E, release, PDF and Dashboard UI were later increments. Subsequent sections record Issues #90–#92; final-main, release and PDF remain pending.
 
 ## 7. Issue #90 / PR #100 implementation review
 
-October 30, 2026, Bangkok time. [PR #100](https://github.com/FramePongrit/toktickit/pull/100), source `5236ef59aa25be02ae578087449dfc07e35e4aea`, awaits human review. Independent AI Reviewer confirmed exact source, no actionable findings, and six client files / 62 tests passed. [Evidence](../../artifacts/lab-04/verification/issue90/README.md) includes final client 219 tests, Dashboard browser 1 test, inherited authentication/Staff/Admin browser 7 tests, build and actual three-viewport screenshots. Review findings corrected request cancellation and identity isolation, URL validation and navigation, stale Action labels, empty-page pagination, Bangkok period labels and the PR99 Staff search defect.
+October 30, 2026, Bangkok time (historical handoff note). PR #100 source 5236ef59aa25be02ae578087449dfc07e35e4aea was later approved and merged as b35e76cdf0923ac9d6266e2a2714e8adf036532b; Issue #90 was closed and moved to Done. Independent AI Reviewer confirmed the earlier source and six client files / 62 tests passed. The evidence index includes final client 219 tests, Dashboard browser 1 test, inherited authentication/Staff/Admin browser 7 tests and build. Review corrections addressed request cancellation and identity isolation, URL validation/navigation, stale Action labels, pagination, Bangkok period labels and the PR99 Staff search defect.
 
 An earlier parallel client run was reported to have eight failures; its raw log and test names are unavailable. A later, separate default-parallel investigation failed five of 219 tests while unchanged two-worker and serial runs passed all 219. The comparison indicates execution sensitivity but does not establish the earlier failures' cause. Full outputs are in the evidence index. Earlier browser startup/locator failures remain recorded. Visual inspection of eight screenshots is scoped and is not a full manual screen-reader audit; final-main and release checks remain pending.
 
@@ -201,20 +201,33 @@ Sxr1n [approved PR #100](https://github.com/FramePongrit/toktickit/pull/100#pull
 
 ## Issue #91 integrated verification
 
-[PR #101](https://github.com/FramePongrit/toktickit/pull/101) remains draft while human visual and keyboard inspection is outstanding. AI review and automated accessibility checks do not constitute human approval.
+[PR #101](https://github.com/FramePongrit/toktickit/pull/101) is merged into `lab4-staging` at `5654d14e782800c6029da73f00411d49f291fb26`; Issue #91 was closed and moved to Done. Sxr1n [approved the tested PR head](https://github.com/FramePongrit/toktickit/pull/101#pullrequestreview-5723636677) `53833eac2b2a73946401d5020efef812219eec05` at 2026-10-31 22:49:39 Asia/Bangkok; the merge followed at 22:54:01. This is code review and integration approval, not a whole-app manual visual sign-off.
 
-On 31 October, the [integrated Linux/PostgreSQL and Windows runbook workflow](https://github.com/FramePongrit/toktickit/actions/runs/41212274335) and the [client workflow](https://github.com/FramePongrit/toktickit/actions/runs/41212274328) passed on source commit `0366209d2f56a4d0983ae5961e3a41e9b97a9c3f`. The integrated workflow uploads logs, browser output and screenshots as GitHub Actions artifacts (14-day retention). Consult current PR checks for later commits.
+The [integrated Linux/PostgreSQL/E2E and Windows runbook workflow 41212795923](https://github.com/FramePongrit/toktickit/actions/runs/41212795923) and [client workflow 41212795912](https://github.com/FramePongrit/toktickit/actions/runs/41212795912) passed on the exact PR head. The workflow uploads logs, browser output and screenshots. The test paths and current results are mapped in [tests.md section 17](tests.md#17-issue-91-integrated-verification-and-current-status).
 
-A separate local integrated run passed server 243 tests, security 21, migration/recovery 7, client 228, browser 23, builds and screenshot capture. It ran on a dedicated PostgreSQL 16 test container and isolated schemas, with a dirty worktree based on `b35e76c`, before subsequent test-only CI fixes; it is not evidence for the final commit. Its performance fixture contained 1,000 Tickets and 5,000 Actions: seven endpoints, three warmups and 20 sequential HTTP measurements each, with maximum observed p95 29.5 ms against the 2,000 ms threshold. This result describes that local environment and is not a production load test. The CI run also exercises the exact-cardinality performance test.
+A separate local integrated run on a dedicated PostgreSQL 16 test container and task-owned schemas reported server 27 files/243 tests, security 21, migration 7, Windows runbook 5 before its final case, client 20 files/228, browser 23, Dashboard capture 1, legacy captures 12, builds and Prisma checks passed. Its performance fixture had 1,000 Tickets/5,000 Actions and seven endpoints with three warmups and 20 samples each; the max p95 was about 29.5 ms in that local run. The CI run passed the final six-case Windows runbook and the guarded exact-cardinality performance test (CI max p95 about 12.74 ms). These timings describe their respective test environments, not production load. Security, migration and runbook suites are kept separate from the default server count.
 
-Earlier CI runs exposed Windows PowerShell path handling and timing-sensitive E2E assertions. The current tests retain the restore path guard, and the Admin concurrency scenario requires the two authenticated service queries to wait on fixture rows before asserting HTTP 200/409 and the last-admin invariant. Focused local E2E passed 3/3 after these corrections.
+Earlier CI failures and corrections are retained in the private/raw Issue91 verification area; selected PR evidence and CI run links are used here. A failed early Admin race used a seeded third Admin; the final test asserts the two fixture Admin identities before the race. The final concurrency test holds the exact fixture rows and observes two authenticated service requests blocked through the PostgreSQL lock chain before asserting 200/409 and one remaining Admin. The Windows runbook tests preserve the restore path guard and real file-hash checks. No failure is silently relabeled as a pass.
 
-**Human checklist: pending.** A reviewer must inspect the captured major screens at the specified viewports and perform the agreed keyboard/focus checks, including error and draft-preservation flows, before recording completion. Automated screenshots and keyboard assertions are supporting evidence only. Human approval and merge remain pending.
+### User-reported manual inspection (partial)
 
-Human inspection record (reviewer name, date, result and any issue links must be filled from the actual review):
+After the merge, the user reported completing these checks in the local application; the staging record does not include browser/version metadata or screenshots for every interaction. The detailed prompt/answer record is in [ai-use.md entries #774–#805](ai-use.md#human-reported-live-inspection):
 
-- [ ] Inspect major Requester, Staff and Admin screens using the desktop, tablet and mobile captures in the integrated workflow artifact; check text, field states, validation, clipping, overlap and overflow.
-- [ ] On the running application, navigate the key flows by keyboard and verify focus order and visible focus, including dialogs and error states.
-- [ ] Exercise validation and error recovery, and confirm an in-progress draft is preserved where specified.
-- [ ] Check browser console and relevant network requests during the inspected flows; record failures or linked issues.
-- [ ] Record the reviewer, date, tested commit, viewport/browser and results here or in the PR review.
+| Area | User-reported checks | Evidence limits |
+|---|---|---|
+| Requester | Dashboard Tab/Shift+Tab and Enter on View Open Tickets; My Tickets navigation, opening/returning, search/filter; Create Ticket required-field validation and partial-input preservation; Dashboard/Create Ticket at normal and narrower widths | Exact viewport sizes were not recorded for these actions. |
+| Staff | Dashboard and active Actions/Ticket; Action required-field validation, partial draft preservation and cancel confirmation; Queue search/filter/return | User report; no screenshot for each form state. |
+| Admin | User Management list, keyboard focus, edit/cancel and narrow window; Dashboard/User Management inspection reported at 1440x900, 820x1024 and 390x844 | Exact browser/version and separate captures for each size were not recorded. |
+| Console/network | User reported the Staff Queue network view was normal; screenshot showed informational Vite/React messages and 8 of 61 filtered network requests (statuses 200/304) | No unfiltered request inventory or all-page console/network review. |
+
+Separately, the assistant inspected a live Admin Dashboard/deep link at one narrow, unspecified viewport and inspected nine earlier screenshots from a working-tree run. That is agent-operated, not human review. The user-reported actions are meaningful partial inspection, but **the full human checklist remains incomplete**: unfiltered console/network review, error/conflict/draft-preservation paths, documented browser/version, exact manual captures, and a recorded whole-app sign-off remain outstanding. Final-main regression and the single PDF belong to Issue #93 and remain pending.
+
+## Issue #92 documentation and evidence reconciliation
+
+[Issue #92](https://github.com/FramePongrit/toktickit/issues/92) is Started on feature/lab4-final-evidence, based on merged lab4-staging commit 5654d14. This increment reconciles README/test/review/visual evidence and prepares the prompt-by-prompt AI-use record from the external staging capture. User/human input is archived through #870 (89 actual messages); the staging file contains later agent-only records through #878 and no later user input. Prompt entries preserve source order and wording, with the four #633 messages separated. The private full staging file is not copied. The original course rubric requests 6–10 selected prompts and a student reflection; the later user instruction requests the full prompt archive, so a 9-entry index is supplementary. The reflection is an assistant-drafted factual draft that the user reviewed and endorsed on 2026-11-01 (staging entries #870–#871); it is not represented as wholly student-authored.
+
+The approved target deadline was 2026-10-29; the current documentation work is on 2026-11-01 and is not backdated. Issue #93 remains responsible for final-main verification and submission of exactly one PDF with Answer Parts 1–9. Neither is claimed complete here.
+
+### Dashboard capture files and provenance
+
+The [Requester](../../artifacts/lab-04/screenshots/requester-dashboard/README.md) and [Staff](../../artifacts/lab-04/screenshots/staff-dashboard/README.md) folders contain normal dashboard captures at 1440×900, 820×1024 and 390×844, plus the mobile navigation-open state. They are byte-for-byte copies from isolated run run-164bc3a66c49461e8da5f0055e592b46. The recorded HEAD was b35e76cdf0923ac9d6266e2a2714e8adf036532b with 24 dirty worktree entries; the exact working-tree diff is unavailable. They are automated captures, not human sign-off or final-main evidence.

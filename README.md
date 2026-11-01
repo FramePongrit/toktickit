@@ -4,7 +4,7 @@ TokTickIT is an IT service desk application for Account and Access, Hardware, So
 
 An authenticated Requester can create a ticket and receive an official ticket number, find their own tickets through search, filters, sorting and pagination, open a ticket, and upload, download and soft-remove attachments. Ownership is enforced by the backend: one Requester cannot read another's ticket or attachment.
 
-Lab 3 authentication uses an eight-hour session cookie. The browser restores the current User through `/api/auth/me`; the server derives Ticket and Attachment ownership from that authenticated User and never from a client-supplied requester id. State-changing requests also send the session's `X-CSRF-Token` header.
+Authentication uses an eight-hour session cookie. The browser restores the current User through `/api/auth/me`; the server derives Ticket and Attachment ownership from that authenticated User and never from a client-supplied requester id. State-changing requests also send the session's `X-CSRF-Token` header. Lab 4 adds Staff/Admin Actions, Ticket workflow history and resolution gates, and role-specific Dashboards while retaining the existing Requester, Staff and Admin access controls.
 
 ## Setup
 
@@ -36,7 +36,7 @@ npx prisma db seed            # idempotent: safe to run repeatedly
 
 The server automatically loads `server/.env` for both `npm run dev` and `npm start`; environment variables injected by the host take precedence over values in the file. Set `JWT_SECRET`, `CLIENT_ORIGIN`, and the local-development cookie settings from `server/.env.example` before starting Lab 3.
 
-The seed creates the four categories, seven related systems, active local Users, and the Lab 3 authentication fixtures used by the application and tests.
+The seed creates the four categories, seven related systems, local Users, and demo Tickets/Actions/workflow history used by the application and tests. It is repeatable: it does not reset a user's changed password or overwrite existing Ticket work to recreate the demo.
 
 ### Local seeded accounts
 
@@ -49,6 +49,10 @@ The seed uses local-only fixture credentials. These values are for a disposable 
 | Administrator | `kanya.admin@kmutt.ac.th` | `TokTickIT123!` |
 
 Freshly seeded Users start in the mandatory-password-change flow. A migrated Lab 2 Requester receives the same local-only fixture input only when its legacy credential hash is missing; repeat seed/migration does not overwrite an established changed password.
+
+### Lab 4 demo walkthrough
+
+Use a disposable local database. Sign in as the Requester to open the Requester Dashboard and My Tickets; the demo includes active, resolved, reopened and legacy Tickets. Sign in as IT Staff to see assigned active Actions, open a Ticket and use **Actions Taken** to inspect cycles, create or update an Action, record completion/cancellation, and view the readable audit and public workflow timeline. Resolve requires completed current-cycle work with no unfinished Action or unresolved completed follow-up; reopening starts a new work cycle. The Administrator uses the Staff Dashboard and also has User Management access. Seeded Users begin with the mandatory password-change flow, so change the password at first login. Use only the disposable seed password shown above in a local development database.
 
 ### 4. Client
 
@@ -84,15 +88,14 @@ cd client && npm test         # Vitest + React Testing Library
 npx playwright test           # end-to-end and screenshot capture, starts both servers itself
 ```
 
-Notes worth knowing before changing the test setup:
+Lab 4 verification uses explicitly isolated resources; do not run these commands against the configured application database or the primary `toktickit-db` container.
 
-- Server test files run **sequentially** (`fileParallelism: false`). They share one development database, so parallel suites that create and mutate tickets interfere with each other.
-- A global setup runs the seed once. It deliberately does **not** reset the database: the Lab 1 categories test asserts Category ids 1–4, and a truncate would restart the identity sequence.
-- Each Lab 2 suite creates its own Requester rows with randomised emails and deletes only what it made, including any files it uploaded.
-- `npx playwright test` runs both the end-to-end project and the screenshot capture. Use `npm run e2e` for the tests alone. Screenshot capture defaults to an ignored temporary root when invoked through `e2e/run-issue61.ps1`; use `-ScreenshotRoot artifacts/lab-03/screenshots` only when intentionally refreshing committed evidence.
-- For the isolated Lab 3 verification used by Issues #61 and #81, first set an explicit local Docker `DATABASE_URL`, then run `powershell -ExecutionPolicy Bypass -File e2e/run-issue61-full.ps1 -ApiPort 3001 -ClientPort 5174`. The runner validates a public/unspecified base schema, creates and drops only task-owned PostgreSQL schemas, writes screenshots under ignored `test-results/`, and refuses to stop an unrelated process using a port.
-- Use `powershell -ExecutionPolicy Bypass -File e2e/run-issue61.ps1 -Legacy -ApiPort 3001 -ClientPort 5174` for the authenticated legacy browser regression. Add `-Screenshots` for safe temporary screenshot verification, or explicitly add `-ScreenshotRoot artifacts/lab-03/screenshots` when a deliberate committed-artifact refresh is intended.
-- Lab 4 migration checks use `npm --prefix server run test:migration` with `DATABASE_URL` set to a dedicated loopback PostgreSQL database named `lab4test`; the harness creates and drops only random task-owned schemas. The recovery test also requires `LAB4_PG_CONTAINER` to name that dedicated test container. The default server `npm test` discovers these same suites and therefore requires both settings too. Migrate the selected disposable base schema before running the full suite; never target the configured application database.
+- The server suite runs sequentially and uses a disposable PostgreSQL 16 database named `lab4test` on `127.0.0.1:55434`. Set process-local `DATABASE_URL` to that test database and `LAB4_PG_CONTAINER=toktickit-lab4-issue85-test`. Migrate and seed the task-owned base schema before `npm --prefix server test`. The default server config excludes the deliberately separate 1,000-Ticket/5,000-Action performance fixture and the Windows-only backup/restore runbook; run both with their explicit commands below.
+- `npm --prefix server run test:security` runs the security configuration; `npm --prefix server run test:migration` runs migration/recovery; `npm --prefix server run test:runbook` runs the Windows PowerShell backup/restore-script cases; `npm --prefix server run test:performance` opts into the separately guarded performance fixture. The runbook suite is Windows-only. The recovery suite uses Docker PostgreSQL tools through `LAB4_PG_CONTAINER`.
+- `npm --prefix client test` runs the component suite with the configured two-worker budget; `npm --prefix client run build`, `npm --prefix server run build`, and Prisma validate/generate are separate build checks.
+- For the isolated Lab 4 browser/regression/capture workflow, start the dedicated test PostgreSQL container, set an explicit test-only `DATABASE_URL` and `LAB4_PG_CONTAINER`, then run `powershell -ExecutionPolicy Bypass -File e2e/run-lab04.ps1 -ApiPort 3001 -ClientPort 5174`. The runner checks the exact loopback database, refuses occupied ports, creates and drops only its random task-owned schemas and upload root, and restores process environment variables. Routine screenshots go to ignored `test-results/lab-04/run-<id>/screenshots`. Pass `-ScreenshotRoot artifacts/lab-04/screenshots` only when intentionally refreshing curated evidence.
+- `npm run e2e` and `npm run screenshots` invoke Playwright directly; they do not provide the isolated schema/upload/port setup of `e2e/run-lab04.ps1`. Use the runner for Lab 4 browser verification. The separate Dashboard capture project is included by the runner; screenshot defaults never write curated files unless the explicit `ScreenshotRoot` is supplied.
+- Lab 2/3 runners remain available for their scoped regression work. They do not replace the Lab 4 integrated runner or final-main verification.
 
 ### Lab 4 backup and restore
 
