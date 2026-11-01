@@ -57,8 +57,23 @@ test.describe.serial("E2E-88 — Actions Taken Staff and Requester journey", () 
       await page.goto(`/staff/tickets/${ticket.id}`);
       await expect(page.getByRole("heading", { name: ticket.ticketNumber })).toBeVisible();
 
+      const claimResponse = page.waitForResponse((response) => {
+        const url = new URL(response.url());
+        return url.pathname === `/api/staff/tickets/${ticket.id}/claim`
+          && response.request().method() === "PATCH";
+      });
+      const refreshedDetail = page.waitForResponse((response) => {
+        const url = new URL(response.url());
+        return url.pathname === `/api/staff/tickets/${ticket.id}`
+          && response.request().method() === "GET";
+      });
       await page.getByRole("button", { name: "Claim Ticket" }).click();
-      await expect(page.getByText(staff.fullName)).toBeVisible();
+      const [claimResult, detailResult] = await Promise.all([claimResponse, refreshedDetail]);
+      expect(claimResult.status()).toBe(200);
+      expect(detailResult.status()).toBe(200);
+      await expect(page.getByTestId("claim-feedback")).toContainText("Ticket claimed successfully");
+      await expect(page.locator('[aria-labelledby="ownership-heading"] strong')).toContainText(staff.fullName);
+      await expect(page.locator('#staff-status option[value="OPEN"]')).toHaveCount(1);
       await expect(page.getByText("Complete at least one Action in this work cycle.")).toBeVisible();
       await page.getByLabel("Next status").selectOption("OPEN");
       await page.getByRole("button", { name: "Update status" }).click();
