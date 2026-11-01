@@ -8,7 +8,7 @@ Repository: [FramePongrit/toktickit](https://github.com/FramePongrit/toktickit).
 
 The stakeholder completed six decision rounds and clarification, accepted the consolidated shared understanding and authorized contract authoring on 2026-10-23. Approved deadline is October 29, superseding October 30; internal integrated release target is October 28. Repository documents are English.
 
-Working capture is the user-requested external `D:/Software Engineering/lab4_ai_use_staging.md`. It preserves recorded user prompts, inter-agent task prompts and summarized agent answers. The curated [ai-use record](ai-use.md) follows the user's later prompt-by-prompt instruction through the source cutoff; the private full capture itself is not copied into the repository. The user reviewed and endorsed the reflection on 2026-11-01 (staging entries #870–#871).
+Working capture is the user-requested external `D:/Software Engineering/lab4_ai_use_staging.md`. It preserves recorded user prompts, inter-agent task prompts and summarized agent answers. The curated [ai-use record](ai-use.md) contains ten selected prompts and concise answer summaries; the private full capture is not copied into the repository. The user reviewed and endorsed the reflection on 2026-11-01 (staging entries #870–#871).
 
 Contract commit 430cda5 was published before the first feature implementation started. [PR #94](https://github.com/FramePongrit/toktickit/pull/94) was approved by Sxr1n on 2026-10-24 at 16:42:50 Asia/Bangkok and merged into lab4-staging at 16:45:52, commit 954604e88c9a9b0f64b9e9c4fa727dfa7a990fc7. The reviewer explicitly reported reading specification.md and issue-plan.md in full; the approval is not represented as a full-file review of the other four documents.
 
@@ -127,7 +127,7 @@ Three narrow follow-ups accompany #89: client-side Result validation for Complet
 | Traceability | Authoring inspection passed: 15 unique FR, 42 unique BR, 24 unique AC; all map to trace rows and every AC has planned tests; 45 unique test entries and 10 local Issue definitions |
 | Relative links and current Git diff | All local Markdown file links resolve, fences balanced, no trailing whitespace; six new docs only under docs/lab-04; HEAD remains the released Lab 3 baseline on the contract branch |
 | Application tests/builds | Not run for documentation-only authoring |
-| Required future product files/screenshots/ai-use.md | Historical authoring snapshot: these were still planned then. Issue #92 now prepares selected screenshots and the prompt archive; final-main and PDF remain pending |
+| Required future product files/screenshots/ai-use.md | Historical authoring snapshot: these were still planned then. Issue #92 now prepares selected screenshots and the AI-use record; final-main and PDF remain pending |
 
 Read-only AI factual audits checked all six documents against the handout, approved interview and existing code. Coverage audit found no missing mandatory scope or AC-to-test gap. Before final handoff the author corrected the exact statusCounts object shape, preserved Lab 3 USER_INACTIVE semantics, defined a submitted-payload digest before dynamic defaults, serialized concurrent request-key replay before stale-state checks, and specified unchanged-priority no-op behavior. These are documentation corrections within the approved policy, not human peer approvals or executed product tests.
 
@@ -162,7 +162,7 @@ For selected Dashboard metrics, record independent DB queries with redacted fixt
 - [ ] Release PR, review approval, merge commit and final main verification recorded.
 - [ ] README setup/migration/seed/test/demo/recovery and .gitignore/tracked-file evidence current.
 - [ ] UI visual/accessibility checklist actually inspected and screenshots readable at three required sizes.
-- [ ] Curated docs/lab-04/ai-use.md prepared from staging with the user-requested prompt-by-prompt archive, recorded LLM assignments and the user's verified My Reflection; the supplementary Answer Part 4 index may select 6–10 representative prompts without truncating the archive. The reflection was user-reviewed and endorsed on 2026-11-01 (staging entries #870–#871).
+- [ ] Curated docs/lab-04/ai-use.md prepared from staging with ten selected prompts, concise answer summaries, recorded LLM assignments and My Reflection. The reflection was user-reviewed and endorsed on 2026-11-01 (staging entries #870–#871).
 - [ ] One PDF contains exact Answer Part 1 through Answer Part 9 headings, all 60-point evidence and working links.
 - [ ] Final-main repository remains source of truth; actual submission cutoff checked; PDF submitted by October 29, 2026.
 
@@ -224,7 +224,7 @@ Separately, the assistant inspected a live Admin Dashboard/deep link at one narr
 
 ## Issue #92 documentation and evidence reconciliation
 
-[Issue #92](https://github.com/FramePongrit/toktickit/issues/92) is Started on feature/lab4-final-evidence, based on merged lab4-staging commit 5654d14. This increment reconciles README/test/review/visual evidence and prepares the prompt-by-prompt AI-use record from the external staging capture. User/human input is archived through #870 (89 actual messages); the staging file contains later agent-only records through #878 and no later user input. Prompt entries preserve source order and wording, with the four #633 messages separated. The private full staging file is not copied. The original course rubric requests 6–10 selected prompts and a student reflection; the later user instruction requests the full prompt archive, so a 9-entry index is supplementary. The user reviewed and endorsed the reflection on 2026-11-01 (staging entries #870–#871).
+[Issue #92](https://github.com/FramePongrit/toktickit/issues/92) is in progress on feature/lab4-final-evidence, based on merged lab4-staging commit 5654d14. This increment reconciles README, test, review and visual evidence. The AI-use record contains ten selected prompts with concise answers; the full staging capture remains private. Reflection will be revisited during the release PR as requested by the user.
 
 The approved target deadline was 2026-10-29; the current documentation work is on 2026-11-01 and is not backdated. Issue #93 remains responsible for final-main verification and submission of exactly one PDF with Answer Parts 1–9. Neither is claimed complete here.
 
